@@ -1,5 +1,3 @@
-Here's the complete updated `Dashboard.jsx`:
-
 ```jsx
 import { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
