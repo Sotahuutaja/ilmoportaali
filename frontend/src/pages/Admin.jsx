@@ -46,10 +46,8 @@ function EditUserModal({ user, onClose, onSave }) {
 
         <label>Name</label>
         <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-
         <label>Email</label>
         <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-
         <label>Role</label>
         <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
           {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -83,121 +81,23 @@ export default function Admin() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+
+  // Team form
+  const [teamForm, setTeamForm] = useState({ name: '', description: '', captain_id: '' });
+  const [teamMessage, setTeamMessage] = useState('');
+  const [teamError, setTeamError] = useState('');
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       navigate('/');
       return;
     }
-    api.get('/users')
-      .then(res => setUsers(res.data.users))
-      .catch(() => setError('Failed to load users'));
+    api.get('/users').then(res => setUsers(res.data.users));
+    api.get('/teams').then(res => setTeams(res.data.teams));
   }, [user]);
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Delete user "${name}"? This cannot be undone.`)) return;
-    try {
-      await api.delete(`/users/${id}`);
-      setUsers(users.filter(u => u.id !== id));
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete user');
-    }
-  };
-
-  const handleSave = (updated) => {
-    setUsers(users.map(u => u.id === updated.id ? { ...u, ...updated } : u));
-  };
-
-  const roleColor = (role) => ({
-    admin: '#1a1a2e',
-    creator: '#8e44ad',
-    attendee: '#27ae60'
-  }[role] || '#888');
-
-  const filtered = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div>
-      <h2 style={{ margin: '1.5rem 0' }}>User management</h2>
-      {error && <p className="error">{error}</p>}
-
-      <div className="card" style={{ marginBottom: '1rem' }}>
-        <input
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ marginBottom: 0 }}
-        />
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Role</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Joined</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(u => (
-              <tr key={u.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                <td style={{ padding: '0.8rem 1rem' }}>{u.name}</td>
-                <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{u.email}</td>
-                <td style={{ padding: '0.8rem 1rem' }}>
-                  <span style={{
-                    background: roleColor(u.role),
-                    color: 'white',
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '12px',
-                    fontSize: '0.8rem'
-                  }}>
-                    {u.role}
-                  </span>
-                </td>
-                <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.9rem' }}>
-                  {new Date(u.created_at).toLocaleDateString('fi-FI')}
-                </td>
-                <td style={{ padding: '0.8rem 1rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-secondary" onClick={() => setEditingUser(u)}>
-                      Edit
-                    </button>
-                    {u.id !== user.id && (
-                      <button className="btn btn-danger" onClick={() => handleDelete(u.id, u.name)}>
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                  No users found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {editingUser && (
-        <EditUserModal
-          user={editingUser}
-          onClose={() => setEditingUser(null)}
-          onSave={(updated) => { handleSave(updated); setEditingUser(null); }}
-        />
-      )}
-    </div>
-  );
-}
+  const handleDele
