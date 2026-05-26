@@ -43,17 +43,21 @@ jobs:
         with:
           azcliversion: latest
           inlineScript: |
+            SUFFIX=$(date +%Y%m%d%H%M%S)
             az containerapp update \
               --name ilmoportaali-app \
               --resource-group RG_Ilmoportaali \
-              --image ${{ secrets.REGISTRY_LOGIN_SERVER }}/backend:latest
+              --image ${{ secrets.REGISTRY_LOGIN_SERVER }}/backend:latest \
+              --revision-suffix $SUFFIX
 
       - name: Deploy frontend
         uses: azure/cli@v1
         with:
           azcliversion: latest
           inlineScript: |
+            SUFFIX=$(date +%Y%m%d%H%M%S)
             az containerapp update \
               --name ilmoportaali-frontend \
               --resource-group RG_Ilmoportaali \
-              --image ${{ secrets.REGISTRY_LOGIN_SERVER }}/frontend:latest
+              --image ${{ secrets.REGISTRY_LOGIN_SERVER }}/frontend:latest \
+              --revision-suffix $SUFFIX
