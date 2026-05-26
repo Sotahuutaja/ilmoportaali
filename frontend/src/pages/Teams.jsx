@@ -226,9 +226,6 @@ export default function Teams() {
 									Make captain
 								  </button>
 								)}
-								<button className="btn btn-danger" onClick={() => handleRemove(selected.id, m.user_id)}>
-								  Remove
-								</button>
 							  </div>
 							)}	
 						  </div>
