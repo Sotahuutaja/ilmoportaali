@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
+import Teams from './pages/Teams';
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -14,6 +15,7 @@ function Nav() {
       <Link to="/" style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Ilmoportaali</Link>
       <div>
         <Link to="/">Events</Link>
+		<Link to="/teams">Teams</Link>
         {user ? (
           <>
             {(user.role === 'admin' || user.role === 'creator') && (
@@ -53,6 +55,7 @@ export default function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
 			<Route path="/admin" element={<Admin />} />
+			<Route path="/teams" element={<Teams />} />
           </Routes>
         </div>
       </BrowserRouter>
