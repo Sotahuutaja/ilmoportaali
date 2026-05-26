@@ -30,6 +30,52 @@ async function migrate() {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(user_id, event_id)
     );
+
+    CREATE TABLE IF NOT EXISTS teams (
+      id          SERIAL PRIMARY KEY,
+      name        TEXT UNIQUE NOT NULL,
+      description TEXT,
+      created_by  INTEGER REFERENCES users(id),
+      created_at  TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS team_members (
+      id         SERIAL PRIMARY KEY,
+      team_id    INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+      user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      role       TEXT NOT NULL DEFAULT 'member',
+      status     TEXT NOT NULL DEFAULT 'pending',
+      invited_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(team_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS event_products (
+      id          SERIAL PRIMARY KEY,
+      event_id    INTEGER REFERENCES events(id) ON DELETE CASCADE,
+      name        TEXT NOT NULL,
+      description TEXT,
+      price       NUMERIC(10,2) NOT NULL DEFAULT 0,
+      quantity    INTEGER,
+      created_at  TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS registration_products (
+      id              SERIAL PRIMARY KEY,
+      registration_id INTEGER REFERENCES registrations(id) ON DELETE CASCADE,
+      product_id      INTEGER REFERENCES event_products(id) ON DELETE CASCADE,
+      quantity        INTEGER NOT NULL DEFAULT 1,
+      UNIQUE(registration_id, product_id)
+    );
+
+    ALTER TABLE registrations
+      ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
+    ALTER TABLE registrations
+      ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE registrations
+      ADD COLUMN IF NOT EXISTS guest_name TEXT;
+    ALTER TABLE registrations
+      ADD COLUMN IF NOT EXISTS guest_email TEXT;
   `);
 
   console.log('Migration complete');
