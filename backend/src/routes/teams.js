@@ -199,4 +199,52 @@ router.get('/my/memberships', requireAuth, async (req, res) => {
   }
 });
 
+// Transfer captain role to another member
+router.put('/:id/captain', requireAuth, async (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' });
+
+  const client = await pool.connect();
+  try {
+    // Verify caller is current captain or admin
+    if (req.user.role !== 'admin') {
+      const membership = await client.query(
+        'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+        [req.params.id, req.user.id, 'captain', 'approved']
+      );
+      if (!membership.rows[0]) return res.status(403).json({ error: 'Only the captain can transfer captaincy' });
+    }
+
+    // Verify target user is an approved member
+    const target = await client.query(
+      'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND status = $3',
+      [req.params.id, user_id, 'approved']
+    );
+    if (!target.rows[0]) return res.status(400).json({ error: 'Target user is not an approved member' });
+
+    await client.query('BEGIN');
+
+    // Demote current captain to member
+    await client.query(
+      'UPDATE team_members SET role = $1 WHERE team_id = $2 AND role = $3',
+      ['member', req.params.id, 'captain']
+    );
+
+    // Promote target to captain
+    await client.query(
+      'UPDATE team_members SET role = $1 WHERE team_id = $2 AND user_id = $3',
+      ['captain', req.params.id, user_id]
+    );
+
+    await client.query('COMMIT');
+    res.json({ message: 'Captaincy transferred successfully' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Failed to transfer captain:', err.message);
+    res.status(500).json({ error: 'Failed to transfer captaincy' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

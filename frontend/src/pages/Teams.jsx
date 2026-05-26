@@ -76,6 +76,20 @@ export default function Teams() {
       setError(err.response?.data?.error || 'Failed to remove');
     }
   };
+  
+  const handleMakeCaptain = async (teamId, userId, name) => {
+    if (!window.confirm(`Make ${name} the new captain? You will become a regular member.`)) return;
+    try {
+      await api.put(`/teams/${teamId}/captain`, { user_id: userId });
+      setMessage(`${name} is now the captain!`);
+      const res = await api.get(`/teams/${teamId}`);
+      setMembers(res.data.members);
+      const myRes = await api.get('/teams/my/memberships');
+      setMyTeams(myRes.data.teams);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to transfer captaincy');
+    }
+  };
 
   const isCaptain = (teamId) =>
     myTeams.some(t => t.id === teamId && t.role === 'captain' && t.status === 'approved');
@@ -202,6 +216,21 @@ export default function Teams() {
 								Remove
 							  </button>
 								)}
+							{m.status === 'approved' && m.role !== 'captain' && (
+							  <div style={{ display: 'flex', gap: '0.5rem' }}>
+								{isCaptain(selected.id) && (
+								  <button
+									className="btn btn-secondary"
+									onClick={() => handleMakeCaptain(selected.id, m.user_id, m.name)}
+								  >
+									Make captain
+								  </button>
+								)}
+								<button className="btn btn-danger" onClick={() => handleRemove(selected.id, m.user_id)}>
+								  Remove
+								</button>
+							  </div>
+							)}	
 						  </div>
 						)}
 					  </div>
