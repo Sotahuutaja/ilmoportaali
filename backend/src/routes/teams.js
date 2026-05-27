@@ -284,31 +284,13 @@ router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     );
 
     if (captain_id) {
-      // Verify new captain is an approved member
-      const member = await client.query(
-        'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND status = $3',
-        [req.params.id, captain_id, 'approved']
-      );
-
-      if (!member.rows[0]) {
-        // Add them as approved captain if not already a member
-        await client.query(
-          'INSERT INTO team_members (team_id, user_id, role, status) VALUES ($1, $2, $3, $4) ON CONFLICT (team_id, user_id) DO UPDATE SET role = $3, status = $4',
-          [req.params.id, captain_id, 'captain', 'approved']
-        );
-      } else {
-        // Demote current captain to member
-        await client.query(
-          'UPDATE team_members SET role = $1 WHERE team_id = $2 AND role = $3',
-          ['member', req.params.id, 'captain']
-        );
-        // Promote new captain
-        await client.query(
-          'UPDATE team_members SET role = $1 WHERE team_id = $2 AND user_id = $3',
-          ['captain', req.params.id, captain_id]
-        );
-      }
-    }
+	  // Add as approved member if not already one
+	  await client.query(`
+		INSERT INTO team_members (team_id, user_id, role, status)
+		VALUES ($1, $2, 'captain', 'approved')
+		ON CONFLICT (team_id, user_id) DO UPDATE SET role = 'captain', status = 'approved'
+	  `, [req.params.id, captain_id]);
+	}
 
     await client.query('COMMIT');
     res.json({ team: result.rows[0] });
