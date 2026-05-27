@@ -278,15 +278,24 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
     if (reg.rows[0].is_guest) {
       // Update guest details
       await client.query(
-		'UPDATE registrations SET guest_first_name = COALESCE($1, guest_first_name), guest_last_name = COALESCE($2, guest_last_name), guest_email = COALESCE($3, guest_email), team_id = $4 WHERE id = $5',
-		[guest_first_name, guest_last_name, guest_email, team_id || null, req.params.registrationId]
-	  );
+	  `UPDATE registrations SET 
+		guest_first_name = COALESCE($1, guest_first_name), 
+		guest_last_name = COALESCE($2, guest_last_name), 
+		guest_email = COALESCE($3, guest_email)
+		${team_id !== undefined ? ', team_id = $5' : ''}
+		WHERE id = $4`,
+	  team_id !== undefined 
+		? [guest_first_name, guest_last_name, guest_email, req.params.registrationId, team_id || null]
+		: [guest_first_name, guest_last_name, guest_email, req.params.registrationId]
+	);
     } else {
       // Update registered user details and team
-      await client.query(
-        'UPDATE registrations SET team_id = $1 WHERE id = $2',
-        [team_id || null, req.params.registrationId]
-      );
+      if (team_id !== undefined) {
+	    await client.query(
+		  'UPDATE registrations SET team_id = $1 WHERE id = $2',
+		  [team_id || null, req.params.registrationId]
+	    );
+	  }
       // Update user's name and email if provided
       if (first_name || last_name || email) {
         await client.query(
