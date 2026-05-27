@@ -340,7 +340,7 @@ export default function Admin() {
 			  )}
 			</div>
 
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="card" style={{ padding: 0, overflow: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>

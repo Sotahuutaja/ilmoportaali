@@ -92,11 +92,6 @@ export default function Profile() {
             onChange={e => setForm({ ...form, email: e.target.value })}
             required
           />
-          <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
-          <h4 style={{ marginBottom: '0.5rem' }}>Change password</h4>
-          <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-            Leave blank to keep your current password
-          </p>
 		  <label>Year of birth</label>
           <input
             type="number"
@@ -116,6 +111,12 @@ export default function Profile() {
             <option value="Female">Female</option>
             <option value="Other">Other</option>
           </select>
+		  
+          <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+          <h4 style={{ marginBottom: '0.5rem' }}>Change password</h4>
+          <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+            Leave blank to keep your current password
+          </p>
           <label>New password</label>
           <input
             type="password"
