@@ -172,36 +172,6 @@ function EditTeamModal({ team, users, onClose, onSave }) {
   );
 }
 
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
-    }}>
-      <div className="card" style={{ width: 440, maxWidth: '95vw' }}>
-        <h3 style={{ marginBottom: '1.5rem' }}>Edit team</h3>
-        {error && <p className="error">{error}</p>}
-        {message && <p className="success">{message}</p>}
-        <label>Team name</label>
-        <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-        <label>Description</label>
-        <textarea rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-        <label>Assign new captain (optional)</label>
-        <select value={form.captain_id} onChange={e => setForm({ ...form, captain_id: e.target.value })}>
-          <option value="">Keep current captain</option>
-          {users.map(u => (
-            <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-          ))}
-        </select>
-        <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%', marginBottom: '1rem' }}>
-          Save changes
-        </button>
-        <button className="btn btn-secondary" onClick={onClose} style={{ width: '100%' }}>
-          Close
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export default function Admin() {
   const { user } = useAuth();
