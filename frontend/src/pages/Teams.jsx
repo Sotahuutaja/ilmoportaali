@@ -76,7 +76,8 @@ export default function Teams() {
     }
   };
 
-  const handleMakeCaptain = async (teamId, userId, name) => {
+  const handleMakeCaptain = async (teamId, userId, firstName, lastName) => {
+    const name = fullName({ first_name: firstName, last_name: lastName });
     if (!window.confirm(`Make ${name} the new captain? You will become a regular member.`)) return;
     try {
       await api.put(`/teams/${teamId}/captain`, { user_id: userId });
@@ -207,7 +208,7 @@ export default function Teams() {
                           {isCaptain(selected.id) && (
                             <button
                               className="btn btn-secondary"
-                              onClick={() => handleMakeCaptain(selected.id, m.user_id, {fullName({ first_name: m.first_name, last_name: m.last_name })})}
+                              onClick={() => handleMakeCaptain(selected.id, m.user_id, m.first_name, m.last_name)}
                             >
                               Make captain
                             </button>
