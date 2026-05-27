@@ -142,7 +142,9 @@ export default function Admin() {
       navigate('/');
       return;
     }
-    api.get('/users').then(res => setUsers(res.data.users));
+    api.get('/users').then(res => 
+		setUsers(res.data.users.sort((a, b) => a.name.localeCompare(b.name)))
+	);
     api.get('/teams').then(res => setTeams(res.data.teams));
   }, [user]);
 
@@ -190,7 +192,32 @@ export default function Admin() {
       setTeamError(err.response?.data?.error || 'Failed to delete team');
     }
   };
+  
+  const exportUsersCSV = () => {
+    const headers = ['Name', 'Email', 'Role', 'Age', 'Gender', 'Joined'];
+    const currentYear = new Date().getFullYear();
+    const rows = users.map(u => [
+      u.name,
+      u.email,
+      u.role,
+      u.year_of_birth ? currentYear - u.year_of_birth : '',
+      u.gender || '',
+      new Date(u.created_at).toLocaleDateString('fi-FI')
+    ]);
 
+    const csv = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `users-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  
   const roleColor = (role) => ({
     admin: '#1a1a2e',
     creator: '#8e44ad',
@@ -219,6 +246,14 @@ export default function Admin() {
 	  >
 		<h2>User management</h2>
 		<span style={{ fontSize: '1rem', color: '#888', transition: 'transform 0.2s', display: 'inline-block', transform: showUsers ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+		<span style={{ fontSize: '1rem', color: '#888', display: 'inline-block', transform: showUsers ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+		<button
+			className="btn btn-secondary"
+			onClick={e => { e.stopPropagation(); exportUsersCSV(); }}
+			style={{ marginLeft: 'auto' }}
+		>
+			Export CSV
+		</button>
 	  </div>
       {error && <p className="error">{error}</p>}
 
