@@ -9,7 +9,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/events/:eventId/products', require('./routes/products'));
-app.use('/api/events', require('./routes/events'));
+app.use('/api/events', require('./routes/events').router);
 app.use('/api/registrations', require('./routes/registrations'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/teams', require('./routes/teams'));

@@ -1,8 +1,8 @@
 const express = require('express');
 const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
-
 const router = express.Router({ mergeParams: true });
+const { canManageEvent } = require('../utils/eventAccess');
 
 // Get products for an event (public)
 router.get('/', async (req, res) => {
@@ -32,9 +32,8 @@ router.post('/', requireAuth, requireRole('creator', 'admin'), async (req, res) 
     const event = await pool.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
     if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
 
-    if (req.user.role !== 'admin' && event.rows[0].creator_id !== req.user.id) {
-      return res.status(403).json({ error: 'Not authorised to manage this event' });
-    }
+    const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
+	  if (!allowed) return res.status(403).json({ error: 'Not authorised to manage this event' });
 
     const result = await pool.query(
       'INSERT INTO event_products (event_id, name, description, price, quantity) VALUES ($1, $2, $3, $4, $5) RETURNING *',
@@ -52,10 +51,8 @@ router.put('/:productId', requireAuth, requireRole('creator', 'admin'), async (r
   const { name, description, price, quantity } = req.body;
 
   try {
-    const event = await pool.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
-    if (req.user.role !== 'admin' && event.rows[0]?.creator_id !== req.user.id) {
-      return res.status(403).json({ error: 'Not authorised' });
-    }
+    const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
+	  if (!allowed) return res.status(403).json({ error: 'Not authorised' });
 
     const result = await pool.query(`
       UPDATE event_products SET name=$1, description=$2, price=$3, quantity=$4
@@ -73,10 +70,8 @@ router.put('/:productId', requireAuth, requireRole('creator', 'admin'), async (r
 // Delete product
 router.delete('/:productId', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
   try {
-    const event = await pool.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
-    if (req.user.role !== 'admin' && event.rows[0]?.creator_id !== req.user.id) {
-      return res.status(403).json({ error: 'Not authorised' });
-    }
+    const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
+	  if (!allowed) return res.status(403).json({ error: 'Not authorised' });
 
     await pool.query('DELETE FROM event_products WHERE id=$1 AND event_id=$2', [req.params.productId, req.params.eventId]);
     res.json({ message: 'Product deleted' });

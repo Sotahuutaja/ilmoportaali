@@ -1,8 +1,8 @@
 const express = require('express');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
-
 const router = express.Router();
+const { canManageEvent } = require('../utils/eventAccess');
 
 // Helper: validate and reserve products
 async function insertProducts(client, registrationId, products, eventId) {
