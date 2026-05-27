@@ -80,10 +80,10 @@ router.post('/:eventId', requireAuth, async (req, res) => {
 
 // Captain registers a guest
 router.post('/:eventId/guest', requireAuth, async (req, res) => {
-  const { guest_name, guest_email, team_id, products = [] } = req.body;
+  const { guest_first_name, guest_last_name, guest_email, team_id, products = [] } = req.body;
 
-  if (!guest_name || !guest_email) {
-    return res.status(400).json({ error: 'Guest name and email are required' });
+  if (!guest_first_name || !guest_last_name || !guest_email) {
+    return res.status(400).json({ error: 'Guest first name, last name and email are required' });
   }
   if (!team_id) {
     return res.status(400).json({ error: 'Team is required for guest registration' });
@@ -93,7 +93,6 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Verify caller is captain of the team
     const membership = await client.query(
       'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
       [team_id, req.user.id, 'captain', 'approved']
@@ -116,9 +115,9 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
     }
 
     const reg = await client.query(`
-      INSERT INTO registrations (event_id, team_id, is_guest, guest_name, guest_email)
-      VALUES ($1, $2, TRUE, $3, $4) RETURNING *
-    `, [req.params.eventId, team_id, guest_name, guest_email]);
+      INSERT INTO registrations (event_id, team_id, is_guest, guest_first_name, guest_last_name, guest_email)
+      VALUES ($1, $2, TRUE, $3, $4, $5) RETURNING *
+    `, [req.params.eventId, team_id, guest_first_name, guest_last_name, guest_email]);
 
     if (products.length > 0) {
       await insertProducts(client, reg.rows[0].id, products, req.params.eventId);
@@ -243,7 +242,7 @@ router.get('/my/list', requireAuth, async (req, res) => {
 
 // Update a registration (admin or event creator)
 router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, res) => {
-  const { guest_name, guest_email, first_name, last_name, email, team_id, products } = req.body;
+  const { guest_first_name, guest_last_name, guest_email, first_name, last_name, email, team_id, products } = req.body;
 
   const client = await pool.connect();
   try {
@@ -262,9 +261,9 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
     if (reg.rows[0].is_guest) {
       // Update guest details
       await client.query(
-        'UPDATE registrations SET guest_name = COALESCE($1, guest_name), guest_email = COALESCE($2, guest_email), team_id = $3 WHERE id = $4',
-        [guest_name, guest_email, team_id || null, req.params.registrationId]
-      );
+		UPDATE registrations SET guest_first_name = COALESCE($1, guest_first_name), guest_last_name = COALESCE($2, guest_last_name), guest_email = COALESCE($3, guest_email), team_id = $4 WHERE id = $5',
+		[guest_first_name, guest_last_name, guest_email, team_id || null, req.params.registrationId]
+	  );
     } else {
       // Update registered user details and team
       await client.query(

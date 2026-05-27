@@ -16,7 +16,7 @@ export default function EventDetail() {
 
   // Guest registration state
   const [showGuestForm, setShowGuestForm] = useState(false);
-  const [guestForm, setGuestForm] = useState({ guest_name: '', guest_email: '', team_id: '' });
+  const [guestForm, setGuestForm] = useState({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
   const [guestProducts, setGuestProducts] = useState({});
   const [captainTeams, setCaptainTeams] = useState([]);
 
@@ -80,7 +80,7 @@ export default function EventDetail() {
       });
       setMessage(`Guest ${guestForm.guest_name} registered successfully!`);
       setShowGuestForm(false);
-      setGuestForm({ guest_name: '', guest_email: '', team_id: '' });
+      setGuestForm({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
       setGuestProducts({});
       setEvent(e => ({ ...e, registration_count: e.registration_count + 1 }));
     } catch (err) {
@@ -187,12 +187,18 @@ export default function EventDetail() {
 
                 {showGuestForm && (
                   <form onSubmit={registerGuest} style={{ marginTop: '1rem' }}>
-                    <label>Guest name</label>
-                    <input
-                      value={guestForm.guest_name}
-                      onChange={e => setGuestForm({ ...guestForm, guest_name: e.target.value })}
-                      required
-                    />
+                    <label>Guest first name</label>
+					<input
+					  value={guestForm.guest_first_name}
+					  onChange={e => setGuestForm({ ...guestForm, guest_first_name: e.target.value })}
+					  required
+					/>
+					<label>Guest last name</label>
+					<input
+					  value={guestForm.guest_last_name}
+					  onChange={e => setGuestForm({ ...guestForm, guest_last_name: e.target.value })}
+					  required
+					/>
                     <label>Guest email</label>
                     <input
                       type="email"

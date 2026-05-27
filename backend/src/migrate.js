@@ -68,18 +68,14 @@ async function migrate() {
       UNIQUE(registration_id, product_id)
     );
 
-    ALTER TABLE registrations
-      ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
-    ALTER TABLE registrations
-      ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE;
-    ALTER TABLE registrations
-      ADD COLUMN IF NOT EXISTS guest_name TEXT;
-    ALTER TABLE registrations
-      ADD COLUMN IF NOT EXISTS guest_email TEXT;
-	ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS year_of_birth INTEGER;
-    ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS gender TEXT;
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS guest_name TEXT;
+	ALTER TABLE registrations ADD COLUMN IF NOT EXISTS guest_first_name TEXT;
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS guest_last_name TEXT;
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS guest_email TEXT;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS year_of_birth INTEGER;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT;
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;
 	ALTER TABLE users ALTER COLUMN name DROP NOT NULL;

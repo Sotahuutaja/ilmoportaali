@@ -9,7 +9,8 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
     first_name: reg.first_name || '',
     last_name: reg.last_name || '',
     email: reg.is_guest ? reg.guest_email : reg.user_email,
-    guest_name: reg.guest_name || '',
+    guest_first_name: reg.guest_first_name || '',
+    guest_last_name: reg.guest_last_name || '',
     team_id: reg.team_id || ''
   });
   const [selectedProducts, setSelectedProducts] = useState(
@@ -30,9 +31,10 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
     };
 
     if (reg.is_guest) {
-      payload.guest_name = form.guest_name;
-      payload.guest_email = form.email;
-    } else {
+	  payload.guest_first_name = form.guest_first_name;
+	  payload.guest_last_name = form.guest_last_name;
+	  payload.guest_email = form.email;
+	} else {
       payload.first_name = form.first_name;
       payload.last_name = form.last_name;
       payload.email = form.email;
@@ -54,8 +56,10 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
 
         {reg.is_guest ? (
           <>
-            <label>Guest name</label>
-            <input value={form.guest_name} onChange={e => setForm({ ...form, guest_name: e.target.value })} />
+            <label>Guest first name</label>
+			<input value={form.guest_first_name} onChange={e => setForm({ ...form, guest_first_name: e.target.value })} />
+			<label>Guest last name</label>
+			<input value={form.guest_last_name} onChange={e => setForm({ ...form, guest_last_name: e.target.value })} />
             <label>Guest email</label>
             <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
           </>
@@ -170,8 +174,8 @@ export default function EventRegistrants() {
   const exportRegistrantsCSV = () => {
 	const headers = ['First name', 'Last name', 'Email', 'Team', 'Products', 'Total price', 'Type', 'Registered'];
 	const rows = registrations.map(r => {
-		const firstName = r.is_guest ? r.guest_name : (r.first_name || '');
-		const lastName = r.is_guest ? '' : (r.last_name || '');
+		const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
+		const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
 		const email = r.is_guest ? r.guest_email : r.user_email;
 		const team = r.team_name || '';
 		const products = r.products
@@ -290,13 +294,16 @@ export default function EventRegistrants() {
               return (
                 <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                   <td style={{ padding: '0.8rem 1rem' }}>
-				    {r.is_guest ? r.guest_name : (r.first_name || '—')}
+				    {r.is_guest ? r.guest_first_name : (r.first_name || '—')}
 				    {r.is_guest && (
 					  <span style={{
 					    marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.4rem',
 					    borderRadius: '8px', background: '#e67e22', color: 'white'
 					  }}>guest</span>
 				    )}
+				  </td>
+				  <td style={{ padding: '0.8rem 1rem' }}>
+				    {r.is_guest ? r.guest_last_name : (r.last_name || '—')}
 				  </td>
 				  <td style={{ padding: '0.8rem 1rem' }}>
 				    {r.is_guest ? '' : (r.last_name || '—')}
