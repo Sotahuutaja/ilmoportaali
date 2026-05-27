@@ -79,6 +79,11 @@ async function migrate() {
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;
 	ALTER TABLE users ALTER COLUMN name DROP NOT NULL;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expires TIMESTAMPTZ;
   `);
 
   console.log('Migration complete');

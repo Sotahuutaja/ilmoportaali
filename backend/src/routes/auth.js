@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
+const { sendVerificationEmail } = require('../services/email');
+const crypto = require('crypto');
 
 // Register
 router.post('/register', async (req, res) => {
@@ -29,11 +31,22 @@ router.post('/register', async (req, res) => {
 
   try {
     const hashed = await bcrypt.hash(password, 12);
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
     const result = await pool.query(
-      'INSERT INTO users (email, password, first_name, last_name, year_of_birth, gender) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, first_name, last_name, role',
-      [email, hashed, first_name, last_name, year_of_birth, gender]
+      `INSERT INTO users (email, password, first_name, last_name, year_of_birth, gender, verification_token, verification_token_expires)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, email, first_name, last_name, role`,
+      [email, hashed, first_name, last_name, year_of_birth, gender, token, expires]
     );
-    res.status(201).json({ user: result.rows[0] });
+
+    await sendVerificationEmail(email, token);
+
+    res.status(201).json({
+      user: result.rows[0],
+      message: 'Registration successful. Please check your email to verify your account.'
+    });
   } catch (err) {
     console.error('Registration failed:', err.message);
     if (err.code === '23505') {
@@ -59,6 +72,10 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    if (!user.email_verified) {
+      return res.status(403).json({ error: 'Please verify your email before logging in', unverified: true });
+    }
+
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -74,6 +91,63 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ error: 'Login failed', detail: err.message });
   }
 });
+
+// Verify email
+router.get('/verify-email', async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) return res.status(400).json({ error: 'Token is required' });
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE verification_token = $1 AND verification_token_expires > NOW()',
+      [token]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    }
+
+    await pool.query(
+      'UPDATE users SET email_verified = TRUE, verification_token = NULL, verification_token_expires = NULL WHERE id = $1',
+      [result.rows[0].id]
+    );
+
+    res.json({ message: 'Email verified successfully. You can now log in.' });
+  } catch (err) {
+    console.error('Verification failed:', err.message);
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+// Resend verification email
+router.post('/resend-verification', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.email_verified) return res.status(400).json({ error: 'Email already verified' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await pool.query(
+      'UPDATE users SET verification_token = $1, verification_token_expires = $2 WHERE id = $3',
+      [token, expires, user.id]
+    );
+
+    await sendVerificationEmail(email, token);
+    res.json({ message: 'Verification email resent.' });
+  } catch (err) {
+    console.error('Resend failed:', err.message);
+    res.status(500).json({ error: 'Failed to resend verification email' });
+  }
+});
+
 
 // Get current user
 router.get('/me', requireAuth, async (req, res) => {

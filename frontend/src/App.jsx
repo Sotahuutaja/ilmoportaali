@@ -9,6 +9,7 @@ import Teams from './pages/Teams';
 import EventRegistrants from './pages/EventRegistrants';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth, fullName } from './AuthContext';
+import VerifyEmail from './pages/VerifyEmail';
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -60,6 +61,7 @@ export default function App() {
 			<Route path="/teams" element={<Teams />} />
 			<Route path="/events/:id/registrants" element={<EventRegistrants />} />
 			<Route path="/profile" element={<Profile />} />
+			<Route path="/verify-email" element={<VerifyEmail />} />
           </Routes>
         </div>
       </BrowserRouter>
