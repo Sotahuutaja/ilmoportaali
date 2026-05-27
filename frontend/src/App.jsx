@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Teams from './pages/Teams';
 import EventRegistrants from './pages/EventRegistrants';
+import Profile from './pages/Profile';
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -25,7 +26,7 @@ function Nav() {
             {user.role === 'admin' && (
               <Link to="/admin">Admin</Link>
             )}
-            <span style={{ marginLeft: '1rem', opacity: 0.7 }}>{user.name}</span>
+            <Link to="/profile" style={{ marginLeft: '1rem', opacity: 0.7 }}>{user.name}</Link>
             <button
               onClick={logout}
               className="btn btn-secondary"
@@ -34,6 +35,7 @@ function Nav() {
           </>
         ) : (
           <>
+			<Link to="/profile">{user.name}</Link>
             <Link to="/login">Login</Link>
             <Link to="/register">Register</Link>
           </>
@@ -58,6 +60,7 @@ export default function App() {
 			<Route path="/admin" element={<Admin />} />
 			<Route path="/teams" element={<Teams />} />
 			<Route path="/events/:id/registrants" element={<EventRegistrants />} />
+			<Route path="/profile" element={<Profile />} />
           </Routes>
         </div>
       </BrowserRouter>

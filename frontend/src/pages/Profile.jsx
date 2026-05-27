@@ -1,0 +1,186 @@
+import { useEffect, useState } from 'react';
+import { useAuth } from '../AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
+import api from '../api';
+
+export default function Profile() {
+  const { user, login } = useAuth();
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const [registrations, setRegistrations] = useState([]);
+  const [myTeams, setMyTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) { navigate('/login'); return; }
+    setForm(f => ({ ...f, name: user.name, email: user.email }));
+
+    Promise.all([
+      api.get('/registrations/my/list'),
+      api.get('/teams/my/memberships')
+    ]).then(([regRes, teamRes]) => {
+      setRegistrations(regRes.data.registrations);
+      setMyTeams(teamRes.data.teams);
+    }).finally(() => setLoading(false));
+  }, [user]);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setError(''); setMessage('');
+
+    if (form.password && form.password !== form.confirmPassword) {
+      return setError('Passwords do not match');
+    }
+
+    try {
+      const payload = { name: form.name, email: form.email };
+      if (form.password) payload.password = form.password;
+
+      const res = await api.put('/auth/profile', payload);
+      const token = localStorage.getItem('token');
+      login(token, res.data.user);
+      setMessage('Profile updated! Please log out and back in if you changed your email.');
+      setForm(f => ({ ...f, password: '', confirmPassword: '' }));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update profile');
+    }
+  };
+
+  if (!user) return null;
+
+  return (
+    <div style={{ maxWidth: 700, margin: '2rem auto' }}>
+      <h2 style={{ marginBottom: '1.5rem' }}>My profile</h2>
+
+      {/* Account settings */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ marginBottom: '1rem' }}>Account settings</h3>
+        {error && <p className="error">{error}</p>}
+        {message && <p className="success">{message}</p>}
+        <form onSubmit={handleSave}>
+          <label>Name</label>
+          <input
+            value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+            required
+          />
+          <label>Email</label>
+          <input
+            type="email"
+            value={form.email}
+            onChange={e => setForm({ ...form, email: e.target.value })}
+            required
+          />
+          <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+          <h4 style={{ marginBottom: '0.5rem' }}>Change password</h4>
+          <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+            Leave blank to keep your current password
+          </p>
+          <label>New password</label>
+          <input
+            type="password"
+            value={form.password}
+            onChange={e => setForm({ ...form, password: e.target.value })}
+            placeholder="Min. 8 characters"
+          />
+          <label>Confirm new password</label>
+          <input
+            type="password"
+            value={form.confirmPassword}
+            onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
+          />
+          <button type="submit" className="btn btn-primary">Save changes</button>
+        </form>
+      </div>
+
+      {/* Team memberships */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ marginBottom: '1rem' }}>My teams</h3>
+        {loading && <p style={{ color: '#888' }}>Loading...</p>}
+        {!loading && myTeams.length === 0 && (
+          <p style={{ color: '#888' }}>
+            You are not a member of any team. <Link to="/teams">Browse teams</Link>
+          </p>
+        )}
+        {myTeams.map(t => (
+          <div key={t.id} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '0.6rem 0', borderBottom: '1px solid #f0f0f0'
+          }}>
+            <div>
+              <strong>{t.name}</strong>
+              <span style={{
+                marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
+                borderRadius: '12px',
+                background: t.role === 'captain' ? '#1a1a2e' : '#8e44ad',
+                color: 'white'
+              }}>{t.role}</span>
+              <span style={{
+                marginLeft: '0.4rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
+                borderRadius: '12px',
+                background: t.status === 'approved' ? '#27ae60' : '#e67e22',
+                color: 'white'
+              }}>{t.status}</span>
+            </div>
+            <Link to="/teams">
+              <button className="btn btn-secondary">View</button>
+            </Link>
+          </div>
+        ))}
+      </div>
+
+      {/* Registered events */}
+      <div className="card">
+        <h3 style={{ marginBottom: '1rem' }}>My registrations</h3>
+        {loading && <p style={{ color: '#888' }}>Loading...</p>}
+        {!loading && registrations.length === 0 && (
+          <p style={{ color: '#888' }}>
+            You have not registered for any events. <Link to="/">Browse events</Link>
+          </p>
+        )}
+        {registrations.map(r => (
+          <div key={r.id} style={{
+            padding: '0.8rem 0', borderBottom: '1px solid #f0f0f0'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <strong>{r.title}</strong>
+                <p style={{ color: '#666', fontSize: '0.9rem', margin: '0.2rem 0' }}>
+                  📍 {r.location} &nbsp;|&nbsp;
+                  📅 {new Date(r.starts_at).toLocaleDateString('fi-FI', {
+                    day: 'numeric', month: 'long', year: 'numeric'
+                  })}
+                </p>
+                {r.team_name && (
+                  <p style={{ color: '#888', fontSize: '0.85rem' }}>
+                    Team: {r.team_name}
+                  </p>
+                )}
+                {r.products && r.products.length > 0 && (
+                  <div style={{ marginTop: '0.3rem' }}>
+                    {r.products.map((p, i) => (
+                      <span key={i} style={{
+                        display: 'inline-block', marginRight: '0.4rem',
+                        fontSize: '0.8rem', padding: '0.1rem 0.5rem',
+                        borderRadius: '8px', background: '#f0f0f0', color: '#444'
+                      }}>
+                        {p.name} x{p.quantity}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Link to={`/events/${r.id}`}>
+                <button className="btn btn-secondary">View event</button>
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

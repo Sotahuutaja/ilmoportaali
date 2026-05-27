@@ -72,4 +72,44 @@ router.get('/me', require('../middleware/auth').requireAuth, async (req, res) =>
   res.json({ user: result.rows[0] });
 });
 
+// Update own profile
+router.put('/profile', requireAuth, async (req, res) => {
+  const { name, email, password } = req.body;
+
+  try {
+    if (password && password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const updates = [];
+    const values = [];
+    let i = 1;
+
+    if (name) { updates.push(`name = $${i++}`); values.push(name); }
+    if (email) { updates.push(`email = $${i++}`); values.push(email); }
+    if (password) {
+      const hashed = await bcrypt.hash(password, 12);
+      updates.push(`password = $${i++}`);
+      values.push(hashed);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'Nothing to update' });
+    }
+
+    values.push(req.user.id);
+    const result = await pool.query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} RETURNING id, email, name, role`,
+      values
+    );
+
+    res.json({ user: result.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Email already in use' });
+    console.error('Failed to update profile:', err.message);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+
 module.exports = router;
