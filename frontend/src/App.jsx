@@ -7,6 +7,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Teams from './pages/Teams';
+import EventRegistrants from './pages/EventRegistrants';
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
 			<Route path="/admin" element={<Admin />} />
 			<Route path="/teams" element={<Teams />} />
+			<Route path="/events/:id/registrants" element={<EventRegistrants />} />
           </Routes>
         </div>
       </BrowserRouter>

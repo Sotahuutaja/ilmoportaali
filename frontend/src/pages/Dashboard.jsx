@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 
 export default function Dashboard() {
@@ -125,6 +125,9 @@ export default function Dashboard() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
+			<Link to={`/events/${event.id}/registrants`}>
+              <button className="btn btn-secondary">Registrants</button>
+            </Link>
             <button className="btn btn-secondary" onClick={() => openProducts(event)}>Products</button>
             <button className="btn btn-danger" onClick={() => handleDelete(event.id)}>Delete</button>
           </div>

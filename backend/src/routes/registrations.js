@@ -193,6 +193,29 @@ router.get('/:eventId', requireAuth, async (req, res) => {
   }
 });
 
+// Cancel any registration (admin or event creator)
+router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req, res) => {
+  try {
+    const event = await pool.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
+    if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
+
+    if (req.user.role !== 'admin' && event.rows[0].creator_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorised' });
+    }
+
+    const result = await pool.query(
+      'DELETE FROM registrations WHERE id = $1 AND event_id = $2 RETURNING id',
+      [req.params.registrationId, req.params.eventId]
+    );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Registration not found' });
+    res.json({ message: 'Registration cancelled' });
+  } catch (err) {
+    console.error('Failed to cancel registration:', err.message);
+    res.status(500).json({ error: 'Failed to cancel registration' });
+  }
+});
+
 // Get my registrations
 router.get('/my/list', requireAuth, async (req, res) => {
   try {
