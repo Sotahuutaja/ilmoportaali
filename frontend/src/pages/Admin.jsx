@@ -204,7 +204,12 @@ export default function Admin() {
 	(!filters.year_of_birth || String(u.year_of_birth).includes(filters.year_of_birth)) &&
 	(!filters.gender || u.gender === filters.gender)
   );
-
+  
+  const calculateAge = (yearOfBirth) => {
+	if (!yearOfBirth) return '—';
+	return new Date().getFullYear() - yearOfBirth;
+  };
+  
   return (
     <div>
       {/* User management */}
@@ -251,9 +256,9 @@ export default function Admin() {
 				  </select>
 				</div>
 				<div>
-				  <label>Year of birth</label>
+				  <label>Age</label>
 				  <input
-					placeholder="Filter..."
+					placeholder="Filter by age..."
 					value={filters.year_of_birth}
 					onChange={e => setFilters({ ...filters, year_of_birth: e.target.value })}
 					style={{ marginBottom: 0 }}
@@ -291,7 +296,7 @@ export default function Admin() {
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Role</th>
-                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Year of birth</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Age</th>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Gender</th>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Joined</th>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
@@ -313,7 +318,7 @@ export default function Admin() {
                         {u.role}
                       </span>
                     </td>
-                    <td style={{ padding: '0.8rem 1rem' }}>{u.year_of_birth || '—'}</td>
+                    <td style={{ padding: '0.8rem 1rem' }}>{calculateAge(u.year_of_birth)}</td>
                     <td style={{ padding: '0.8rem 1rem' }}>{u.gender || '—'}</td>
                     <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.9rem' }}>
                       {new Date(u.created_at).toLocaleDateString('fi-FI')}
