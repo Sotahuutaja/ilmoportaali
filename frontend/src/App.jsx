@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './AuthContext';
 import Events from './pages/Events';
 import EventDetail from './pages/EventDetail';
 import Login from './pages/Login';
