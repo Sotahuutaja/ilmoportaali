@@ -6,7 +6,7 @@ import api from '../api';
 const ROLES = ['attendee', 'creator', 'admin'];
 
 function EditUserModal({ user, onClose, onSave }) {
-  const [form, setForm] = useState({ name: user.name, email: user.email, role: user.role });
+  const [form, setForm] = useState({ first_name: user.first_name, last_name: user.last_name, email: user.email, role: user.role });
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -43,8 +43,10 @@ function EditUserModal({ user, onClose, onSave }) {
         <h3 style={{ marginBottom: '1.5rem' }}>Edit user</h3>
         {error && <p className="error">{error}</p>}
         {message && <p className="success">{message}</p>}
-        <label>Name</label>
-        <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+        <label>First name</label>
+		<input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} />
+		<label>Last name</label>
+		<input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} />
         <label>Email</label>
         <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
         <label>Role</label>
@@ -130,7 +132,7 @@ export default function Admin() {
   const [editingUser, setEditingUser] = useState(null);
   const [editingTeam, setEditingTeam] = useState(null);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState({ name: '', email: '', role: '', year_of_birth: '', gender: '' });
+  const [filters, setFilters] = useState({ first_name: '', last_name: '', email: '', role: '', year_of_birth: '', gender: '' });
   const [teamForm, setTeamForm] = useState({ name: '', description: '', captain_id: '' });
   const [teamMessage, setTeamMessage] = useState('');
   const [teamError, setTeamError] = useState('');
@@ -194,16 +196,17 @@ export default function Admin() {
   };
   
   const exportUsersCSV = () => {
-    const headers = ['Name', 'Email', 'Role', 'Age', 'Gender', 'Joined'];
+    const headers = ['First name', 'Last name', 'Email', 'Role', 'Age', 'Gender', 'Joined'];
     const currentYear = new Date().getFullYear();
     const rows = users.map(u => [
-      u.name,
-      u.email,
-      u.role,
-      u.year_of_birth ? currentYear - u.year_of_birth : '',
-      u.gender || '',
-      new Date(u.created_at).toLocaleDateString('fi-FI')
-    ]);
+	  u.first_name || '',
+	  u.last_name || '',
+	  u.email,
+	  u.role,
+	  u.year_of_birth ? currentYear - u.year_of_birth : '',
+	  u.gender || '',
+	  new Date(u.created_at).toLocaleDateString('fi-FI')
+	]);
 
     const csv = [headers, ...rows]
       .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
@@ -225,11 +228,12 @@ export default function Admin() {
   }[role] || '#888');
 
   const filtered = users.filter(u =>
-	(!filters.name || u.name.toLowerCase().includes(filters.name.toLowerCase())) &&
-	(!filters.email || u.email.toLowerCase().includes(filters.email.toLowerCase())) &&
-	(!filters.role || u.role === filters.role) &&
-	(!filters.year_of_birth || String(u.year_of_birth).includes(filters.year_of_birth)) &&
-	(!filters.gender || u.gender === filters.gender)
+    (!filters.first_name || u.first_name?.toLowerCase().includes(filters.first_name.toLowerCase())) &&
+    (!filters.last_name || u.last_name?.toLowerCase().includes(filters.last_name.toLowerCase())) &&
+    (!filters.email || u.email.toLowerCase().includes(filters.email.toLowerCase())) &&
+    (!filters.role || u.role === filters.role) &&
+    (!filters.year_of_birth || String(u.year_of_birth).includes(filters.year_of_birth)) &&
+    (!filters.gender || u.gender === filters.gender)
   );
   
   const calculateAge = (yearOfBirth) => {
@@ -246,7 +250,6 @@ export default function Admin() {
 	  >
 		<h2>User management</h2>
 		<span style={{ fontSize: '1rem', color: '#888', transition: 'transform 0.2s', display: 'inline-block', transform: showUsers ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
-		<span style={{ fontSize: '1rem', color: '#888', display: 'inline-block', transform: showUsers ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
 		<button
 			className="btn btn-secondary"
 			onClick={e => { e.stopPropagation(); exportUsersCSV(); }}
@@ -260,13 +263,22 @@ export default function Admin() {
       {showUsers && (
         <>
           <div className="card" style={{ marginBottom: '1rem' }}>
-			  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+			  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem' }}>
 				<div>
-				  <label>Name</label>
+				  <label>First name</label>
 				  <input
 					placeholder="Filter..."
-					value={filters.name}
-					onChange={e => setFilters({ ...filters, name: e.target.value })}
+					value={filters.first_name}
+					onChange={e => setFilters({ ...filters, first_name: e.target.value })}
+					style={{ marginBottom: 0 }}
+				  />
+				</div>
+				<div>
+				  <label>Last name</label>
+				  <input
+					placeholder="Filter..."
+					value={filters.last_name}
+					onChange={e => setFilters({ ...filters, last_name: e.target.value })}
 					style={{ marginBottom: 0 }}
 				  />
 				</div>
@@ -316,7 +328,7 @@ export default function Admin() {
 			  {Object.values(filters).some(v => v) && (
 				<button
 				  className="btn btn-secondary"
-				  onClick={() => setFilters({ name: '', email: '', role: '', year_of_birth: '', gender: '' })}
+				  onClick={() => setFilters({ first_name: '', last_name: '', email: '', role: '', year_of_birth: '', gender: '' })}
 				  style={{ marginTop: '0.5rem' }}
 				>
 				  Clear filters
@@ -328,7 +340,8 @@ export default function Admin() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
-                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>First name</th>
+				  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Last name</th>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Role</th>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Age</th>
@@ -340,7 +353,8 @@ export default function Admin() {
               <tbody>
                 {filtered.map(u => (
                   <tr key={u.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                    <td style={{ padding: '0.8rem 1rem' }}>{u.name}</td>
+                    <td style={{ padding: '0.8rem 1rem' }}>{u.first_name}</td>
+					<td style={{ padding: '0.8rem 1rem' }}>{u.last_name}</td>
                     <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{u.email}</td>
                     <td style={{ padding: '0.8rem 1rem' }}>
                       <span style={{
@@ -370,7 +384,7 @@ export default function Admin() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                    <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
                       No users found
                     </td>
                   </tr>

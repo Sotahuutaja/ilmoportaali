@@ -9,6 +9,7 @@ import Admin from './pages/Admin';
 import Teams from './pages/Teams';
 import EventRegistrants from './pages/EventRegistrants';
 import Profile from './pages/Profile';
+import { AuthProvider, useAuth, fullName } from './AuthContext';
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -26,7 +27,7 @@ function Nav() {
             {user.role === 'admin' && (
               <Link to="/admin">Admin</Link>
             )}
-			<Link to="/profile" style={{ marginLeft: '1rem', opacity: 0.7 }}>{user?.name}</Link>
+			<Link to="/profile" style={{ marginLeft: '1rem', opacity: 0.7 }}>{fullName(user)}</Link>
             <button
               onClick={logout}
               className="btn btn-secondary"

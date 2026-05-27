@@ -30,11 +30,11 @@ router.get('/:id', async (req, res) => {
     if (!team.rows[0]) return res.status(404).json({ error: 'Team not found' });
 
     const members = await pool.query(`
-      SELECT tm.*, u.name, u.email
+      SELECT tm.*, u.first_name, u.last_name, u.email
       FROM team_members tm
       JOIN users u ON tm.user_id = u.id
       WHERE tm.team_id = $1
-      ORDER BY tm.role DESC, u.name ASC
+      ORDER BY tm.role DESC, u.last_name ASC, u.first_name ASC
     `, [req.params.id]);
 
     res.json({ team: team.rows[0], members: members.rows });

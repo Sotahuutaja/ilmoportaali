@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import api from '../api';
+import { fullName } from '../AuthContext';
 
 export default function Teams() {
   const { user } = useAuth();
@@ -175,7 +176,7 @@ export default function Teams() {
                   padding: '0.6rem 0', borderBottom: '1px solid #f0f0f0'
                 }}>
                   <div>
-                    <strong>{m.name}</strong>
+                    <strong>{fullName({ first_name: m.first_name, last_name: m.last_name })}</strong>
                     <span style={{
                       marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
                       borderRadius: '12px',
@@ -206,7 +207,7 @@ export default function Teams() {
                           {isCaptain(selected.id) && (
                             <button
                               className="btn btn-secondary"
-                              onClick={() => handleMakeCaptain(selected.id, m.user_id, m.name)}
+                              onClick={() => handleMakeCaptain(selected.id, m.user_id, {fullName({ first_name: m.first_name, last_name: m.last_name })})}
                             >
                               Make captain
                             </button>

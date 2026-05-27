@@ -12,7 +12,7 @@ router.use(requireAuth, requireRole('admin'));
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, name, role, year_of_birth, gender, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, email, first_name, last_name, role, year_of_birth, gender, created_at FROM users ORDER BY last_name ASC, first_name ASC'
     );
     res.json({ users: result.rows });
   } catch (err) {
@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
 
 // Update user (name, email, role)
 router.put('/:id', async (req, res) => {
-  const { name, email, role } = req.body;
+  const { first_name, last_name, email, role } = req.body;
   const validRoles = ['attendee', 'creator', 'admin'];
 
   if (role && !validRoles.includes(role)) {
@@ -33,12 +33,13 @@ router.put('/:id', async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE users SET
-        name = COALESCE($1, name),
-        email = COALESCE($2, email),
-        role = COALESCE($3, role)
-       WHERE id = $4
-       RETURNING id, email, name, role`,
-      [name, email, role, req.params.id]
+        first_name = COALESCE($1, first_name),
+        last_name = COALESCE($2, last_name),
+        email = COALESCE($3, email),
+        role = COALESCE($4, role)
+       WHERE id = $5
+       RETURNING id, email, first_name, last_name, role`,
+      [first_name, last_name, email, role, req.params.id]
     );
 
     if (!result.rows[0]) {
@@ -47,6 +48,7 @@ router.put('/:id', async (req, res) => {
 
     res.json({ user: result.rows[0] });
   } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Email already in use' });
     console.error('Failed to update user:', err.message);
     res.status(500).json({ error: 'Failed to update user' });
   }

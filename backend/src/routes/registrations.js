@@ -168,7 +168,7 @@ router.get('/:eventId', requireAuth, async (req, res) => {
     const result = await pool.query(`
       SELECT
         r.*,
-        u.name as user_name, u.email as user_email,
+        u.first_name, u.last_name, u.email as user_email,
         t.name as team_name,
         json_agg(json_build_object(
           'product_id', rp.product_id,

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
+import { fullName } from '../AuthContext';
 
 export default function EventRegistrants() {
   const { id } = useParams();
@@ -38,7 +39,7 @@ export default function EventRegistrants() {
   };
 
   const filtered = registrations.filter(r => {
-    const name = r.is_guest ? r.guest_name : r.user_name;
+    const name = r.is_guest ? r.guest_name : fullName({ first_name: r.first_name, last_name: r.last_name });
     const email = r.is_guest ? r.guest_email : r.user_email;
     const term = search.toLowerCase();
     return (

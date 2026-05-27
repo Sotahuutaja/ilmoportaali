@@ -39,3 +39,9 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
+export const fullName = (user) => {
+  if (!user) return '';
+  if (user.last_name && user.first_name) return `${user.last_name}, ${user.first_name}`;
+  return user.first_name || user.last_name || '';
+};

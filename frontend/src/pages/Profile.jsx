@@ -8,7 +8,7 @@ export default function Profile() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', confirmPassword: '', year_of_birth: '', gender: '' });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -20,7 +20,8 @@ export default function Profile() {
     if (!user) { navigate('/login'); return; }
 	setForm(f => ({ 
 		...f,
-		name: user.name,
+		first_name: user.first_name || '',
+		last_name: user.last_name || '',
 		email: user.email,
 		year_of_birth: user.year_of_birth || '',
 		gender: user.gender || ''
@@ -45,7 +46,7 @@ export default function Profile() {
     }
 
     try {
-      const payload = { name: form.name, email: form.email };
+      const payload = { first_name: form.first_name, last_name: form.last_name, email: form.email };
       if (form.password) payload.password = form.password;
       if (form.year_of_birth) payload.year_of_birth = parseInt(form.year_of_birth);
       if (form.gender) payload.gender = form.gender;
@@ -72,12 +73,18 @@ export default function Profile() {
         {error && <p className="error">{error}</p>}
         {message && <p className="success">{message}</p>}
         <form onSubmit={handleSave}>
-          <label>Name</label>
-          <input
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
-            required
-          />
+          <label>First name</label>
+		  <input
+		    value={form.first_name}
+		    onChange={e => setForm({ ...form, first_name: e.target.value })}
+		    required
+		  />
+		  <label>Last name</label>
+		  <input
+		    value={form.last_name}
+		    onChange={e => setForm({ ...form, last_name: e.target.value })}
+		    required
+		  />
           <label>Email</label>
           <input
             type="email"
