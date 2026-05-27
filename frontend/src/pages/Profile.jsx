@@ -36,7 +36,7 @@ export default function Profile() {
     }).finally(() => setLoading(false));
   }, [user]);
 
-  const handleSave = async (e) => {
+	const handleSave = async (e) => {
     e.preventDefault();
     setError(''); setMessage('');
 
@@ -47,12 +47,14 @@ export default function Profile() {
     try {
       const payload = { name: form.name, email: form.email };
       if (form.password) payload.password = form.password;
+      if (form.year_of_birth) payload.year_of_birth = parseInt(form.year_of_birth);
+      if (form.gender) payload.gender = form.gender;
 
       const res = await api.put('/auth/profile', payload);
       const token = localStorage.getItem('token');
       login(token, res.data.user);
-      setMessage('Profile updated! Please log out and back in if you changed your email.');
       setForm(f => ({ ...f, password: '', confirmPassword: '' }));
+      setMessage('Profile updated!');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to update profile');
     }
