@@ -134,6 +134,8 @@ export default function Admin() {
   const [teamForm, setTeamForm] = useState({ name: '', description: '', captain_id: '' });
   const [teamMessage, setTeamMessage] = useState('');
   const [teamError, setTeamError] = useState('');
+  const [showUsers, setShowUsers] = useState(true);
+  const [showTeams, setShowTeams] = useState(true);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -202,141 +204,161 @@ export default function Admin() {
 
   return (
     <div>
-      <h2 style={{ margin: '1.5rem 0' }}>User management</h2>
+      {/* User management */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.5rem 0' }}>
+        <h2>User management</h2>
+        <button className="btn btn-secondary" onClick={() => setShowUsers(v => !v)}>
+          {showUsers ? 'Collapse' : 'Expand'}
+        </button>
+      </div>
       {error && <p className="error">{error}</p>}
 
-      <div className="card" style={{ marginBottom: '1rem' }}>
-        <input
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ marginBottom: 0 }}
-        />
+      {showUsers && (
+        <>
+          <div className="card" style={{ marginBottom: '1rem' }}>
+            <input
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ marginBottom: 0 }}
+            />
+          </div>
+
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Role</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Year of birth</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Gender</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Joined</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(u => (
+                  <tr key={u.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '0.8rem 1rem' }}>{u.name}</td>
+                    <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{u.email}</td>
+                    <td style={{ padding: '0.8rem 1rem' }}>
+                      <span style={{
+                        background: roleColor(u.role),
+                        color: 'white',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '12px',
+                        fontSize: '0.8rem'
+                      }}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.8rem 1rem' }}>{u.year_of_birth || '—'}</td>
+                    <td style={{ padding: '0.8rem 1rem' }}>{u.gender || '—'}</td>
+                    <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.9rem' }}>
+                      {new Date(u.created_at).toLocaleDateString('fi-FI')}
+                    </td>
+                    <td style={{ padding: '0.8rem 1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn btn-secondary" onClick={() => setEditingUser(u)}>Edit</button>
+                        {u.id !== user.id && (
+                          <button className="btn btn-danger" onClick={() => handleDelete(u.id, u.name)}>Delete</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                      No users found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* Team management */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '2rem 0 1rem' }}>
+        <h2>Team management</h2>
+        <button className="btn btn-secondary" onClick={() => setShowTeams(v => !v)}>
+          {showTeams ? 'Collapse' : 'Expand'}
+        </button>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Role</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Year of birth</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Gender</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Joined</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(u => (
-              <tr key={u.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                <td style={{ padding: '0.8rem 1rem' }}>{u.name}</td>
-                <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{u.email}</td>
-                <td style={{ padding: '0.8rem 1rem' }}>
-                  <span style={{
-                    background: roleColor(u.role),
-                    color: 'white',
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '12px',
-                    fontSize: '0.8rem'
-                  }}>
-                    {u.role}
-                  </span>
-                </td>
-                <td style={{ padding: '0.8rem 1rem' }}>{u.year_of_birth || '—'}</td>
-                <td style={{ padding: '0.8rem 1rem' }}>{u.gender || '—'}</td>
-                <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.9rem' }}>
-                  {new Date(u.created_at).toLocaleDateString('fi-FI')}
-                </td>
-                <td style={{ padding: '0.8rem 1rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-secondary" onClick={() => setEditingUser(u)}>Edit</button>
-                    {u.id !== user.id && (
-                      <button className="btn btn-danger" onClick={() => handleDelete(u.id, u.name)}>Delete</button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                  No users found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {showTeams && (
+        <>
+          <div className="card">
+            <h3 style={{ marginBottom: '1rem' }}>Create new team</h3>
+            {teamError && <p className="error">{teamError}</p>}
+            {teamMessage && <p className="success">{teamMessage}</p>}
+            <form onSubmit={handleCreateTeam}>
+              <label>Team name</label>
+              <input
+                value={teamForm.name}
+                onChange={e => setTeamForm({ ...teamForm, name: e.target.value })}
+                required
+              />
+              <label>Description</label>
+              <textarea
+                rows={2}
+                value={teamForm.description}
+                onChange={e => setTeamForm({ ...teamForm, description: e.target.value })}
+              />
+              <label>Captain</label>
+              <select
+                value={teamForm.captain_id}
+                onChange={e => setTeamForm({ ...teamForm, captain_id: e.target.value })}
+                required
+              >
+                <option value="">Select a captain...</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                ))}
+              </select>
+              <button type="submit" className="btn btn-primary">Create team</button>
+            </form>
+          </div>
 
-      <h2 style={{ margin: '2rem 0 1rem' }}>Team management</h2>
-
-      <div className="card">
-        <h3 style={{ marginBottom: '1rem' }}>Create new team</h3>
-        {teamError && <p className="error">{teamError}</p>}
-        {teamMessage && <p className="success">{teamMessage}</p>}
-        <form onSubmit={handleCreateTeam}>
-          <label>Team name</label>
-          <input
-            value={teamForm.name}
-            onChange={e => setTeamForm({ ...teamForm, name: e.target.value })}
-            required
-          />
-          <label>Description</label>
-          <textarea
-            rows={2}
-            value={teamForm.description}
-            onChange={e => setTeamForm({ ...teamForm, description: e.target.value })}
-          />
-          <label>Captain</label>
-          <select
-            value={teamForm.captain_id}
-            onChange={e => setTeamForm({ ...teamForm, captain_id: e.target.value })}
-            required
-          >
-            <option value="">Select a captain...</option>
-            {users.map(u => (
-              <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-            ))}
-          </select>
-          <button type="submit" className="btn btn-primary">Create team</button>
-        </form>
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Description</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Members</th>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {teams.map(t => (
-              <tr key={t.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                <td style={{ padding: '0.8rem 1rem' }}><strong>{t.name}</strong></td>
-                <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{t.description}</td>
-                <td style={{ padding: '0.8rem 1rem' }}>{t.member_count}</td>
-                <td style={{ padding: '0.8rem 1rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-secondary" onClick={() => setEditingTeam(t)}>Edit</button>
-                    <button className="btn btn-danger" onClick={() => handleDeleteTeam(t.id, t.name)}>Delete</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {teams.length === 0 && (
-              <tr>
-                <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                  No teams yet
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Description</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Members</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teams.map(t => (
+                  <tr key={t.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '0.8rem 1rem' }}><strong>{t.name}</strong></td>
+                    <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{t.description}</td>
+                    <td style={{ padding: '0.8rem 1rem' }}>{t.member_count}</td>
+                    <td style={{ padding: '0.8rem 1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn btn-secondary" onClick={() => setEditingTeam(t)}>Edit</button>
+                        <button className="btn btn-danger" onClick={() => handleDeleteTeam(t.id, t.name)}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {teams.length === 0 && (
+                  <tr>
+                    <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                      No teams yet
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {editingUser && (
         <EditUserModal
