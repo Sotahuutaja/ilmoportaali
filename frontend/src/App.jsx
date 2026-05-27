@@ -21,7 +21,7 @@ function Nav() {
         {user ? (
           <>
             {(user.role === 'admin' || user.role === 'creator') && (
-              <Link to="/dashboard">Dashboard</Link>
+              <Link to="/dashboard">Event Management</Link>
             )}
             {user.role === 'admin' && (
               <Link to="/admin">Admin</Link>

@@ -90,7 +90,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h2 style={{ margin: '1.5rem 0' }}>Dashboard</h2>
+      <h2 style={{ margin: '1.5rem 0' }}>Event Management</h2>
 
       <div className="card">
         <h3 style={{ marginBottom: '1rem' }}>Create new event</h3>
