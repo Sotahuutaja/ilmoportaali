@@ -205,12 +205,13 @@ export default function Admin() {
   return (
     <div>
       {/* User management */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.5rem 0' }}>
-        <h2>User management</h2>
-        <button className="btn btn-secondary" onClick={() => setShowUsers(v => !v)}>
-          {showUsers ? 'Collapse' : 'Expand'}
-        </button>
-      </div>
+      <div
+		onClick={() => setShowUsers(v => !v)}
+		style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '1.5rem 0', cursor: 'pointer', userSelect: 'none' }}
+	  >
+		<h2>User management</h2>
+		<span style={{ fontSize: '1rem', color: '#888', transition: 'transform 0.2s', display: 'inline-block', transform: showUsers ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+	  </div>
       {error && <p className="error">{error}</p>}
 
       {showUsers && (
@@ -282,12 +283,13 @@ export default function Admin() {
       )}
 
       {/* Team management */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '2rem 0 1rem' }}>
-        <h2>Team management</h2>
-        <button className="btn btn-secondary" onClick={() => setShowTeams(v => !v)}>
-          {showTeams ? 'Collapse' : 'Expand'}
-        </button>
-      </div>
+      <div
+		onClick={() => setShowTeams(v => !v)}
+		style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '2rem 0 1rem', cursor: 'pointer', userSelect: 'none' }}
+	  >
+		<h2>Team management</h2>
+		<span style={{ fontSize: '1rem', color: '#888', transition: 'transform 0.2s', display: 'inline-block', transform: showTeams ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+	  </div>
 
       {showTeams && (
         <>
