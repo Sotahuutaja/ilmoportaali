@@ -7,17 +7,32 @@ const { requireAuth } = require('../middleware/auth');
 
 // Register
 router.post('/register', async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, year_of_birth, gender } = req.body;
 
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'Email, password and name are required' });
+  }
+  if (!year_of_birth) {
+    return res.status(400).json({ error: 'Year of birth is required' });
+  }
+  if (!gender) {
+    return res.status(400).json({ error: 'Gender is required' });
+  }
+
+  const currentYear = new Date().getFullYear();
+  if (year_of_birth < 1940 || year_of_birth > currentYear) {
+    return res.status(400).json({ error: `Year of birth must be between 1940 and ${currentYear}` });
+  }
+
+  if (!['Male', 'Female', 'Other'].includes(gender)) {
+    return res.status(400).json({ error: 'Gender must be Male, Female or Other' });
   }
 
   try {
     const hashed = await bcrypt.hash(password, 12);
     const result = await pool.query(
-      'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name, role',
-      [email, hashed, name]
+      'INSERT INTO users (email, password, name, year_of_birth, gender) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, name, role',
+      [email, hashed, name, year_of_birth, gender]
     );
     res.status(201).json({ user: result.rows[0] });
   } catch (err) {
@@ -64,9 +79,9 @@ router.post('/login', async (req, res) => {
 });
 
 // Get current user
-router.get('/me', require('../middleware/auth').requireAuth, async (req, res) => {
+router.get('/me', requireAuth, async (req, res) => {
   const result = await pool.query(
-    'SELECT id, email, name, role FROM users WHERE id = $1',
+    'SELECT id, email, name, role, year_of_birth, gender FROM users WHERE id = $1',
     [req.user.id]
   );
   res.json({ user: result.rows[0] });
@@ -74,11 +89,20 @@ router.get('/me', require('../middleware/auth').requireAuth, async (req, res) =>
 
 // Update own profile
 router.put('/profile', requireAuth, async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, year_of_birth, gender } = req.body;
 
   try {
     if (password && password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const currentYear = new Date().getFullYear();
+    if (year_of_birth && (year_of_birth < 1940 || year_of_birth > currentYear)) {
+      return res.status(400).json({ error: `Year of birth must be between 1940 and ${currentYear}` });
+    }
+
+    if (gender && !['Male', 'Female', 'Other'].includes(gender)) {
+      return res.status(400).json({ error: 'Gender must be Male, Female or Other' });
     }
 
     const updates = [];
@@ -92,6 +116,8 @@ router.put('/profile', requireAuth, async (req, res) => {
       updates.push(`password = $${i++}`);
       values.push(hashed);
     }
+    if (year_of_birth) { updates.push(`year_of_birth = $${i++}`); values.push(year_of_birth); }
+    if (gender) { updates.push(`gender = $${i++}`); values.push(gender); }
 
     if (updates.length === 0) {
       return res.status(400).json({ error: 'Nothing to update' });
@@ -99,7 +125,7 @@ router.put('/profile', requireAuth, async (req, res) => {
 
     values.push(req.user.id);
     const result = await pool.query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} RETURNING id, email, name, role`,
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} RETURNING id, email, name, role, year_of_birth, gender`,
       values
     );
 

@@ -76,6 +76,10 @@ async function migrate() {
       ADD COLUMN IF NOT EXISTS guest_name TEXT;
     ALTER TABLE registrations
       ADD COLUMN IF NOT EXISTS guest_email TEXT;
+	ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS year_of_birth INTEGER;
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS gender TEXT;
   `);
 
   console.log('Migration complete');

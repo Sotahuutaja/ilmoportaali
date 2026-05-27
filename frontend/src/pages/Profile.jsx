@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
+const currentYear = new Date().getFullYear();
 
 export default function Profile() {
   const { user, login } = useAuth();
@@ -17,7 +18,14 @@ export default function Profile() {
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
-    setForm(f => ({ ...f, name: user.name, email: user.email }));
+	setForm(f => ({ 
+		...f,
+		name: user.name,
+		email: user.email,
+		year_of_birth: user.year_of_birth || '',
+		gender: user.gender || ''
+	}));
+
 
     Promise.all([
       api.get('/registrations/my/list'),
@@ -80,6 +88,25 @@ export default function Profile() {
           <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
             Leave blank to keep your current password
           </p>
+		  <label>Year of birth</label>
+          <input
+            type="number"
+            min="1940"
+            max={currentYear}
+            value={form.year_of_birth}
+            onChange={e => setForm({ ...form, year_of_birth: e.target.value })}
+            placeholder={`1940 – ${currentYear}`}
+          />
+          <label>Gender</label>
+          <select
+            value={form.gender}
+            onChange={e => setForm({ ...form, gender: e.target.value })}
+          >
+            <option value="">Select...</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
           <label>New password</label>
           <input
             type="password"
