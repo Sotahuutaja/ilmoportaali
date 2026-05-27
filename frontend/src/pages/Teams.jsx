@@ -117,7 +117,6 @@ export default function Teams() {
                     color: 'white'
                   }}>{t.role} · {t.status}</span>
                 </div>
-                <button className="btn btn-secondary" onClick={() => selectTeam(t)}>View</button>
               </div>
             ))}
           </div>
