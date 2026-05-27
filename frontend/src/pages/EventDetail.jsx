@@ -3,22 +3,55 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 
-function RegistrationRow({ r }) {
+function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState({});
+  const [error, setError] = useState('');
+
   const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
   const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
   const displayName = lastName && firstName
     ? `${firstName} ${lastName}`
     : firstName || lastName || r.guest_email || r.user_email;
 
+  const startEditing = () => {
+    setSelectedProducts(
+      r.products
+        ? Object.fromEntries(r.products.map(p => [p.product_id, p.quantity]))
+        : {}
+    );
+    setEditing(true);
+  };
+
+  const handleSave = async () => {
+    setError('');
+    const products = Object.entries(selectedProducts)
+      .filter(([, qty]) => qty > 0)
+      .map(([product_id, quantity]) => ({ product_id: parseInt(product_id), quantity }));
+
+    if (products.length === 0) {
+      setError('Please select at least one product.');
+      return;
+    }
+
+    try {
+      await onUpdate(r.id, { products });
+      setEditing(false);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update');
+    }
+  };
+
+
   return (
     <div style={{ marginBottom: '0.2rem' }}>
       <div
-        onClick={() => setOpen(v => !v)}
+        onClick={() => !editing && setOpen(v => !v)}
         style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '0.4rem 0.6rem', borderRadius: '6px',
-          background: '#f9f9f9', cursor: 'pointer',
+          padding: '0.4rem 0.6rem', borderRadius: open ? '6px 6px 0 0' : '6px',
+          background: '#f9f9f9', cursor: editing ? 'default' : 'pointer',
           userSelect: 'none'
         }}
       >
@@ -36,20 +69,68 @@ function RegistrationRow({ r }) {
           {r.products ? r.products.length : 0} product{r.products?.length !== 1 ? 's' : ''}
         </span>
       </div>
+
       {open && (
         <div style={{
           padding: '0.5rem 1rem', background: '#f0f0f8',
           borderRadius: '0 0 6px 6px', fontSize: '0.85rem'
         }}>
-          {r.products && r.products.length > 0 ? (
-            r.products.map((p, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
-                <span>{p.name} x{p.quantity}</span>
-                <span style={{ color: '#888' }}>€{(parseFloat(p.price) * p.quantity).toFixed(2)}</span>
+          {error && <p className="error" style={{ fontSize: '0.85rem' }}>{error}</p>}
+
+          {!editing ? (
+            <>
+              {r.products && r.products.length > 0 ? (
+                r.products.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
+                    <span>{p.name} x{p.quantity}</span>
+                    <span style={{ color: '#888' }}>€{(parseFloat(p.price) * p.quantity).toFixed(2)}</span>
+                  </div>
+                ))
+              ) : (
+                <p style={{ color: '#888', marginBottom: '0.5rem' }}>No products selected.</p>
+              )}
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid #ddd', paddingTop: '0.5rem' }}>
+                <button className="btn btn-secondary" onClick={e => { e.stopPropagation(); startEditing(); }}>
+                  Edit products
+                </button>
+                <button className="btn btn-danger" onClick={e => { e.stopPropagation(); onDelete(r.id, displayName); }}>
+                  Delete registration
+                </button>
               </div>
-            ))
+            </>
           ) : (
-            <p style={{ color: '#888' }}>No products selected.</p>
+            <>
+              <p style={{ color: '#666', marginBottom: '0.5rem' }}>Select products:</p>
+              {eventProducts.map(p => {
+                const isSelected = !!selectedProducts[p.id] && selectedProducts[p.id] > 0;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={e => { e.stopPropagation(); setSelectedProducts(prev => ({ ...prev, [p.id]: prev[p.id] > 0 ? 0 : 1 })); }}
+                    style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '0.4rem', marginBottom: '0.3rem', borderRadius: '4px',
+                      border: `2px solid ${isSelected ? '#1a1a2e' : '#ddd'}`,
+                      background: isSelected ? '#e8e8f0' : 'white', cursor: 'pointer'
+                    }}
+                  >
+                    <span>{p.name} — €{parseFloat(p.price).toFixed(2)}</span>
+                    {isSelected && (
+                      <input
+                        type="number" min="1" value={selectedProducts[p.id]}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => setSelectedProducts(prev => ({ ...prev, [p.id]: parseInt(e.target.value) || 1 }))}
+                        style={{ width: '50px', margin: 0 }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button className="btn btn-primary" onClick={e => { e.stopPropagation(); handleSave(); }}>Save</button>
+                <button className="btn btn-secondary" onClick={e => { e.stopPropagation(); setEditing(false); setError(''); }}>Cancel</button>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -152,6 +233,22 @@ export default function EventDetail() {
     } catch (err) {
       setError(err.response?.data?.error || 'Guest registration failed');
     }
+  };
+  
+  const handleDeleteTeamReg = async (registrationId, name) => {
+    if (!window.confirm(`Delete registration for ${name}?`)) return;
+    try {
+      await api.delete(`/registrations/${id}/registrations/${registrationId}`);
+      setTeamRegistrations(teamRegistrations.filter(r => r.id !== registrationId));
+      setEvent(e => ({ ...e, registration_count: e.registration_count - 1 }));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete registration');
+    }
+  };
+
+  const handleUpdateTeamReg = async (registrationId, payload) => {
+    const res = await api.put(`/registrations/${id}/registrations/${registrationId}`, payload);
+    setTeamRegistrations(teamRegistrations.map(r => r.id === registrationId ? res.data.registration : r));
   };
 
   if (!event) return <p>Loading...</p>;
@@ -307,7 +404,14 @@ export default function EventDetail() {
 						{team.name} ({teamRegs.length})
 					  </h4>
 					  {teamRegs.map(r => (
-						<RegistrationRow key={r.id} r={r} />
+					    <RegistrationRow
+						  key={r.id}
+						  r={r}
+						  eventId={id}
+						  eventProducts={products}
+						  onDelete={handleDeleteTeamReg}
+						  onUpdate={handleUpdateTeamReg}
+					    />
 					  ))}
 					</div>
 				  );
