@@ -82,6 +82,7 @@ async function migrate() {
       ADD COLUMN IF NOT EXISTS gender TEXT;
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;
+	ALTER TABLE users ALTER COLUMN name DROP NOT NULL;
   `);
 
   console.log('Migration complete');
