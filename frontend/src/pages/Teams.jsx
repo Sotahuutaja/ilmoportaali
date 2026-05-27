@@ -171,20 +171,20 @@ export default function Teams() {
             ) : members.length === 0 ? (
               <p style={{ color: '#888' }}>No members yet.</p>
             ) : (
-              members.map(m => (
-                <div key={m.user_id} style={{
+              members.map((member) => (
+                <div key={member.user_id} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   padding: '0.6rem 0', borderBottom: '1px solid #f0f0f0'
                 }}>
                   <div>
-                    <strong>{fullName({ first_name: m.first_name, last_name: m.last_name, email: m.email })}</strong>
+                    <strong>{fullName({ first_name: member.first_name, last_name: member.last_name, email: member.email })}</strong>
                     <span style={{
                       marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
                       borderRadius: '12px',
-                      background: m.role === 'captain' ? '#1a1a2e' : '#8e44ad',
+                      background: member.role === 'captain' ? '#1a1a2e' : '#8e44ad',
                       color: 'white'
-                    }}>{m.role}</span>
-                    {m.status === 'pending' && (
+                    }}>{member.role}</span>
+                    {member.status === 'pending' && (
                       <span style={{
                         marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
                         borderRadius: '12px', background: '#e67e22', color: 'white'
@@ -193,27 +193,27 @@ export default function Teams() {
                   </div>
                   {(isCaptain(selected.id) || user?.role === 'admin') && (
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      {m.status === 'pending' && (
+                      {member.status === 'pending' && (
                         <>
-                          <button className="btn btn-primary" onClick={() => handleApprove(selected.id, m.user_id)}>
+                          <button className="btn btn-primary" onClick={() => handleApprove(selected.id, member.user_id)}>
                             Approve
                           </button>
-                          <button className="btn btn-danger" onClick={() => handleReject(selected.id, m.user_id)}>
+                          <button className="btn btn-danger" onClick={() => handleReject(selected.id, member.user_id)}>
                             Reject
                           </button>
                         </>
                       )}
-                      {m.status === 'approved' && m.role !== 'captain' && (
+                      {member.status === 'approved' && member.role !== 'captain' && (
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           {isCaptain(selected.id) && (
                             <button
                               className="btn btn-secondary"
-                              onClick={() => handleMakeCaptain(selected.id, m.user_id, m.first_name, m.last_name)}
+                              onClick={() => handleMakeCaptain(selected.id, member.user_id, member.first_name, member.last_name)}
                             >
                               Make captain
                             </button>
                           )}
-                          <button className="btn btn-danger" onClick={() => handleRemove(selected.id, m.user_id)}>
+                          <button className="btn btn-danger" onClick={() => handleRemove(selected.id, member.user_id)}>
                             Remove
                           </button>
                         </div>
