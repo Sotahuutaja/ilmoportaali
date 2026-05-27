@@ -126,7 +126,7 @@ export default function Dashboard() {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
 			<Link to={`/events/${event.id}/registrants`}>
-              <button className="btn btn-secondary">Registrants</button>
+              <button className="btn btn-secondary">Participants</button>
             </Link>
             <button className="btn btn-secondary" onClick={() => openProducts(event)}>Products</button>
             <button className="btn btn-danger" onClick={() => handleDelete(event.id)}>Delete</button>

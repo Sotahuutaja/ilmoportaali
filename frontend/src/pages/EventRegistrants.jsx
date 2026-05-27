@@ -247,14 +247,14 @@ export default function EventRegistrants() {
 
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="card" style={{ flex: 1, textAlign: 'center' }}>
-          <p style={{ color: '#888', fontSize: '0.9rem' }}>Total registrations</p>
+          <p style={{ color: '#888', fontSize: '0.9rem' }}>Total participants</p>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{registrations.length}</p>
           {event.capacity && (
             <p style={{ color: '#888', fontSize: '0.85rem' }}>of {event.capacity} capacity</p>
           )}
         </div>
         <div className="card" style={{ flex: 1, textAlign: 'center' }}>
-          <p style={{ color: '#888', fontSize: '0.9rem' }}>Guest registrations</p>
+          <p style={{ color: '#888', fontSize: '0.9rem' }}>Guest participants</p>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>
             {registrations.filter(r => r.is_guest).length}
           </p>
@@ -344,7 +344,7 @@ export default function EventRegistrants() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                  No registrations found
+                  No participants found
                 </td>
               </tr>
             )}
