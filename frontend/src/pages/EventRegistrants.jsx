@@ -39,12 +39,14 @@ export default function EventRegistrants() {
   };
 
   const filtered = registrations.filter(r => {
-    const name = r.is_guest ? r.guest_name : fullName({ first_name: r.first_name, last_name: r.last_name });
-    const email = r.is_guest ? r.guest_email : r.user_email;
+    const name = r.is_guest
+      ? r.guest_name
+      : fullName({ first_name: r.first_name, last_name: r.last_name, email: r.user_email });
     const term = search.toLowerCase();
     return (
       name?.toLowerCase().includes(term) ||
-      email?.toLowerCase().includes(term) ||
+      r.user_email?.toLowerCase().includes(term) ||
+      r.guest_email?.toLowerCase().includes(term) ||
       r.team_name?.toLowerCase().includes(term)
     );
   });

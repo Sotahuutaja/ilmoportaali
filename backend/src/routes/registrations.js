@@ -182,7 +182,7 @@ router.get('/:eventId', requireAuth, async (req, res) => {
       LEFT JOIN registration_products rp ON r.id = rp.registration_id
       LEFT JOIN event_products ep ON rp.product_id = ep.id
       WHERE r.event_id = $1
-      GROUP BY r.id, u.name, u.email, t.name
+      GROUP BY r.id, u.first_name, u.last_name, u.email, t.name
       ORDER BY r.created_at ASC
     `, [req.params.eventId]);
 
