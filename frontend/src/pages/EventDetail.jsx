@@ -3,6 +3,61 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 
+function RegistrationRow({ r }) {
+  const [open, setOpen] = useState(false);
+  const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
+  const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
+  const displayName = lastName && firstName
+    ? `${firstName} ${lastName}`
+    : firstName || lastName || r.guest_email || r.user_email;
+
+  return (
+    <div style={{ marginBottom: '0.2rem' }}>
+      <div
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '0.4rem 0.6rem', borderRadius: '6px',
+          background: '#f9f9f9', cursor: 'pointer',
+          userSelect: 'none'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ color: '#aaa', fontSize: '0.8rem' }}>{open ? '▼' : '▶'}</span>
+          <span style={{ fontSize: '0.9rem' }}>{displayName}</span>
+          {r.is_guest && (
+            <span style={{
+              fontSize: '0.75rem', padding: '0.1rem 0.4rem',
+              borderRadius: '8px', background: '#e67e22', color: 'white'
+            }}>guest</span>
+          )}
+        </div>
+        <span style={{ color: '#888', fontSize: '0.8rem' }}>
+          {r.products ? r.products.length : 0} product{r.products?.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+      {open && (
+        <div style={{
+          padding: '0.5rem 1rem', background: '#f0f0f8',
+          borderRadius: '0 0 6px 6px', fontSize: '0.85rem'
+        }}>
+          {r.products && r.products.length > 0 ? (
+            r.products.map((p, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
+                <span>{p.name} x{p.quantity}</span>
+                <span style={{ color: '#888' }}>€{(parseFloat(p.price) * p.quantity).toFixed(2)}</span>
+              </div>
+            ))
+          ) : (
+            <p style={{ color: '#888' }}>No products selected.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function EventDetail() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -238,42 +293,22 @@ export default function EventDetail() {
 			  <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
 				<h3 style={{ marginBottom: '1rem' }}>Team registrations</h3>
 				{captainTeams.map(team => {
-				  const teamRegs = teamRegistrations.filter(r => r.team_id === team.id);
+				  const teamRegs = teamRegistrations
+					.filter(r => r.team_id === team.id)
+					.sort((a, b) => {
+					  const nameA = a.is_guest ? (a.guest_first_name || '') : (a.first_name || '');
+					  const nameB = b.is_guest ? (b.guest_first_name || '') : (b.first_name || '');
+					  return nameA.localeCompare(nameB, 'fi');
+					});
 				  if (teamRegs.length === 0) return null;
 				  return (
 					<div key={team.id} style={{ marginBottom: '1rem' }}>
-					  <h4 style={{ marginBottom: '0.5rem', color: '#1a1a2e' }}>{team.name}</h4>
-					  {teamRegs.map(r => {
-						const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
-						const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
-						const email = r.is_guest ? r.guest_email : r.user_email;
-						return (
-						  <div key={r.id} style={{
-							display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-							padding: '0.4rem 0.6rem', marginBottom: '0.3rem',
-							borderRadius: '6px', background: '#f9f9f9',
-							fontSize: '0.9rem'
-						  }}>
-							<div>
-							  <span>{lastName && firstName ? `${lastName}, ${firstName}` : firstName || lastName || email}</span>
-							  {r.is_guest && (
-								<span style={{
-								  marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.4rem',
-								  borderRadius: '8px', background: '#e67e22', color: 'white'
-								}}>guest</span>
-							  )}
-							  <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{email}</span>
-							</div>
-							{r.products && r.products.length > 0 && (
-							  <div style={{ color: '#888', fontSize: '0.8rem' }}>
-								{r.products.map((p, i) => (
-								  <span key={i} style={{ marginLeft: '0.3rem' }}>{p.name} x{p.quantity}</span>
-								))}
-							  </div>
-							)}
-						  </div>
-						);
-					  })}
+					  <h4 style={{ marginBottom: '0.5rem', color: '#1a1a2e' }}>
+						{team.name} ({teamRegs.length})
+					  </h4>
+					  {teamRegs.map(r => (
+						<RegistrationRow key={r.id} r={r} />
+					  ))}
 					</div>
 				  );
 				})}
