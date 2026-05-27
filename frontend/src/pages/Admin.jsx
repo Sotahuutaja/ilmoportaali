@@ -77,8 +77,13 @@ function EditUserModal({ user, onClose, onSave }) {
 
 function EditTeamModal({ team, users, onClose, onSave }) {
   const [form, setForm] = useState({ name: team.name, description: team.description || '', captain_id: '' });
+  const [members, setMembers] = useState([]);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    api.get(`/teams/${team.id}`).then(res => setMembers(res.data.members));
+  }, [team.id]);
 
   const handleSave = async () => {
     setError(''); setMessage('');
@@ -92,6 +97,80 @@ function EditTeamModal({ team, users, onClose, onSave }) {
       setError(err.response?.data?.error || 'Failed to save');
     }
   };
+
+  const handleDemote = async (userId) => {
+    setError(''); setMessage('');
+    try {
+      await api.put(`/teams/${team.id}/members/${userId}`, { status: 'approved', role: 'member' });
+      setMembers(members.map(m => m.user_id === userId ? { ...m, role: 'member' } : m));
+      setMessage('Captain demoted to member.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to demote');
+    }
+  };
+
+  const captains = members.filter(m => m.role === 'captain' && m.status === 'approved');
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+    }}>
+      <div className="card" style={{ width: 480, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' }}>
+        <h3 style={{ marginBottom: '1.5rem' }}>Edit team</h3>
+        {error && <p className="error">{error}</p>}
+        {message && <p className="success">{message}</p>}
+
+        <label>Team name</label>
+        <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+        <label>Description</label>
+        <textarea rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+
+        <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%', marginBottom: '1.5rem' }}>
+          Save changes
+        </button>
+
+        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+        <h4 style={{ marginBottom: '1rem' }}>Current captains</h4>
+        {captains.length === 0 && <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1rem' }}>No captains assigned.</p>}
+        {captains.map(m => (
+          <div key={m.user_id} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '0.5rem 0', borderBottom: '1px solid #f0f0f0'
+          }}>
+            <span>{m.first_name || m.last_name ? `${m.last_name || ''}, ${m.first_name || ''}`.trim() : m.email}</span>
+            <button className="btn btn-danger" onClick={() => handleDemote(m.user_id)}>
+              Remove captain
+            </button>
+          </div>
+        ))}
+
+        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+        <h4 style={{ marginBottom: '0.5rem' }}>Assign new captain</h4>
+        <select value={form.captain_id} onChange={e => setForm({ ...form, captain_id: e.target.value })}>
+          <option value="">Select a user...</option>
+          {users.map(u => (
+            <option key={u.id} value={u.id}>
+              {u.first_name || u.last_name ? `${u.last_name || ''}, ${u.first_name || ''}` : u.email}
+            </option>
+          ))}
+        </select>
+        <button
+          className="btn btn-primary"
+          onClick={handleSave}
+          disabled={!form.captain_id}
+          style={{ width: '100%', marginBottom: '1rem' }}
+        >
+          Assign captain
+        </button>
+
+        <button className="btn btn-secondary" onClick={onClose} style={{ width: '100%' }}>
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div style={{

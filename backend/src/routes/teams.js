@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react';
+
 const express = require('express');
 const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
-
 const router = express.Router();
 
 // List all teams (public)
@@ -131,9 +132,15 @@ router.post('/:id/invite', requireAuth, async (req, res) => {
 
 // Approve or reject a membership (captain or admin)
 router.put('/:id/members/:userId', requireAuth, async (req, res) => {
-  const { status } = req.body;
-  if (!['approved', 'rejected'].includes(status)) {
+  const { status, role } = req.body;
+  const validStatuses = ['approved', 'rejected'];
+  const validRoles = ['member', 'captain'];
+
+  if (status && !validStatuses.includes(status)) {
     return res.status(400).json({ error: 'Status must be approved or rejected' });
+  }
+  if (role && !validRoles.includes(role)) {
+    return res.status(400).json({ error: 'Role must be member or captain' });
   }
 
   try {
@@ -142,12 +149,24 @@ router.put('/:id/members/:userId', requireAuth, async (req, res) => {
         'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
         [req.params.id, req.user.id, 'captain', 'approved']
       );
-      if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can approve members' });
+      if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can manage members' });
     }
 
+    const updates = [];
+    const values = [];
+    let i = 1;
+
+    if (status) { updates.push(`status = $${i++}`); values.push(status); }
+    if (role) { updates.push(`role = $${i++}`); values.push(role); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'Nothing to update' });
+    }
+
+    values.push(req.params.id, req.params.userId);
     const result = await pool.query(
-      'UPDATE team_members SET status = $1 WHERE team_id = $2 AND user_id = $3 RETURNING *',
-      [status, req.params.id, req.params.userId]
+      `UPDATE team_members SET ${updates.join(', ')} WHERE team_id = $${i++} AND user_id = $${i} RETURNING *`,
+      values
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Membership not found' });
