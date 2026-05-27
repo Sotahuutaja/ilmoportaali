@@ -46,6 +46,9 @@ export default function EventDetail() {
 
   const register = async () => {
     setError(''); setMessage('');
+    if (buildProducts(selectedProducts).length === 0) {
+      return setError('Please select at least one product to register.');
+    }
     try {
       await api.post(`/registrations/${id}`, {
         team_id: selectedTeam ? parseInt(selectedTeam) : null,
@@ -72,13 +75,16 @@ export default function EventDetail() {
   const registerGuest = async (e) => {
     e.preventDefault();
     setError(''); setMessage('');
+    if (buildProducts(guestProducts).length === 0) {
+      return setError('Please select at least one product for the guest.');
+    }
     try {
       await api.post(`/registrations/${id}/guest`, {
         ...guestForm,
         team_id: parseInt(guestForm.team_id),
         products: buildProducts(guestProducts)
       });
-      setMessage(`Guest ${guestForm.guest_name} registered successfully!`);
+      setMessage(`Guest ${guestForm.guest_first_name} registered successfully!`);
       setShowGuestForm(false);
       setGuestForm({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
       setGuestProducts({});

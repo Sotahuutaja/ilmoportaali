@@ -57,6 +57,10 @@ router.post('/:eventId', requireAuth, async (req, res) => {
       );
       if (!membership.rows[0]) return res.status(403).json({ error: 'Not an approved team member' });
     }
+	
+	if (products.length === 0) {
+	  return res.status(400).json({ error: 'You must select at least one product to register' });
+	}
 
     const reg = await client.query(
       'INSERT INTO registrations (user_id, event_id, team_id) VALUES ($1, $2, $3) RETURNING *',
@@ -113,6 +117,10 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
         return res.status(409).json({ error: 'Event is full' });
       }
     }
+	
+	if (products.length === 0) {
+	  return res.status(400).json({ error: 'You must select at least one product for the guest' });
+	}
 
     const reg = await client.query(`
       INSERT INTO registrations (event_id, team_id, is_guest, guest_first_name, guest_last_name, guest_email)
