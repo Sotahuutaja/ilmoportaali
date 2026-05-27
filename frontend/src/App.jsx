@@ -26,7 +26,7 @@ function Nav() {
             {user.role === 'admin' && (
               <Link to="/admin">Admin</Link>
             )}
-            <Link to="/profile" style={{ marginLeft: '1rem', opacity: 0.7 }}>{user.name}</Link>
+			<Link to="/profile" style={{ marginLeft: '1rem', opacity: 0.7 }}>{user?.name}</Link>
             <button
               onClick={logout}
               className="btn btn-secondary"
@@ -35,7 +35,6 @@ function Nav() {
           </>
         ) : (
           <>
-			<Link to="/profile">{user.name}</Link>
             <Link to="/login">Login</Link>
             <Link to="/register">Register</Link>
           </>
