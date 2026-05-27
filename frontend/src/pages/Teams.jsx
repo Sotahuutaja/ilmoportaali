@@ -177,7 +177,7 @@ export default function Teams() {
                   padding: '0.6rem 0', borderBottom: '1px solid #f0f0f0'
                 }}>
                   <div>
-                    <strong>{fullName({ first_name: m.first_name, last_name: m.last_name })}</strong>
+                    <strong>{fullName({ first_name: m.first_name, last_name: m.last_name, email: m.email })}</strong>
                     <span style={{
                       marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
                       borderRadius: '12px',

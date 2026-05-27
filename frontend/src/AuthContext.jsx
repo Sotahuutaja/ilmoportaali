@@ -43,5 +43,6 @@ export function useAuth() {
 export const fullName = (user) => {
   if (!user) return '';
   if (user.last_name && user.first_name) return `${user.last_name}, ${user.first_name}`;
-  return user.first_name || user.last_name || '';
+  if (user.first_name || user.last_name) return `${user.last_name || ''} ${user.first_name || ''}`.trim();
+  return user.email || '';
 };
