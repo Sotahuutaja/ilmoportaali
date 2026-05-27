@@ -21,10 +21,8 @@ export default function Teams() {
   const selectTeam = async (team) => {
     setSelected(team);
     setMessage(''); setError('');
-
     const isMember = myTeams.some(t => t.id === team.id && t.status === 'approved');
     const isAdmin = user?.role === 'admin';
-
     if (isMember || isAdmin) {
       const res = await api.get(`/teams/${team.id}`);
       setMembers(res.data.members);
@@ -76,7 +74,7 @@ export default function Teams() {
       setError(err.response?.data?.error || 'Failed to remove');
     }
   };
-  
+
   const handleMakeCaptain = async (teamId, userId, name) => {
     if (!window.confirm(`Make ${name} the new captain? You will become a regular member.`)) return;
     try {
@@ -164,79 +162,68 @@ export default function Teams() {
             <h3>{selected.name}</h3>
             <button className="btn btn-secondary" onClick={() => { setSelected(null); setMembers(null); }}>Close</button>
           </div>
-
-		  {selected && (
-			<div>
-				<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.5rem 0' }}>
-					<h2>{selected.name}</h2>
-					<button className="btn btn-secondary" onClick={() => setSelected(null)}>Close</button>
-			</div>
-			<div className="card">
-				<h3 style={{ marginBottom: '1rem' }}>Members</h3>
-				{members === null ? (
-					<p style={{ color: '#888' }}>You must be a member of this team to see its members.</p>
-				) : members.length === 0 ? (
-					<p style={{ color: '#888' }}>No members yet.</p>
-				) : (
-					members.map(m => (
-						<div key={m.user_id} style={{
-							display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-							padding: '0.6rem 0', borderBottom: '1px solid #f0f0f0'
-					}}>
-						<div>
-						  <strong>{m.name}</strong>
-						  <span style={{
-							marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
-							borderRadius: '12px',
-							background: m.role === 'captain' ? '#1a1a2e' : '#8e44ad',
-							color: 'white'
-						  }}>{m.role}</span>
-						  {m.status === 'pending' && (
-							<span style={{
-							  marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
-							  borderRadius: '12px', background: '#e67e22', color: 'white'
-							}}>pending</span>
-						  )}
-						</div>
-						{(isCaptain(selected.id) || user?.role === 'admin') && (
-						  <div style={{ display: 'flex', gap: '0.5rem' }}>
-							{m.status === 'pending' && (
-							  <>
-								<button className="btn btn-primary" onClick={() => handleApprove(selected.id, m.user_id)}>
-								  Approve
-								</button>
-								<button className="btn btn-danger" onClick={() => handleReject(selected.id, m.user_id)}>
-								  Reject
-								</button>
-							  </>
-							)}
-							{m.status === 'approved' && m.role !== 'captain' && (
-							  <button className="btn btn-danger" onClick={() => handleRemove(selected.id, m.user_id)}>
-								Remove
-							  </button>
-								)}
-							{m.status === 'approved' && m.role !== 'captain' && (
-							  <div style={{ display: 'flex', gap: '0.5rem' }}>
-								{isCaptain(selected.id) && (
-								  <button
-									className="btn btn-secondary"
-									onClick={() => handleMakeCaptain(selected.id, m.user_id, m.name)}
-								  >
-									Make captain
-								  </button>
-								)}
-							  </div>
-							)}	
-						  </div>
-						)}
-					  </div>
-					))
-				  )}
-				</div>
-			  </div>
-			)}		  
-		</div>
-	  )}
+          <div className="card">
+            <h3 style={{ marginBottom: '1rem' }}>Members</h3>
+            {members === null ? (
+              <p style={{ color: '#888' }}>You must be a member of this team to see its members.</p>
+            ) : members.length === 0 ? (
+              <p style={{ color: '#888' }}>No members yet.</p>
+            ) : (
+              members.map(m => (
+                <div key={m.user_id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '0.6rem 0', borderBottom: '1px solid #f0f0f0'
+                }}>
+                  <div>
+                    <strong>{m.name}</strong>
+                    <span style={{
+                      marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
+                      borderRadius: '12px',
+                      background: m.role === 'captain' ? '#1a1a2e' : '#8e44ad',
+                      color: 'white'
+                    }}>{m.role}</span>
+                    {m.status === 'pending' && (
+                      <span style={{
+                        marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
+                        borderRadius: '12px', background: '#e67e22', color: 'white'
+                      }}>pending</span>
+                    )}
+                  </div>
+                  {(isCaptain(selected.id) || user?.role === 'admin') && (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {m.status === 'pending' && (
+                        <>
+                          <button className="btn btn-primary" onClick={() => handleApprove(selected.id, m.user_id)}>
+                            Approve
+                          </button>
+                          <button className="btn btn-danger" onClick={() => handleReject(selected.id, m.user_id)}>
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      {m.status === 'approved' && m.role !== 'captain' && (
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          {isCaptain(selected.id) && (
+                            <button
+                              className="btn btn-secondary"
+                              onClick={() => handleMakeCaptain(selected.id, m.user_id, m.name)}
+                            >
+                              Make captain
+                            </button>
+                          )}
+                          <button className="btn btn-danger" onClick={() => handleRemove(selected.id, m.user_id)}>
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
