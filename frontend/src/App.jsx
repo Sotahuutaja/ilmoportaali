@@ -10,6 +10,7 @@ import EventRegistrants from './pages/EventRegistrants';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth, fullName } from './AuthContext';
 import VerifyEmail from './pages/VerifyEmail';
+import EditEvent from './pages/EditEvent';
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -62,6 +63,7 @@ export default function App() {
 			<Route path="/events/:id/registrants" element={<EventRegistrants />} />
 			<Route path="/profile" element={<Profile />} />
 			<Route path="/verify-email" element={<VerifyEmail />} />
+			<Route path="/events/:id/edit" element={<EditEvent />} />
           </Routes>
         </div>
       </BrowserRouter>

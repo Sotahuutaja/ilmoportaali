@@ -169,11 +169,10 @@ export default function Dashboard() {
 			  </p>
 			</div>
 			<div style={{ display: 'flex', gap: '0.5rem' }}>
-			  <Link to={`/events/${event.id}/registrants`}>
-				<button className="btn btn-secondary">Participants</button>
-			  </Link>
+			  <Link to={`/events/${event.id}/registrants`}><button className="btn btn-secondary">Participants</button></Link>
 			  <button className="btn btn-secondary" onClick={() => openManagers(event)}>Managers</button>
 			  <button className="btn btn-secondary" onClick={() => openProducts(event)}>Products</button>
+			  <Link to={`/events/${event.id}/edit`}><button className="btn btn-secondary">Edit</button></Link>
 			  {(event.is_owner || user.role === 'admin') && (
 				<button className="btn btn-danger" onClick={() => handleDelete(event.id)}>Delete</button>
 			  )}
