@@ -77,7 +77,7 @@ export default function Teams() {
   };
 
   const handleMakeCaptain = async (teamId, userId, firstName, lastName) => {
-    const name = fullName({ first_name: firstName, last_name: lastName });
+    const name = fullName({ first_name: m.first_name, last_name: m.last_name, email: m.email });
     if (!window.confirm(`Make ${name} the new captain? You will become a regular member.`)) return;
     try {
       await api.put(`/teams/${teamId}/captain`, { user_id: userId });
