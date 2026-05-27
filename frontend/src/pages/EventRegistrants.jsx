@@ -109,7 +109,8 @@ export default function EventRegistrants() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
-              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>First name</th>
+			  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Last name</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Team</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Products</th>
@@ -124,14 +125,17 @@ export default function EventRegistrants() {
               return (
                 <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                   <td style={{ padding: '0.8rem 1rem' }}>
-                    {name}
-                    {r.is_guest && (
-                      <span style={{
-                        marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.4rem',
-                        borderRadius: '8px', background: '#e67e22', color: 'white'
-                      }}>guest</span>
-                    )}
-                  </td>
+				    {r.is_guest ? r.guest_name : (r.first_name || '—')}
+				    {r.is_guest && (
+					  <span style={{
+					    marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.4rem',
+					    borderRadius: '8px', background: '#e67e22', color: 'white'
+					  }}>guest</span>
+				    )}
+				  </td>
+				  <td style={{ padding: '0.8rem 1rem' }}>
+				    {r.is_guest ? '' : (r.last_name || '—')}
+				  </td>
                   <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{email}</td>
                   <td style={{ padding: '0.8rem 1rem' }}>
                     {r.team_name ? (
@@ -172,7 +176,7 @@ export default function EventRegistrants() {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
                   No registrations found
                 </td>
               </tr>
