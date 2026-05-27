@@ -97,18 +97,18 @@ Completed so far (27.5.2026):
 
 **UX improvements**
 
-Collapsible admin sections
-Sortable columns in user management
-Horizontal scroll on wide tables
-Browser title set to Ilmoportaali
-Consistent Last name, First name format throughout
-Email fallback when names are null
+* Collapsible admin sections
+* Sortable columns in user management
+* Horizontal scroll on wide tables
+* Browser title set to Ilmoportaali
+* Consistent Last name, First name format throughout
+* Email fallback when names are null
 
 
 **Remaining items:**
 
-Custom domain
-Payment handling for products
-Captain invite flow UI
-Fix user deletion (foreign key constraints)
-Password reset via email
+* Custom domain
+* Payment handling for products
+* Captain invite flow UI
+* Fix user deletion (foreign key constraints)
+* Password reset via email
