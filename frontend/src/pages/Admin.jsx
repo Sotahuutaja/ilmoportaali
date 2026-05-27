@@ -166,6 +166,8 @@ export default function Admin() {
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Role</th>
+			  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Year of birth</th>
+			  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Gender</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Joined</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
             </tr>
@@ -186,6 +188,8 @@ export default function Admin() {
                     {u.role}
                   </span>
                 </td>
+				<td style={{ padding: '0.8rem 1rem' }}>{u.year_of_birth || '—'}</td>
+				<td style={{ padding: '0.8rem 1rem' }}>{u.gender || '—'}</td>
                 <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.9rem' }}>
                   {new Date(u.created_at).toLocaleDateString('fi-FI')}
                 </td>
