@@ -37,6 +37,37 @@ export default function EventRegistrants() {
       setError(err.response?.data?.error || 'Failed to cancel registration');
     }
   };
+  
+  const exportRegistrantsCSV = () => {
+	const headers = ['First name', 'Last name', 'Email', 'Team', 'Products', 'Total price', 'Type', 'Registered'];
+	const rows = registrations.map(r => {
+		const firstName = r.is_guest ? r.guest_name : (r.first_name || '');
+		const lastName = r.is_guest ? '' : (r.last_name || '');
+		const email = r.is_guest ? r.guest_email : r.user_email;
+		const team = r.team_name || '';
+		const products = r.products
+			? r.products.map(p => `${p.name} x${p.quantity}`).join('; ')
+			: '';
+		const totalPrice = r.products
+			? r.products.reduce((sum, p) => sum + parseFloat(p.price) * p.quantity, 0).toFixed(2)
+			: '0.00';
+		const type = r.is_guest ? 'Guest' : 'Registered user';
+		const registered = new Date(r.created_at).toLocaleDateString('fi-FI');
+		return [firstName, lastName, email, team, products, totalPrice, type, registered];
+	});
+
+	const csv = [headers, ...rows]
+		.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+		.join('\n');
+
+	const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = `registrants-${event.title.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+	link.click();
+	URL.revokeObjectURL(url);
+  };
 
   const filtered = registrations.filter(r => {
     const name = r.is_guest
@@ -68,6 +99,14 @@ export default function EventRegistrants() {
             📅 {new Date(event.starts_at).toLocaleDateString('fi-FI')}
           </p>
         </div>
+		<div style={{ display: 'flex', gap: '0.5rem' }}>
+		  <button className="btn btn-secondary" onClick={exportRegistrantsCSV}>
+			Export CSV
+		  </button>
+		  <Link to="/dashboard">
+			<button className="btn btn-secondary">Back to dashboard</button>
+		  </Link>
+		</div>
         <Link to="/dashboard">
           <button className="btn btn-secondary">Back to dashboard</button>
         </Link>
@@ -105,7 +144,7 @@ export default function EventRegistrants() {
         />
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card" style={{ padding: 0, overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
