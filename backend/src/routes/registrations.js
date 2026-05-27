@@ -241,4 +241,88 @@ router.get('/my/list', requireAuth, async (req, res) => {
   }
 });
 
+// Update a registration (admin or event creator)
+router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, res) => {
+  const { guest_name, guest_email, first_name, last_name, email, team_id, products } = req.body;
+
+  const client = await pool.connect();
+  try {
+    const event = await client.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
+    if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
+
+    if (req.user.role !== 'admin' && event.rows[0].creator_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorised' });
+    }
+
+    const reg = await client.query('SELECT * FROM registrations WHERE id = $1', [req.params.registrationId]);
+    if (!reg.rows[0]) return res.status(404).json({ error: 'Registration not found' });
+
+    await client.query('BEGIN');
+
+    if (reg.rows[0].is_guest) {
+      // Update guest details
+      await client.query(
+        'UPDATE registrations SET guest_name = COALESCE($1, guest_name), guest_email = COALESCE($2, guest_email), team_id = $3 WHERE id = $4',
+        [guest_name, guest_email, team_id || null, req.params.registrationId]
+      );
+    } else {
+      // Update registered user details and team
+      await client.query(
+        'UPDATE registrations SET team_id = $1 WHERE id = $2',
+        [team_id || null, req.params.registrationId]
+      );
+      // Update user's name and email if provided
+      if (first_name || last_name || email) {
+        await client.query(
+          `UPDATE users SET
+            first_name = COALESCE($1, first_name),
+            last_name = COALESCE($2, last_name),
+            email = COALESCE($3, email)
+          WHERE id = $4`,
+          [first_name, last_name, email, reg.rows[0].user_id]
+        );
+      }
+    }
+
+    // Update products
+    if (products !== undefined) {
+      await client.query('DELETE FROM registration_products WHERE registration_id = $1', [req.params.registrationId]);
+      if (products.length > 0) {
+        await insertProducts(client, req.params.registrationId, products, req.params.eventId);
+      }
+    }
+
+    await client.query('COMMIT');
+
+    // Return updated registration
+    const updated = await pool.query(`
+      SELECT
+        r.*,
+        u.first_name, u.last_name, u.email as user_email,
+        t.name as team_name,
+        json_agg(json_build_object(
+          'product_id', rp.product_id,
+          'name', ep.name,
+          'quantity', rp.quantity,
+          'price', ep.price
+        )) FILTER (WHERE rp.id IS NOT NULL) as products
+      FROM registrations r
+      LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN teams t ON r.team_id = t.id
+      LEFT JOIN registration_products rp ON r.id = rp.registration_id
+      LEFT JOIN event_products ep ON rp.product_id = ep.id
+      WHERE r.id = $1
+      GROUP BY r.id, u.first_name, u.last_name, u.email, t.name
+    `, [req.params.registrationId]);
+
+    res.json({ registration: updated.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Failed to update registration:', err.message);
+    res.status(500).json({ error: err.message || 'Failed to update registration' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

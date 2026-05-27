@@ -4,6 +4,117 @@ import { useAuth } from '../AuthContext';
 import api from '../api';
 import { fullName } from '../AuthContext';
 
+function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
+  const [form, setForm] = useState({
+    first_name: reg.first_name || '',
+    last_name: reg.last_name || '',
+    email: reg.is_guest ? reg.guest_email : reg.user_email,
+    guest_name: reg.guest_name || '',
+    team_id: reg.team_id || ''
+  });
+  const [selectedProducts, setSelectedProducts] = useState(
+    reg.products
+      ? Object.fromEntries(reg.products.map(p => [p.product_id, p.quantity]))
+      : {}
+  );
+  const [error, setError] = useState('');
+
+  const handleSave = () => {
+    const products = Object.entries(selectedProducts)
+      .filter(([, qty]) => qty > 0)
+      .map(([product_id, quantity]) => ({ product_id: parseInt(product_id), quantity }));
+
+    const payload = {
+      team_id: form.team_id ? parseInt(form.team_id) : null,
+      products
+    };
+
+    if (reg.is_guest) {
+      payload.guest_name = form.guest_name;
+      payload.guest_email = form.email;
+    } else {
+      payload.first_name = form.first_name;
+      payload.last_name = form.last_name;
+      payload.email = form.email;
+    }
+
+    onSave(reg.id, payload);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+    }}>
+      <div className="card" style={{ width: 500, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' }}>
+        <h3 style={{ marginBottom: '1.5rem' }}>
+          Edit registration {reg.is_guest && <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', borderRadius: '8px', background: '#e67e22', color: 'white', marginLeft: '0.5rem' }}>guest</span>}
+        </h3>
+        {error && <p className="error">{error}</p>}
+
+        {reg.is_guest ? (
+          <>
+            <label>Guest name</label>
+            <input value={form.guest_name} onChange={e => setForm({ ...form, guest_name: e.target.value })} />
+            <label>Guest email</label>
+            <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          </>
+        ) : (
+          <>
+            <label>First name</label>
+            <input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} />
+            <label>Last name</label>
+            <input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} />
+            <label>Email</label>
+            <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          </>
+        )}
+
+        <label>Team</label>
+        <select value={form.team_id} onChange={e => setForm({ ...form, team_id: e.target.value })}>
+          <option value="">No team — individual</option>
+          {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+
+        <label style={{ marginBottom: '0.5rem', display: 'block' }}>Products</label>
+        {eventProducts.length === 0 && <p style={{ color: '#888', fontSize: '0.9rem' }}>No products for this event.</p>}
+        {eventProducts.map(p => (
+          <div key={p.id} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '0.5rem', marginBottom: '0.3rem', borderRadius: '6px',
+            border: `2px solid ${selectedProducts[p.id] ? '#1a1a2e' : '#eee'}`,
+            background: selectedProducts[p.id] ? '#f0f0f8' : 'white',
+            cursor: 'pointer'
+          }}
+            onClick={() => setSelectedProducts(prev => ({
+              ...prev,
+              [p.id]: prev[p.id] ? 0 : 1
+            }))}
+          >
+            <div>
+              <strong>{p.name}</strong>
+              <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.9rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
+            </div>
+            {selectedProducts[p.id] > 0 && (
+              <input
+                type="number" min="1" value={selectedProducts[p.id]}
+                onClick={e => e.stopPropagation()}
+                onChange={e => setSelectedProducts(prev => ({ ...prev, [p.id]: parseInt(e.target.value) }))}
+                style={{ width: '60px', margin: 0 }}
+              />
+            )}
+          </div>
+        ))}
+
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+          <button className="btn btn-primary" onClick={handleSave} style={{ flex: 1 }}>Save changes</button>
+          <button className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EventRegistrants() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -13,6 +124,9 @@ export default function EventRegistrants() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
+  const [editingReg, setEditingReg] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [eventProducts, setEventProducts] = useState([]);
 
   useEffect(() => {
     if (!user || (user.role !== 'admin' && user.role !== 'creator')) {
@@ -25,6 +139,10 @@ export default function EventRegistrants() {
     api.get(`/registrations/${id}`)
       .then(res => setRegistrations(res.data.registrations))
       .catch(() => setError('Failed to load registrations'));
+	api.get('/teams')
+	  .then(res => setTeams(res.data.teams));
+	api.get(`/events/${id}/products`)
+	  .then(res => setEventProducts(res.data.products));
   }, [id, user]);
 
   const handleCancel = async (registrationId, name) => {
@@ -35,6 +153,17 @@ export default function EventRegistrants() {
       setMessage(`Registration for ${name} cancelled.`);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel registration');
+    }
+  };
+  
+  const handleSaveReg = async (registrationId, payload) => {
+    try {
+      const res = await api.put(`/registrations/${id}/registrations/${registrationId}`, payload);
+      setRegistrations(registrations.map(r => r.id === registrationId ? res.data.registration : r));
+      setEditingReg(null);
+      setMessage('Registration updated.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update registration');
     }
   };
   
@@ -107,9 +236,6 @@ export default function EventRegistrants() {
 			<button className="btn btn-secondary">Back to dashboard</button>
 		  </Link>
 		</div>
-        <Link to="/dashboard">
-          <button className="btn btn-secondary">Back to dashboard</button>
-        </Link>
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -203,13 +329,11 @@ export default function EventRegistrants() {
                     {new Date(r.created_at).toLocaleDateString('fi-FI')}
                   </td>
                   <td style={{ padding: '0.8rem 1rem' }}>
-                    <button
-                      className="btn btn-danger"
-                      onClick={() => handleCancel(r.id, name)}
-                    >
-                      Cancel
-                    </button>
-                  </td>
+				    <div style={{ display: 'flex', gap: '0.5rem' }}>
+					  <button className="btn btn-secondary" onClick={() => setEditingReg(r)}>Edit</button>
+					  <button className="btn btn-danger" onClick={() => handleCancel(r.id, name)}>Cancel</button>
+				    </div>
+				  </td>
                 </tr>
               );
             })}
@@ -223,6 +347,15 @@ export default function EventRegistrants() {
           </tbody>
         </table>
       </div>
+	{editingReg && (
+	  <EditRegistrantModal
+		reg={editingReg}
+		teams={teams}
+		eventProducts={eventProducts}
+		onClose={() => setEditingReg(null)}
+		onSave={handleSaveReg}
+	  />
+	)}
     </div>
   );
 }
