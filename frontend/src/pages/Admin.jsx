@@ -3,7 +3,6 @@ import { useAuth } from '../AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
-const [editingTeam, setEditingTeam] = useState(null);
 const ROLES = ['attendee', 'creator', 'admin'];
 
 function EditUserModal({ user, onClose, onSave }) {
@@ -21,11 +20,6 @@ function EditUserModal({ user, onClose, onSave }) {
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save');
     }
-  };
-  
-  const handleSaveTeam = (updated) => {
-    setTeams(teams.map(t => t.id === updated.id ? { ...t, ...updated } : t));
-    setEditingTeam(null);
   };
 
   const handlePasswordReset = async () => {
@@ -134,6 +128,7 @@ export default function Admin() {
   const [users, setUsers] = useState([]);
   const [teams, setTeams] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
+  const [editingTeam, setEditingTeam] = useState(null);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [teamForm, setTeamForm] = useState({ name: '', description: '', captain_id: '' });
@@ -161,6 +156,11 @@ export default function Admin() {
 
   const handleSave = (updated) => {
     setUsers(users.map(u => u.id === updated.id ? { ...u, ...updated } : u));
+  };
+
+  const handleSaveTeam = (updated) => {
+    setTeams(teams.map(t => t.id === updated.id ? { ...t, ...updated } : t));
+    setEditingTeam(null);
   };
 
   const handleCreateTeam = async (e) => {
@@ -221,8 +221,8 @@ export default function Admin() {
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Role</th>
-			  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Year of birth</th>
-			  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Gender</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Year of birth</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Gender</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Joined</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
             </tr>
@@ -243,8 +243,8 @@ export default function Admin() {
                     {u.role}
                   </span>
                 </td>
-				<td style={{ padding: '0.8rem 1rem' }}>{u.year_of_birth || '—'}</td>
-				<td style={{ padding: '0.8rem 1rem' }}>{u.gender || '—'}</td>
+                <td style={{ padding: '0.8rem 1rem' }}>{u.year_of_birth || '—'}</td>
+                <td style={{ padding: '0.8rem 1rem' }}>{u.gender || '—'}</td>
                 <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.9rem' }}>
                   {new Date(u.created_at).toLocaleDateString('fi-FI')}
                 </td>
@@ -260,7 +260,7 @@ export default function Admin() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
                   No users found
                 </td>
               </tr>
@@ -320,8 +320,10 @@ export default function Admin() {
                 <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{t.description}</td>
                 <td style={{ padding: '0.8rem 1rem' }}>{t.member_count}</td>
                 <td style={{ padding: '0.8rem 1rem' }}>
-                  <button className="btn btn-danger" onClick={() => handleDeleteTeam(t.id, t.name)}>Delete</button>
-				  <button className="btn btn-secondary" onClick={() => setEditingTeam(t)}>Edit</button>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn btn-secondary" onClick={() => setEditingTeam(t)}>Edit</button>
+                    <button className="btn btn-danger" onClick={() => handleDeleteTeam(t.id, t.name)}>Delete</button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -343,14 +345,14 @@ export default function Admin() {
           onSave={(updated) => { handleSave(updated); setEditingUser(null); }}
         />
       )}
-	  {editingTeam && (
-		<EditTeamModal
-		  team={editingTeam}
-		  users={users}
-		  onClose={() => setEditingTeam(null)}
-		  onSave={handleSaveTeam}
-		/>
-	  )}
+      {editingTeam && (
+        <EditTeamModal
+          team={editingTeam}
+          users={users}
+          onClose={() => setEditingTeam(null)}
+          onSave={handleSaveTeam}
+        />
+      )}
     </div>
   );
 }
