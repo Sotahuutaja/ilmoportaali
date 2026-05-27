@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN registration_products rp ON p.id = rp.product_id
       WHERE p.event_id = $1
       GROUP BY p.id
-      ORDER BY p.name ASC
+      ORDER BY p.sort_order ASC, p.name ASC
     `, [req.params.eventId]);
     res.json({ products: result.rows });
   } catch (err) {
@@ -43,6 +43,34 @@ router.post('/', requireAuth, requireRole('creator', 'admin'), async (req, res) 
   } catch (err) {
     console.error('Failed to create product:', err.message);
     res.status(500).json({ error: 'Failed to create product' });
+  }
+});
+
+// Reorder products
+router.put('/reorder', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+  const { order } = req.body;
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be an array' });
+
+  const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
+  if (!allowed) return res.status(403).json({ error: 'Not authorised' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (let i = 0; i < order.length; i++) {
+      await client.query(
+        'UPDATE event_products SET sort_order = $1 WHERE id = $2 AND event_id = $3',
+        [i, order[i], req.params.eventId]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ message: 'Order updated' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Failed to reorder products:', err.message);
+    res.status(500).json({ error: 'Failed to reorder products' });
+  } finally {
+    client.release();
   }
 });
 
@@ -80,5 +108,6 @@ router.delete('/:productId', requireAuth, requireRole('creator', 'admin'), async
     res.status(500).json({ error: 'Failed to delete product' });
   }
 });
+
 
 module.exports = router;

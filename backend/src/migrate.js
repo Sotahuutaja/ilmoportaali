@@ -92,6 +92,7 @@ async function migrate() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expires TIMESTAMPTZ;
+	ALTER TABLE event_products ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
   `);
 
   console.log('Migration complete');

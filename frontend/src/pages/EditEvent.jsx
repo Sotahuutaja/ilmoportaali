@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
@@ -14,11 +14,14 @@ export default function EditEvent() {
   });
   const [products, setProducts] = useState([]);
   const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '' });
+  const [editingProduct, setEditingProduct] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [productMessage, setProductMessage] = useState('');
   const [productError, setProductError] = useState('');
   const [loading, setLoading] = useState(true);
+  const dragItem = useRef(null);
+  const dragOverItem = useRef(null);
 
   useEffect(() => {
     if (!user || (user.role !== 'admin' && user.role !== 'creator')) {
@@ -75,6 +78,24 @@ export default function EditEvent() {
     }
   };
 
+  const handleUpdateProduct = async (e) => {
+    e.preventDefault();
+    setProductError(''); setProductMessage('');
+    try {
+      const res = await api.put(`/events/${id}/products/${editingProduct.id}`, {
+        name: editingProduct.name,
+        description: editingProduct.description,
+        price: parseFloat(editingProduct.price) || 0,
+        quantity: editingProduct.quantity ? parseInt(editingProduct.quantity) : null
+      });
+      setProducts(products.map(p => p.id === editingProduct.id ? res.data.product : p));
+      setProductMessage('Product updated!');
+      setEditingProduct(null);
+    } catch (err) {
+      setProductError(err.response?.data?.error || 'Failed to update product');
+    }
+  };
+
   const handleDeleteProduct = async (productId) => {
     if (!window.confirm('Delete this product?')) return;
     try {
@@ -82,6 +103,31 @@ export default function EditEvent() {
       setProducts(products.filter(p => p.id !== productId));
     } catch (err) {
       setProductError(err.response?.data?.error || 'Failed to delete product');
+    }
+  };
+
+  const handleDragStart = (index) => {
+    dragItem.current = index;
+  };
+
+  const handleDragEnter = (index) => {
+    dragOverItem.current = index;
+    const newProducts = [...products];
+    const dragged = newProducts.splice(dragItem.current, 1)[0];
+    newProducts.splice(dragOverItem.current, 0, dragged);
+    dragItem.current = dragOverItem.current;
+    setProducts(newProducts);
+  };
+
+  const handleDragEnd = async () => {
+    dragItem.current = null;
+    dragOverItem.current = null;
+    try {
+      await api.put(`/events/${id}/products/reorder`, {
+        order: products.map(p => p.id)
+      });
+    } catch (err) {
+      setProductError('Failed to save order');
     }
   };
 
@@ -103,68 +149,83 @@ export default function EditEvent() {
         {message && <p className="success">{message}</p>}
         <form onSubmit={handleSave}>
           <label>Title</label>
-          <input
-            value={form.title}
-            onChange={e => setForm({ ...form, title: e.target.value })}
-            required
-          />
+          <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
           <label>Description</label>
-          <textarea
-            rows={3}
-            value={form.description}
-            onChange={e => setForm({ ...form, description: e.target.value })}
-          />
+          <textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           <label>Location</label>
-          <input
-            value={form.location}
-            onChange={e => setForm({ ...form, location: e.target.value })}
-          />
+          <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
           <label>Starts at</label>
-          <input
-            type="datetime-local"
-            value={form.starts_at}
-            onChange={e => setForm({ ...form, starts_at: e.target.value })}
-            required
-          />
+          <input type="datetime-local" value={form.starts_at} onChange={e => setForm({ ...form, starts_at: e.target.value })} required />
           <label>Ends at</label>
-          <input
-            type="datetime-local"
-            value={form.ends_at}
-            onChange={e => setForm({ ...form, ends_at: e.target.value })}
-            required
-          />
+          <input type="datetime-local" value={form.ends_at} onChange={e => setForm({ ...form, ends_at: e.target.value })} required />
           <label>Capacity (leave blank for unlimited)</label>
-          <input
-            type="number"
-            value={form.capacity}
-            onChange={e => setForm({ ...form, capacity: e.target.value })}
-          />
+          <input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} />
           <button type="submit" className="btn btn-primary">Save changes</button>
         </form>
       </div>
 
       {/* Products */}
       <div className="card">
-        <h3 style={{ marginBottom: '1rem' }}>Products</h3>
+        <h3 style={{ marginBottom: '0.5rem' }}>Products</h3>
+        <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1rem' }}>Drag to reorder</p>
         {productError && <p className="error">{productError}</p>}
         {productMessage && <p className="success">{productMessage}</p>}
 
-        {products.map(p => (
-          <div key={p.id} style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '0.5rem 0', borderBottom: '1px solid #f0f0f0'
-          }}>
-            <div>
-              <strong>{p.name}</strong>
-              {p.description && (
-                <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>
-              )}
-              <span style={{ marginLeft: '0.5rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
-              <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
-                {p.quantity !== null ? `${p.remaining ?? p.quantity} / ${p.quantity} left` : 'Unlimited'}
-              </span>
-            </div>
-            <button className="btn btn-danger" onClick={() => handleDeleteProduct(p.id)}>Delete</button>
+        {products.map((p, index) => (
+          <div
+            key={p.id}
+            draggable
+            onDragStart={() => handleDragStart(index)}
+            onDragEnter={() => handleDragEnter(index)}
+            onDragEnd={handleDragEnd}
+            onDragOver={e => e.preventDefault()}
+            style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '0.6rem 0.5rem', marginBottom: '0.3rem',
+              borderRadius: '6px', border: '1px solid #eee',
+              background: 'white', cursor: 'grab'
+            }}
+          >
+            {editingProduct?.id === p.id ? (
+              <form onSubmit={handleUpdateProduct} style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginRight: '0.5rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem' }}>Name</label>
+                  <input value={editingProduct.name} onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })} required style={{ marginBottom: 0 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem' }}>Description</label>
+                  <input value={editingProduct.description || ''} onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })} style={{ marginBottom: 0 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem' }}>Price (€)</label>
+                  <input type="number" step="0.01" min="0" value={editingProduct.price} onChange={e => setEditingProduct({ ...editingProduct, price: e.target.value })} required style={{ marginBottom: 0 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem' }}>Quantity limit</label>
+                  <input type="number" min="1" value={editingProduct.quantity || ''} onChange={e => setEditingProduct({ ...editingProduct, quantity: e.target.value })} style={{ marginBottom: 0 }} />
+                </div>
+                <div style={{ gridColumn: 'span 2', display: 'flex', gap: '0.5rem' }}>
+                  <button type="submit" className="btn btn-primary">Save</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setEditingProduct(null)}>Cancel</button>
+                </div>
+              </form>
+            ) : (
+              <div style={{ flex: 1 }}>
+                <span style={{ cursor: 'grab', marginRight: '0.5rem', color: '#aaa' }}>⠿</span>
+                <strong>{p.name}</strong>
+                {p.description && <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
+                <span style={{ marginLeft: '0.5rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
+                <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+                  {p.quantity !== null ? `${p.remaining ?? p.quantity} / ${p.quantity} left` : 'Unlimited'}
+                </span>
+              </div>
+            )}
+            {editingProduct?.id !== p.id && (
+              <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                <button className="btn btn-secondary" onClick={() => setEditingProduct({ ...p })}>Edit</button>
+                <button className="btn btn-danger" onClick={() => handleDeleteProduct(p.id)}>Delete</button>
+              </div>
+            )}
           </div>
         ))}
 
@@ -175,29 +236,13 @@ export default function EditEvent() {
         <form onSubmit={handleAddProduct} style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
           <h4 style={{ marginBottom: '0.5rem' }}>Add product</h4>
           <label>Name</label>
-          <input
-            value={productForm.name}
-            onChange={e => setProductForm({ ...productForm, name: e.target.value })}
-            required
-          />
+          <input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} required />
           <label>Description</label>
-          <input
-            value={productForm.description}
-            onChange={e => setProductForm({ ...productForm, description: e.target.value })}
-          />
+          <input value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} />
           <label>Price (€)</label>
-          <input
-            type="number" step="0.01" min="0"
-            value={productForm.price}
-            onChange={e => setProductForm({ ...productForm, price: e.target.value })}
-            required
-          />
+          <input type="number" step="0.01" min="0" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required />
           <label>Quantity limit (leave blank for unlimited)</label>
-          <input
-            type="number" min="1"
-            value={productForm.quantity}
-            onChange={e => setProductForm({ ...productForm, quantity: e.target.value })}
-          />
+          <input type="number" min="1" value={productForm.quantity} onChange={e => setProductForm({ ...productForm, quantity: e.target.value })} />
           <button type="submit" className="btn btn-primary">Add product</button>
         </form>
       </div>
