@@ -34,6 +34,28 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get events I can manage (creator, co-manager, or admin)
+router.get('/manageable', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT e.*, u.first_name, u.last_name,
+        COUNT(r.id)::integer as registration_count,
+        CASE WHEN e.creator_id = $1 THEN true ELSE false END as is_owner
+      FROM events e
+      LEFT JOIN users u ON e.creator_id = u.id
+      LEFT JOIN registrations r ON e.id = r.event_id
+      LEFT JOIN event_managers em ON e.id = em.event_id
+      WHERE e.creator_id = $1 OR em.user_id = $1 OR $2 = 'admin'
+      GROUP BY e.id, u.first_name, u.last_name
+      ORDER BY e.starts_at ASC
+    `, [req.user.id, req.user.role]);
+    res.json({ events: result.rows });
+  } catch (err) {
+    console.error('Failed to fetch manageable events:', err.message);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
 // Get single event (public)
 router.get('/:id', async (req, res) => {
   try {
@@ -181,26 +203,6 @@ router.delete('/:id/managers/:userId', requireAuth, async (req, res) => {
   }
 });
 
-// Get events I can manage (creator, co-manager, or admin)
-router.get('/manageable', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT e.*, u.first_name, u.last_name,
-        COUNT(r.id)::integer as registration_count,
-        CASE WHEN e.creator_id = $1 THEN true ELSE false END as is_owner
-      FROM events e
-      LEFT JOIN users u ON e.creator_id = u.id
-      LEFT JOIN registrations r ON e.id = r.event_id
-      LEFT JOIN event_managers em ON e.id = em.event_id
-      WHERE e.creator_id = $1 OR em.user_id = $1 OR $2 = 'admin'
-      GROUP BY e.id, u.first_name, u.last_name
-      ORDER BY e.starts_at ASC
-    `, [req.user.id, req.user.role]);
-    res.json({ events: result.rows });
-  } catch (err) {
-    console.error('Failed to fetch manageable events:', err.message);
-    res.status(500).json({ error: 'Failed to fetch events' });
-  }
-});
+
 
 module.exports = { router, canManageEvent };
