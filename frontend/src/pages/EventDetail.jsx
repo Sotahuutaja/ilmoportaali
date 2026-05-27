@@ -13,6 +13,7 @@ export default function EventDetail() {
   const [selectedProducts, setSelectedProducts] = useState({});
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [teamRegistrations, setTeamRegistrations] = useState([]);
 
   // Guest registration state
   const [showGuestForm, setShowGuestForm] = useState(false);
@@ -29,6 +30,10 @@ export default function EventDetail() {
         setMyTeams(approved);
         setCaptainTeams(approved.filter(t => t.role === 'captain'));
       });
+      // Fetch registrations if user is a captain
+      api.get(`/registrations/${id}`)
+        .then(res => setTeamRegistrations(res.data.registrations))
+        .catch(() => {}); // silently fail if not authorised
     }
   }, [id, user]);
 
@@ -229,6 +234,51 @@ export default function EventDetail() {
                 )}
               </div>
             )}
+			{captainTeams.length > 0 && teamRegistrations.length > 0 && (
+			  <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
+				<h3 style={{ marginBottom: '1rem' }}>Team registrations</h3>
+				{captainTeams.map(team => {
+				  const teamRegs = teamRegistrations.filter(r => r.team_id === team.id);
+				  if (teamRegs.length === 0) return null;
+				  return (
+					<div key={team.id} style={{ marginBottom: '1rem' }}>
+					  <h4 style={{ marginBottom: '0.5rem', color: '#1a1a2e' }}>{team.name}</h4>
+					  {teamRegs.map(r => {
+						const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
+						const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
+						const email = r.is_guest ? r.guest_email : r.user_email;
+						return (
+						  <div key={r.id} style={{
+							display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+							padding: '0.4rem 0.6rem', marginBottom: '0.3rem',
+							borderRadius: '6px', background: '#f9f9f9',
+							fontSize: '0.9rem'
+						  }}>
+							<div>
+							  <span>{lastName && firstName ? `${lastName}, ${firstName}` : firstName || lastName || email}</span>
+							  {r.is_guest && (
+								<span style={{
+								  marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.4rem',
+								  borderRadius: '8px', background: '#e67e22', color: 'white'
+								}}>guest</span>
+							  )}
+							  <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{email}</span>
+							</div>
+							{r.products && r.products.length > 0 && (
+							  <div style={{ color: '#888', fontSize: '0.8rem' }}>
+								{r.products.map((p, i) => (
+								  <span key={i} style={{ marginLeft: '0.3rem' }}>{p.name} x{p.quantity}</span>
+								))}
+							  </div>
+							)}
+						  </div>
+						);
+					  })}
+					</div>
+				  );
+				})}
+			  </div>
+			)}
           </>
         )}
 
