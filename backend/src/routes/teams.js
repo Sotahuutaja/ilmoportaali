@@ -247,4 +247,62 @@ router.put('/:id/captain', requireAuth, async (req, res) => {
   }
 });
 
+// Update team name and description (admin only)
+router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+  const { name, description, captain_id } = req.body;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const existing = await client.query('SELECT * FROM teams WHERE id = $1', [req.params.id]);
+    if (!existing.rows[0]) return res.status(404).json({ error: 'Team not found' });
+
+    const result = await client.query(
+      `UPDATE teams SET
+        name = COALESCE($1, name),
+        description = COALESCE($2, description)
+       WHERE id = $3 RETURNING *`,
+      [name, description, req.params.id]
+    );
+
+    if (captain_id) {
+      // Verify new captain is an approved member
+      const member = await client.query(
+        'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND status = $3',
+        [req.params.id, captain_id, 'approved']
+      );
+
+      if (!member.rows[0]) {
+        // Add them as approved captain if not already a member
+        await client.query(
+          'INSERT INTO team_members (team_id, user_id, role, status) VALUES ($1, $2, $3, $4) ON CONFLICT (team_id, user_id) DO UPDATE SET role = $3, status = $4',
+          [req.params.id, captain_id, 'captain', 'approved']
+        );
+      } else {
+        // Demote current captain to member
+        await client.query(
+          'UPDATE team_members SET role = $1 WHERE team_id = $2 AND role = $3',
+          ['member', req.params.id, 'captain']
+        );
+        // Promote new captain
+        await client.query(
+          'UPDATE team_members SET role = $1 WHERE team_id = $2 AND user_id = $3',
+          ['captain', req.params.id, captain_id]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ team: result.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    if (err.code === '23505') return res.status(409).json({ error: 'Team name already taken' });
+    console.error('Failed to update team:', err.message);
+    res.status(500).json({ error: 'Failed to update team' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

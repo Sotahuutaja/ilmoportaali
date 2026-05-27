@@ -3,6 +3,7 @@ import { useAuth } from '../AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
+const [editingTeam, setEditingTeam] = useState(null);
 const ROLES = ['attendee', 'creator', 'admin'];
 
 function EditUserModal({ user, onClose, onSave }) {
@@ -20,6 +21,11 @@ function EditUserModal({ user, onClose, onSave }) {
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save');
     }
+  };
+  
+  const handleSaveTeam = (updated) => {
+    setTeams(teams.map(t => t.id === updated.id ? { ...t, ...updated } : t));
+    setEditingTeam(null);
   };
 
   const handlePasswordReset = async () => {
@@ -64,6 +70,55 @@ function EditUserModal({ user, onClose, onSave }) {
         />
         <button className="btn btn-secondary" onClick={handlePasswordReset} style={{ width: '100%', marginBottom: '1rem' }}>
           Update password
+        </button>
+        <button className="btn btn-secondary" onClick={onClose} style={{ width: '100%' }}>
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EditTeamModal({ team, users, onClose, onSave }) {
+  const [form, setForm] = useState({ name: team.name, description: team.description || '', captain_id: '' });
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+
+  const handleSave = async () => {
+    setError(''); setMessage('');
+    try {
+      const payload = { name: form.name, description: form.description };
+      if (form.captain_id) payload.captain_id = parseInt(form.captain_id);
+      const res = await api.put(`/teams/${team.id}`, payload);
+      onSave(res.data.team);
+      setMessage('Saved!');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save');
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+    }}>
+      <div className="card" style={{ width: 440, maxWidth: '95vw' }}>
+        <h3 style={{ marginBottom: '1.5rem' }}>Edit team</h3>
+        {error && <p className="error">{error}</p>}
+        {message && <p className="success">{message}</p>}
+        <label>Team name</label>
+        <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+        <label>Description</label>
+        <textarea rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+        <label>Assign new captain (optional)</label>
+        <select value={form.captain_id} onChange={e => setForm({ ...form, captain_id: e.target.value })}>
+          <option value="">Keep current captain</option>
+          {users.map(u => (
+            <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+          ))}
+        </select>
+        <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%', marginBottom: '1rem' }}>
+          Save changes
         </button>
         <button className="btn btn-secondary" onClick={onClose} style={{ width: '100%' }}>
           Close
@@ -265,9 +320,8 @@ export default function Admin() {
                 <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{t.description}</td>
                 <td style={{ padding: '0.8rem 1rem' }}>{t.member_count}</td>
                 <td style={{ padding: '0.8rem 1rem' }}>
-                  <button className="btn btn-danger" onClick={() => handleDeleteTeam(t.id, t.name)}>
-                    Delete
-                  </button>
+                  <button className="btn btn-danger" onClick={() => handleDeleteTeam(t.id, t.name)}>Delete</button>
+				  <button className="btn btn-secondary" onClick={() => setEditingTeam(t)}>Edit</button>
                 </td>
               </tr>
             ))}
@@ -289,6 +343,14 @@ export default function Admin() {
           onSave={(updated) => { handleSave(updated); setEditingUser(null); }}
         />
       )}
+	  {editingTeam && (
+		<EditTeamModal
+		  team={editingTeam}
+		  users={users}
+		  onClose={() => setEditingTeam(null)}
+		  onSave={handleSaveTeam}
+		/>
+	  )}
     </div>
   );
 }
