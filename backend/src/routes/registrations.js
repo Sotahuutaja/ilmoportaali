@@ -261,7 +261,7 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
     if (reg.rows[0].is_guest) {
       // Update guest details
       await client.query(
-		UPDATE registrations SET guest_first_name = COALESCE($1, guest_first_name), guest_last_name = COALESCE($2, guest_last_name), guest_email = COALESCE($3, guest_email), team_id = $4 WHERE id = $5',
+		'UPDATE registrations SET guest_first_name = COALESCE($1, guest_first_name), guest_last_name = COALESCE($2, guest_last_name), guest_email = COALESCE($3, guest_email), team_id = $4 WHERE id = $5',
 		[guest_first_name, guest_last_name, guest_email, team_id || null, req.params.registrationId]
 	  );
     } else {
