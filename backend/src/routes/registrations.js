@@ -257,13 +257,22 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
     const event = await client.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
     if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
 
-    if (req.user.role !== 'admin' && event.rows[0].creator_id !== req.user.id) {
-      return res.status(403).json({ error: 'Not authorised' });
-    }
-
     const reg = await client.query('SELECT * FROM registrations WHERE id = $1', [req.params.registrationId]);
     if (!reg.rows[0]) return res.status(404).json({ error: 'Registration not found' });
 
+    // Check authorisation — admin, event creator, co-manager, or captain of the registration's team
+    const canManage = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
+    if (!canManage) {
+      if (reg.rows[0].team_id) {
+        const captainCheck = await client.query(
+          'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+          [reg.rows[0].team_id, req.user.id, 'captain', 'approved']
+        );
+        if (!captainCheck.rows[0]) return res.status(403).json({ error: 'Not authorised' });
+      } else {
+        return res.status(403).json({ error: 'Not authorised' });
+      }
+    }
     await client.query('BEGIN');
 
     if (reg.rows[0].is_guest) {
