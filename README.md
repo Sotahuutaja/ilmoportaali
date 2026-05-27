@@ -10,8 +10,8 @@ Persistent secrets in Azure Key Vault
 Docker Compose local development environment
 
 
-**Authentication & Users
-**
+**Authentication & Users**
+
 User registration with email verification (SendGrid)
 JWT-based login with role checks
 Three roles: admin, creator, attendee
@@ -44,16 +44,16 @@ Captains can remove members
 Team member list visible only to members, captains and admins
 
 
-**Event Registration
-**
+**Event Registration**
+
 Registered users register individually with product selection
 Optional team linking when registering
 Guest registration by captains (first name, last name, email, team, products)
 Capacity checking and sold-out handling
 
 
-**Admin Panel
-**
+**Admin Panel**
+
 User management with filters, sorting, CSV export
 Collapsible sections with clickable headers
 Edit users (name, email, role, password reset)
@@ -64,7 +64,7 @@ Team management — create, edit, delete teams
 Assign and remove captains per team
 
 
-**Event Management Dashboard **
+**Event Management Dashboard**
 
 Creators and co-managers see their events
 Manage products per event
@@ -75,7 +75,7 @@ Cancel individual registrations
 Co-manager badge on events you don't own
 
 
-**Participant (Registrant) View **
+**Participant (Registrant) View**
 
 Summary stats: total participants, guests, revenue
 Search by name, email or team
@@ -95,7 +95,7 @@ Request to join
 Captain tools: approve/reject requests, remove members, make captain
 
 
-**UX improvements **
+**UX improvements**
 
 Collapsible admin sections
 Sortable columns in user management
