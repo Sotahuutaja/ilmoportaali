@@ -145,8 +145,12 @@ export default function Admin() {
       return;
     }
     api.get('/users').then(res => 
-		setUsers(res.data.users.sort((a, b) => a.name.localeCompare(b.name)))
-	);
+	  setUsers(res.data.users.sort((a, b) => {
+      const nameA = `${a.last_name || ''} ${a.first_name || ''}`.trim();
+      const nameB = `${b.last_name || ''} ${b.first_name || ''}`.trim();
+      return nameA.localeCompare(nameB);
+    }))
+  );
     api.get('/teams').then(res => setTeams(res.data.teams));
   }, [user]);
 
@@ -228,8 +232,8 @@ export default function Admin() {
   }[role] || '#888');
 
   const filtered = users.filter(u =>
-    (!filters.first_name || u.first_name?.toLowerCase().includes(filters.first_name.toLowerCase())) &&
-    (!filters.last_name || u.last_name?.toLowerCase().includes(filters.last_name.toLowerCase())) &&
+    (!filters.first_name || (u.first_name || '').toLowerCase().includes(filters.first_name.toLowerCase())) &&
+    (!filters.last_name || (u.last_name || '').toLowerCase().includes(filters.last_name.toLowerCase())) &&
     (!filters.email || u.email.toLowerCase().includes(filters.email.toLowerCase())) &&
     (!filters.role || u.role === filters.role) &&
     (!filters.year_of_birth || String(u.year_of_birth).includes(filters.year_of_birth)) &&
