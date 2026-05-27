@@ -294,7 +294,7 @@ export default function EventRegistrants() {
               return (
                 <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                   <td style={{ padding: '0.8rem 1rem' }}>
-				    {r.is_guest ? r.guest_first_name : (r.first_name || '—')}
+				    {r.is_guest ? (r.guest_first_name || r.guest_name || '—') : (r.first_name || '—')}
 				    {r.is_guest && (
 					  <span style={{
 					    marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.4rem',
@@ -303,10 +303,7 @@ export default function EventRegistrants() {
 				    )}
 				  </td>
 				  <td style={{ padding: '0.8rem 1rem' }}>
-				    {r.is_guest ? r.guest_last_name : (r.last_name || '—')}
-				  </td>
-				  <td style={{ padding: '0.8rem 1rem' }}>
-				    {r.is_guest ? '' : (r.last_name || '—')}
+				    {r.is_guest ? (r.guest_last_name || '') : (r.last_name || '—')}
 				  </td>
                   <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{email}</td>
                   <td style={{ padding: '0.8rem 1rem' }}>
