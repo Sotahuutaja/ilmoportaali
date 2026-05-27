@@ -130,7 +130,7 @@ export default function Admin() {
   const [editingUser, setEditingUser] = useState(null);
   const [editingTeam, setEditingTeam] = useState(null);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState({ name: '', email: '', role: '', year_of_birth: '', gender: '' });
   const [teamForm, setTeamForm] = useState({ name: '', description: '', captain_id: '' });
   const [teamMessage, setTeamMessage] = useState('');
   const [teamError, setTeamError] = useState('');
@@ -198,8 +198,11 @@ export default function Admin() {
   }[role] || '#888');
 
   const filtered = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
+	(!filters.name || u.name.toLowerCase().includes(filters.name.toLowerCase())) &&
+	(!filters.email || u.email.toLowerCase().includes(filters.email.toLowerCase())) &&
+	(!filters.role || u.role === filters.role) &&
+	(!filters.year_of_birth || String(u.year_of_birth).includes(filters.year_of_birth)) &&
+	(!filters.gender || u.gender === filters.gender)
   );
 
   return (
@@ -217,13 +220,69 @@ export default function Admin() {
       {showUsers && (
         <>
           <div className="card" style={{ marginBottom: '1rem' }}>
-            <input
-              placeholder="Search by name or email..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ marginBottom: 0 }}
-            />
-          </div>
+			  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+				<div>
+				  <label>Name</label>
+				  <input
+					placeholder="Filter..."
+					value={filters.name}
+					onChange={e => setFilters({ ...filters, name: e.target.value })}
+					style={{ marginBottom: 0 }}
+				  />
+				</div>
+				<div>
+				  <label>Email</label>
+				  <input
+					placeholder="Filter..."
+					value={filters.email}
+					onChange={e => setFilters({ ...filters, email: e.target.value })}
+					style={{ marginBottom: 0 }}
+				  />
+				</div>
+				<div>
+				  <label>Role</label>
+				  <select
+					value={filters.role}
+					onChange={e => setFilters({ ...filters, role: e.target.value })}
+					style={{ marginBottom: 0 }}
+				  >
+					<option value="">All</option>
+					{ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+				  </select>
+				</div>
+				<div>
+				  <label>Year of birth</label>
+				  <input
+					placeholder="Filter..."
+					value={filters.year_of_birth}
+					onChange={e => setFilters({ ...filters, year_of_birth: e.target.value })}
+					style={{ marginBottom: 0 }}
+				  />
+				</div>
+				<div>
+				  <label>Gender</label>
+				  <select
+					value={filters.gender}
+					onChange={e => setFilters({ ...filters, gender: e.target.value })}
+					style={{ marginBottom: 0 }}
+				  >
+					<option value="">All</option>
+					<option value="Male">Male</option>
+					<option value="Female">Female</option>
+					<option value="Other">Other</option>
+				  </select>
+				</div>
+			  </div>
+			  {Object.values(filters).some(v => v) && (
+				<button
+				  className="btn btn-secondary"
+				  onClick={() => setFilters({ name: '', email: '', role: '', year_of_birth: '', gender: '' })}
+				  style={{ marginTop: '0.5rem' }}
+				>
+				  Clear filters
+				</button>
+			  )}
+			</div>
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
