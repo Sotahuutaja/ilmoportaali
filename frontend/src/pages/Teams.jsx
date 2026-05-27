@@ -159,10 +159,10 @@ export default function Teams() {
       </div>
 
       {selected && (
-        <div>
+        <div key={selected.id}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.5rem 0' }}>
-            <h2>{selected.name}</h2>
-            <button className="btn btn-secondary" onClick={() => setSelected(null)}>Close</button>
+            <h3>{selected.name}</h3>
+            <button className="btn btn-secondary" onClick={() => { setSelected(null); setMembers(null); }}>Close</button>
           </div>
 
 		  {selected && (
