@@ -138,19 +138,15 @@ export default function Admin() {
   const [teamError, setTeamError] = useState('');
   const [showUsers, setShowUsers] = useState(true);
   const [showTeams, setShowTeams] = useState(true);
+  const [sortField, setSortField] = useState('last_name');
+  const [sortDir, setSortDir] = useState('asc');
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       navigate('/');
       return;
     }
-    api.get('/users').then(res => 
-	  setUsers(res.data.users.sort((a, b) => {
-      const nameA = `${a.last_name || ''} ${a.first_name || ''}`.trim();
-      const nameB = `${b.last_name || ''} ${b.first_name || ''}`.trim();
-      return nameA.localeCompare(nameB);
-    }))
-  );
+    api.get('/users').then(res => setUsers(res.data.users));
     api.get('/teams').then(res => setTeams(res.data.teams));
   }, [user]);
 
@@ -199,6 +195,28 @@ export default function Admin() {
     }
   };
   
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+  
+  const getSortValue = (u, field) => {
+    switch (field) {
+      case 'first_name': return u.first_name || u.email || '';
+      case 'last_name': return u.last_name || u.email || '';
+      case 'email': return u.email || '';
+      case 'role': return u.role || '';
+      case 'age': return u.year_of_birth ? new Date().getFullYear() - u.year_of_birth : 0;
+      case 'gender': return u.gender || '';
+      case 'created_at': return u.created_at || '';
+      default: return '';
+    }
+  };
+  
   const exportUsersCSV = () => {
     const headers = ['First name', 'Last name', 'Email', 'Role', 'Age', 'Gender', 'Joined'];
     const currentYear = new Date().getFullYear();
@@ -238,7 +256,15 @@ export default function Admin() {
     (!filters.role || u.role === filters.role) &&
     (!filters.year_of_birth || String(u.year_of_birth).includes(filters.year_of_birth)) &&
     (!filters.gender || u.gender === filters.gender)
-  );
+  )
+  .sort((a, b) => {
+    const valA = getSortValue(a, sortField);
+    const valB = getSortValue(b, sortField);
+    if (typeof valA === 'number') return sortDir === 'asc' ? valA - valB : valB - valA;
+    return sortDir === 'asc'
+      ? valA.localeCompare(valB, 'fi')
+      : valB.localeCompare(valA, 'fi');
+  });
   
   const calculateAge = (yearOfBirth) => {
 	if (!yearOfBirth) return '—';
@@ -342,18 +368,35 @@ export default function Admin() {
 
           <div className="card" style={{ padding: 0, overflow: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
-                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>First name</th>
-				  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Last name</th>
-                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
-                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Role</th>
-                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Age</th>
-                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Gender</th>
-                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Joined</th>
-                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
-                </tr>
-              </thead>
+			  <thead>
+			    <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
+				  {[
+				    { label: 'First name', field: 'first_name' },
+				    { label: 'Last name', field: 'last_name' },
+				    { label: 'Email', field: 'email' },
+				    { label: 'Role', field: 'role' },
+				    { label: 'Age', field: 'age' },
+				    { label: 'Gender', field: 'gender' },
+				    { label: 'Joined', field: 'created_at' },
+				  ].map(({ label, field }) => (
+				    <th
+					  key={field}
+					  onClick={() => handleSort(field)}
+					  style={{
+					    padding: '0.8rem 1rem', textAlign: 'left',
+					    cursor: 'pointer', userSelect: 'none',
+					    whiteSpace: 'nowrap'
+					  }}
+				    >
+					  {label}
+					  <span style={{ marginLeft: '0.3rem', color: '#aaa' }}>
+					    {sortField === field ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+					  </span>
+				    </th>
+				  ))}
+				  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
+			    </tr>
+			  </thead>
               <tbody>
                 {filtered.map(u => (
                   <tr key={u.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
