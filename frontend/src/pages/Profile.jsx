@@ -119,12 +119,12 @@ export default function Profile() {
             <option value="Other">Other</option>
           </select>
 		  
-          <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
-			<h4 style={{ marginBottom: '0.5rem' }}>Password</h4>
-			{resetMessage && <p className="success">{resetMessage}</p>}
-			{resetError && <p className="error">{resetError}</p>}
-			<button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={handlePasswordReset}>Send password reset email</button>
           <button type="submit" className="btn btn-primary">Save changes</button>
+          <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+          <h4 style={{ marginBottom: '0.5rem' }}>Password</h4>
+          {resetMessage && <p className="success">{resetMessage}</p>}
+          {resetError && <p className="error">{resetError}</p>}
+          <button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={handlePasswordReset}>Send password reset email</button>
         </form>
       </div>
 

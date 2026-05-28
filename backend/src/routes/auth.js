@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
-const { sendVerificationEmail } = require('../services/email');
 const crypto = require('crypto');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email');
 
