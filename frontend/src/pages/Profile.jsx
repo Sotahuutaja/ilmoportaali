@@ -7,14 +7,14 @@ const currentYear = new Date().getFullYear();
 export default function Profile() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', confirmPassword: '', year_of_birth: '', gender: '' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', year_of_birth: '', gender: '' });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-
   const [registrations, setRegistrations] = useState([]);
   const [myTeams, setMyTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetError, setResetError] = useState('');
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -38,8 +38,35 @@ export default function Profile() {
   }, [user]);
 
 	const handleSave = async (e) => {
-    e.preventDefault();
-    setError(''); setMessage('');
+	  e.preventDefault();
+	  setError(''); setMessage('');
+	  try {
+		const payload = {
+		  first_name: form.first_name,
+		  last_name: form.last_name,
+		  email: form.email
+		};
+		if (form.year_of_birth) payload.year_of_birth = parseInt(form.year_of_birth);
+		if (form.gender) payload.gender = form.gender;
+
+		const res = await api.put('/auth/profile', payload);
+		const token = localStorage.getItem('token');
+		login(token, res.data.user);
+		setMessage('Profile updated!');
+	  } catch (err) {
+		setError(err.response?.data?.error || 'Failed to update profile');
+	  }
+	};
+	
+	const handlePasswordReset = async () => {
+	  setResetMessage(''); setResetError('');
+	  try {
+		const res = await api.post('/auth/forgot-password', { email: user.email });
+		setResetMessage(res.data.message);
+	  } catch (err) {
+		setResetError(err.response?.data?.error || 'Failed to send reset email');
+	  }
+	};
 
     if (form.password && form.password !== form.confirmPassword) {
       return setError('Passwords do not match');
@@ -113,23 +140,10 @@ export default function Profile() {
           </select>
 		  
           <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
-          <h4 style={{ marginBottom: '0.5rem' }}>Change password</h4>
-          <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-            Leave blank to keep your current password
-          </p>
-          <label>New password</label>
-          <input
-            type="password"
-            value={form.password}
-            onChange={e => setForm({ ...form, password: e.target.value })}
-            placeholder="Min. 8 characters"
-          />
-          <label>Confirm new password</label>
-          <input
-            type="password"
-            value={form.confirmPassword}
-            onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
-          />
+			<h4 style={{ marginBottom: '0.5rem' }}>Password</h4>
+			{resetMessage && <p className="success">{resetMessage}</p>}
+			{resetError && <p className="error">{resetError}</p>}
+			<button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={handlePasswordReset}>Send password reset email</button>
           <button type="submit" className="btn btn-primary">Save changes</button>
         </form>
       </div>

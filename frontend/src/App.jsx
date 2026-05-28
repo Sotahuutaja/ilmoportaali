@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import { AuthProvider, useAuth, fullName } from './AuthContext';
 import VerifyEmail from './pages/VerifyEmail';
 import EditEvent from './pages/EditEvent';
+import ResetPassword from './pages/ResetPassword';
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -64,6 +65,7 @@ export default function App() {
 			<Route path="/profile" element={<Profile />} />
 			<Route path="/verify-email" element={<VerifyEmail />} />
 			<Route path="/events/:id/edit" element={<EditEvent />} />
+			<Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </div>
       </BrowserRouter>
