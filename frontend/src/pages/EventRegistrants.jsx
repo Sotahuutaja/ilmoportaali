@@ -185,7 +185,10 @@ export default function EventRegistrants() {
 			? r.products.reduce((sum, p) => sum + parseFloat(p.price) * p.quantity, 0).toFixed(2)
 			: '0.00';
 		const type = r.is_guest ? 'Guest' : 'Registered user';
-		const registered = new Date(r.created_at).toLocaleDateString('fi-FI');
+		const registered = new Date(r.created_at).toLocaleString('fi-FI', {
+		  day: 'numeric', month: 'numeric', year: 'numeric',
+		  hour: '2-digit', minute: '2-digit', second: '2-digit'
+		});
 		return [firstName, lastName, email, team, products, totalPrice, type, registered];
 	});
 
@@ -330,7 +333,10 @@ export default function EventRegistrants() {
                     )}
                   </td>
                   <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.85rem' }}>
-                    {new Date(r.created_at).toLocaleDateString('fi-FI')}
+                    {new Date(r.created_at).toLocaleString('fi-FI', {
+					  day: 'numeric', month: 'numeric', year: 'numeric',
+					  hour: '2-digit', minute: '2-digit', second: '2-digit'
+					})}
                   </td>
                   <td style={{ padding: '0.8rem 1rem' }}>
 				    <div style={{ display: 'flex', gap: '0.5rem' }}>
