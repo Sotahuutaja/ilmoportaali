@@ -182,6 +182,14 @@ export default function EventDetail() {
     }
   }, [id, user]);
 
+useEffect(() => {
+  if (!event) return;
+  if (!event.allow_individual_registration && allowedTeams.length > 0 && myTeams.length > 0) {
+    const firstAllowed = myTeams.find(t => allowedTeams.includes(t.id));
+    if (firstAllowed) setSelectedTeam(String(firstAllowed.id));
+  }
+}, [event, allowedTeams, myTeams]);
+
   const toggleProduct = (productId, setter) => {
     setter(prev => ({
       ...prev,
