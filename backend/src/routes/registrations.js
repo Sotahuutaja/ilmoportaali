@@ -51,12 +51,19 @@ router.post('/:eventId', requireAuth, async (req, res) => {
     }
 
     if (team_id) {
-      const membership = await client.query(
-        'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND status = $3',
-        [team_id, req.user.id, 'approved']
-      );
-      if (!membership.rows[0]) return res.status(403).json({ error: 'Not an approved team member' });
-    }
+	  const membership = await client.query(
+		'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND status = $3',
+		[team_id, req.user.id, 'approved']
+	  );
+	  if (!membership.rows[0]) return res.status(403).json({ error: 'Not an approved team member' });
+
+	  // Check if team is allowed for this event
+	  const eventTeam = await client.query(
+		'SELECT * FROM event_teams WHERE event_id = $1 AND team_id = $2',
+		[req.params.eventId, team_id]
+	  );
+	  if (!eventTeam.rows[0]) return res.status(403).json({ error: 'This team is not allowed for this event' });
+	}
 	
 	if (products.length === 0) {
 	  return res.status(400).json({ error: 'You must select at least one product to register' });
@@ -104,6 +111,13 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
     if (!membership.rows[0] && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Only team captains can register guests' });
     }
+	
+	// Check if team is allowed for this event
+	const eventTeam = await client.query(
+	  'SELECT * FROM event_teams WHERE event_id = $1 AND team_id = $2',
+	  [req.params.eventId, team_id]
+	);
+	if (!eventTeam.rows[0]) return res.status(403).json({ error: 'This team is not allowed for this event' });
 
     const event = await client.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
     if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });

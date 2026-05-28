@@ -75,6 +75,14 @@ async function migrate() {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(event_id, user_id)
     );
+	
+	CREATE TABLE IF NOT EXISTS event_teams (
+      id         SERIAL PRIMARY KEY,
+      event_id   INTEGER REFERENCES events(id) ON DELETE CASCADE,
+      team_id    INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(event_id, team_id)
+    );
 
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE;

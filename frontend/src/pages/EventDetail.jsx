@@ -150,6 +150,7 @@ export default function EventDetail() {
   const [error, setError] = useState('');
   const [teamRegistrations, setTeamRegistrations] = useState([]);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [allowedTeams, setAllowedTeams] = useState([]);
 
   // Guest registration state
   const [showGuestForm, setShowGuestForm] = useState(false);
@@ -160,6 +161,7 @@ export default function EventDetail() {
   useEffect(() => {
     api.get(`/events/${id}`).then(res => setEvent(res.data.event));
     api.get(`/events/${id}/products`).then(res => setProducts(res.data.products));
+	api.get(`/events/${id}/teams`).then(res => setAllowedTeams(res.data.teams.map(t => t.team_id)));
     if (user) {
       api.get('/teams/my/memberships').then(res => {
         const approved = res.data.teams.filter(t => t.status === 'approved');
@@ -331,15 +333,17 @@ export default function EventDetail() {
           <>
             <h3 style={{ marginBottom: '1rem' }}>Register yourself</h3>
 
-            {myTeams.length > 0 && (
-              <div>
-                <label>Register as part of a team (optional)</label>
-                <select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)}>
-                  <option value="">No team — register individually</option>
-                  {myTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
-            )}
+            {myTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && (
+			  <div>
+				<label>Register as part of a team (optional)</label>
+				<select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)}>
+				  <option value="">No team — register individually</option>
+				  {myTeams
+					.filter(t => allowedTeams.includes(t.id))
+					.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+				</select>
+			  </div>
+			)}
 
             <ProductSelector selected={selectedProducts} setSelected={setSelectedProducts} />
 
@@ -350,7 +354,7 @@ export default function EventDetail() {
 			  )}
             </div>
 
-            {captainTeams.length > 0 && (
+            {captainTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && (
               <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3>Register a guest</h3>
@@ -387,7 +391,7 @@ export default function EventDetail() {
                       required
                     >
                       <option value="">Select team...</option>
-                      {captainTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      {captainTeams.filter(t => allowedTeams.includes(t.id)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
 
                     <ProductSelector selected={guestProducts} setSelected={setGuestProducts} />
@@ -397,10 +401,10 @@ export default function EventDetail() {
                 )}
               </div>
             )}
-			{captainTeams.length > 0 && teamRegistrations.length > 0 && (
+			{captainTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && teamRegistrations.length > 0 && (
 			  <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
 				<h3 style={{ marginBottom: '1rem' }}>Team registrations</h3>
-				{captainTeams.map(team => {
+				{captainTeams.filter(t => allowedTeams.includes(t.id)).map(team => {
 				  const teamRegs = teamRegistrations
 					.filter(r => r.team_id === team.id)
 					.sort((a, b) => {

@@ -203,6 +203,62 @@ router.delete('/:id/managers/:userId', requireAuth, async (req, res) => {
   }
 });
 
+// Get allowed teams for an event (public)
+router.get('/:id/teams', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT et.*, t.name, t.description,
+        COUNT(tm.id) FILTER (WHERE tm.status = 'approved')::integer as member_count
+      FROM event_teams et
+      JOIN teams t ON et.team_id = t.id
+      LEFT JOIN team_members tm ON t.id = tm.team_id
+      WHERE et.event_id = $1
+      GROUP BY et.id, t.name, t.description
+      ORDER BY t.name ASC
+    `, [req.params.id]);
+    res.json({ teams: result.rows });
+  } catch (err) {
+    console.error('Failed to fetch event teams:', err.message);
+    res.status(500).json({ error: 'Failed to fetch event teams' });
+  }
+});
 
+// Add allowed team to event (creator, co-manager or admin)
+router.post('/:id/teams', requireAuth, async (req, res) => {
+  const { team_id } = req.body;
+  if (!team_id) return res.status(400).json({ error: 'team_id is required' });
+
+  try {
+    const allowed = await canManageEvent(req.user.id, req.user.role, req.params.id, pool);
+    if (!allowed) return res.status(403).json({ error: 'Not authorised' });
+
+    const result = await pool.query(
+      'INSERT INTO event_teams (event_id, team_id) VALUES ($1, $2) RETURNING *',
+      [req.params.id, team_id]
+    );
+    res.status(201).json({ eventTeam: result.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Team already allowed for this event' });
+    console.error('Failed to add event team:', err.message);
+    res.status(500).json({ error: 'Failed to add team' });
+  }
+});
+
+// Remove allowed team from event (creator, co-manager or admin)
+router.delete('/:id/teams/:teamId', requireAuth, async (req, res) => {
+  try {
+    const allowed = await canManageEvent(req.user.id, req.user.role, req.params.id, pool);
+    if (!allowed) return res.status(403).json({ error: 'Not authorised' });
+
+    await pool.query(
+      'DELETE FROM event_teams WHERE event_id = $1 AND team_id = $2',
+      [req.params.id, req.params.teamId]
+    );
+    res.json({ message: 'Team removed from event' });
+  } catch (err) {
+    console.error('Failed to remove event team:', err.message);
+    res.status(500).json({ error: 'Failed to remove team' });
+  }
+});
 
 module.exports = { router, canManageEvent };
