@@ -210,23 +210,12 @@ export default function EventDetail() {
     }
   };
 
-const cancel = async () => {
-  setError(''); setMessage('');
-  try {
-    await api.delete(`/registrations/${id}`);
-    setMessage('Registration cancelled.');
-    setIsRegistered(false);
-    setEvent(e => ({ ...e, registration_count: e.registration_count - 1 }));
-  } catch (err) {
-    setError(err.response?.data?.error || 'Failed to cancel');
-  }
-};
-
   const cancel = async () => {
     setError(''); setMessage('');
     try {
       await api.delete(`/registrations/${id}`);
       setMessage('Registration cancelled.');
+      setIsRegistered(false);
       setEvent(e => ({ ...e, registration_count: e.registration_count - 1 }));
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel');
