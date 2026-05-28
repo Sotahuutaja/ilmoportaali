@@ -49,6 +49,10 @@ router.post('/:eventId', requireAuth, async (req, res) => {
         return res.status(409).json({ error: 'Event is full' });
       }
     }
+	
+	if (!team_id && !event.rows[0].allow_individual_registration) {
+	  return res.status(403).json({ error: 'Individual registration is not allowed for this event — you must register as part of a team' });
+	}
 
     if (team_id) {
 	  const membership = await client.query(

@@ -9,7 +9,8 @@ export default function Dashboard() {
   const [events, setEvents] = useState([]);
   const [form, setForm] = useState({
     title: '', description: '', location: '',
-    starts_at: '', ends_at: '', capacity: ''
+    starts_at: '', ends_at: '', capacity: '',
+    allow_individual_registration: true
   });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -48,7 +49,7 @@ export default function Dashboard() {
       });
       setEvents([...events, res.data.event]);
       setMessage('Event created!');
-      setForm({ title: '', description: '', location: '', starts_at: '', ends_at: '', capacity: '' });
+      setForm({ title: '', description: '', location: '', starts_at: '', ends_at: '', capacity: '', allow_individual_registration: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create event');
     }
@@ -150,6 +151,15 @@ export default function Dashboard() {
           <input type="datetime-local" value={form.ends_at} onChange={e => setForm({ ...form, ends_at: e.target.value })} required />
           <label>Capacity (leave blank for unlimited)</label>
           <input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <input
+              type="checkbox"
+              checked={form.allow_individual_registration}
+              onChange={e => setForm({ ...form, allow_individual_registration: e.target.checked })}
+              style={{ width: 'auto', margin: 0 }}
+            />
+            Allow individual registration (without a team)
+          </label>
           <button type="submit" className="btn btn-primary">Create event</button>
         </form>
       </div>

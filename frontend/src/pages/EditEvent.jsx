@@ -10,7 +10,8 @@ export default function EditEvent() {
 
   const [form, setForm] = useState({
     title: '', description: '', location: '',
-    starts_at: '', ends_at: '', capacity: ''
+    starts_at: '', ends_at: '', capacity: '',
+    allow_individual_registration: true
   });
   const [products, setProducts] = useState([]);
   const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '' });
@@ -40,12 +41,13 @@ export default function EditEvent() {
 	]).then(([eventRes, productsRes, eventTeamsRes, allTeamsRes]) => {
 	  const e = eventRes.data.event;
 	  setForm({
-		title: e.title,
-		description: e.description || '',
-		location: e.location || '',
-		starts_at: e.starts_at ? e.starts_at.slice(0, 16) : '',
-		ends_at: e.ends_at ? e.ends_at.slice(0, 16) : '',
-		capacity: e.capacity || ''
+	    title: e.title,
+	    description: e.description || '',
+	    location: e.location || '',
+	    starts_at: e.starts_at ? e.starts_at.slice(0, 16) : '',
+	    ends_at: e.ends_at ? e.ends_at.slice(0, 16) : '',
+	    capacity: e.capacity || '',
+	    allow_individual_registration: e.allow_individual_registration ?? true
 	  });
 	  setProducts(productsRes.data.products);
 	  setEventTeams(eventTeamsRes.data.teams);
@@ -190,7 +192,9 @@ export default function EditEvent() {
           <input type="datetime-local" value={form.ends_at} onChange={e => setForm({ ...form, ends_at: e.target.value })} required />
           <label>Capacity (leave blank for unlimited)</label>
           <input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} />
-          <button type="submit" className="btn btn-primary">Save changes</button>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+		  <input type="checkbox" checked={form.allow_individual_registration} onChange={e => setForm({ ...form, allow_individual_registration: e.target.checked })} style={{ width: 'auto', margin: 0 }} />Allow individual registration (without a team)</label>
+		  <button type="submit" className="btn btn-primary">Save changes</button>
         </form>
       </div>
 

@@ -101,6 +101,7 @@ async function migrate() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expires TIMESTAMPTZ;
 	ALTER TABLE event_products ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
+	ALTER TABLE events ADD COLUMN IF NOT EXISTS allow_individual_registration BOOLEAN NOT NULL DEFAULT TRUE;
   `);
 
   console.log('Migration complete');

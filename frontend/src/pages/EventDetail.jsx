@@ -330,29 +330,46 @@ export default function EventDetail() {
         {error && <p className="error">{error}</p>}
 
         {user && !full && (
-          <>
-            <h3 style={{ marginBottom: '1rem' }}>Register yourself</h3>
+		  <>
+			<h3 style={{ marginBottom: '1rem' }}>Register yourself</h3>
 
-            {myTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && (
-			  <div>
-				<label>Register as part of a team (optional)</label>
-				<select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)}>
-				  <option value="">No team — register individually</option>
-				  {myTeams
-					.filter(t => allowedTeams.includes(t.id))
-					.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-				</select>
-			  </div>
-			)}
+			{(() => {
+			  const canRegisterIndividually = event.allow_individual_registration;
+			  const hasAllowedTeam = myTeams.filter(t => allowedTeams.includes(t.id)).length > 0;
 
-            <ProductSelector selected={selectedProducts} setSelected={setSelectedProducts} />
+			  if (!canRegisterIndividually && !hasAllowedTeam) {
+				return (
+				  <p style={{ color: '#c0392b' }}>
+					Individual registration is not allowed for this event and you are not a member of any allowed team.
+				  </p>
+				);
+			  }
 
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button className="btn btn-primary" onClick={register}>Register</button>
-			  {isRegistered && (
-                <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
-			  )}
-            </div>
+			  return (
+				<>
+				  {hasAllowedTeam && (
+					<div>
+					  <label>Register as part of a team {!canRegisterIndividually ? '(required)' : '(optional)'}</label>
+					  <select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)}>
+						{canRegisterIndividually && <option value="">No team — register individually</option>}
+						{myTeams
+						  .filter(t => allowedTeams.includes(t.id))
+						  .map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+					  </select>
+					</div>
+				  )}
+
+				  <ProductSelector selected={selectedProducts} setSelected={setSelectedProducts} />
+
+				  <div style={{ display: 'flex', gap: '0.5rem' }}>
+					<button className="btn btn-primary" onClick={register}>Register</button>
+					{isRegistered && (
+					  <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
+					)}
+				  </div>
+				</>
+			  );
+			})()}
 
             {captainTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && (
               <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
