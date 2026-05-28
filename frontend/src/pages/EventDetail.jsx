@@ -8,7 +8,6 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
   const [editing, setEditing] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState({});
   const [error, setError] = useState('');
-  const [isRegistered, setIsRegistered] = useState(false);
   const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
   const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
   const displayName = lastName && firstName
@@ -150,6 +149,7 @@ export default function EventDetail() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [teamRegistrations, setTeamRegistrations] = useState([]);
+  const [isRegistered, setIsRegistered] = useState(false);
 
   // Guest registration state
   const [showGuestForm, setShowGuestForm] = useState(false);
