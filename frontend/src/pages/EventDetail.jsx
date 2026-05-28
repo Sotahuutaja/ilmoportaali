@@ -195,6 +195,7 @@ export default function EventDetail() {
       .map(([product_id, quantity]) => ({ product_id: parseInt(product_id), quantity }));
 
   const register = async () => {
+	console.log('Registering with team_id:', selectedTeam, typeof selectedTeam);
     setError(''); setMessage('');
     if (buildProducts(selectedProducts).length === 0) {
       return setError('Please select at least one product to register.');

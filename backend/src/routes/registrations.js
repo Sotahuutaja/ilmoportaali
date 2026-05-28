@@ -32,8 +32,6 @@ async function insertProducts(client, registrationId, products, eventId) {
 // Register self for an event
 router.post('/:eventId', requireAuth, async (req, res) => {
   const { team_id, products = [] } = req.body;
-  console.log('Registration attempt - team_id:', team_id, 'type:', typeof team_id);
-  const { team_id, products = [] } = req.body;
   const client = await pool.connect();
 
   try {
