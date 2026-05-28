@@ -15,6 +15,8 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
+  const [editing, setEditing] = useState(false);
+
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -76,57 +78,76 @@ export default function Profile() {
 
       {/* Account settings */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <h3 style={{ marginBottom: '1rem' }}>Account settings</h3>
-        {error && <p className="error">{error}</p>}
-        {message && <p className="success">{message}</p>}
-        <form onSubmit={handleSave}>
-          <label>First name</label>
-		  <input
-		    value={form.first_name}
-		    onChange={e => setForm({ ...form, first_name: e.target.value })}
-		    required
-		  />
-		  <label>Last name</label>
-		  <input
-		    value={form.last_name}
-		    onChange={e => setForm({ ...form, last_name: e.target.value })}
-		    required
-		  />
-          <label>Email</label>
-          <input
-            type="email"
-            value={form.email}
-            onChange={e => setForm({ ...form, email: e.target.value })}
-            required
-          />
-		  <label>Year of birth</label>
-          <input
-            type="number"
-            min="1940"
-            max={currentYear}
-            value={form.year_of_birth}
-            onChange={e => setForm({ ...form, year_of_birth: e.target.value })}
-            placeholder={`1940 – ${currentYear}`}
-          />
-          <label>Gender</label>
-          <select
-            value={form.gender}
-            onChange={e => setForm({ ...form, gender: e.target.value })}
-          >
-            <option value="">Select...</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select>
-		  
-          <button type="submit" className="btn btn-primary">Save changes</button>
-          <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
-          <h4 style={{ marginBottom: '0.5rem' }}>Password</h4>
-          {resetMessage && <p className="success">{resetMessage}</p>}
-          {resetError && <p className="error">{resetError}</p>}
-          <button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={handlePasswordReset}>Send password reset email</button>
-        </form>
-      </div>
+	    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+		  <h3>Account settings</h3>
+		  {!editing && (
+		    <button className="btn btn-secondary" onClick={() => setEditing(true)}>Edit</button>
+		  )}
+	    </div>
+	    {error && <p className="error">{error}</p>}
+	    {message && <p className="success">{message}</p>}
+
+	    {!editing ? (
+		  <div>
+		    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+			  <div>
+			    <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.2rem' }}>First name</p>
+			    <p><strong>{user.first_name || '—'}</strong></p>
+			  </div>
+			  <div>
+			    <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Last name</p>
+			    <p><strong>{user.last_name || '—'}</strong></p>
+			  </div>
+			  <div>
+			    <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Email</p>
+			    <p><strong>{user.email}</strong></p>
+			  </div>
+			  <div>
+			    <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Year of birth</p>
+			    <p><strong>{user.year_of_birth || '—'}</strong></p>
+			  </div>
+			  <div>
+			    <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Gender</p>
+			    <p><strong>{user.gender || '—'}</strong></p>
+			  </div>
+		    </div>
+		    <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+		    <h4 style={{ marginBottom: '0.5rem' }}>Password</h4>
+		    {resetMessage && <p className="success">{resetMessage}</p>}
+		    {resetError && <p className="error">{resetError}</p>}
+		    <button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={handlePasswordReset}>
+			  Send password reset email
+		    </button>
+		  </div>
+	    ) : (
+		  <form onSubmit={async (e) => { await handleSave(e); setEditing(false); }}>
+		    <label>First name</label>
+		    <input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} required />
+		    <label>Last name</label>
+		    <input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} required />
+		    <label>Email</label>
+		    <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+		    <label>Year of birth</label>
+		    <input
+			  type="number" min="1940" max={currentYear}
+			  value={form.year_of_birth}
+			  onChange={e => setForm({ ...form, year_of_birth: e.target.value })}
+			  placeholder={`1940 – ${currentYear}`}
+		    />
+		    <label>Gender</label>
+		    <select value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}>
+			  <option value="">Select...</option>
+			  <option value="Male">Male</option>
+			  <option value="Female">Female</option>
+			  <option value="Other">Other</option>
+		    </select>
+		    <div style={{ display: 'flex', gap: '0.5rem' }}>
+			  <button type="submit" className="btn btn-primary">Save changes</button>
+			  <button type="button" className="btn btn-secondary" onClick={() => setEditing(false)}>Cancel</button>
+		    </div>
+		  </form>
+	    )}
+	  </div>
 
       {/* Team memberships */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
