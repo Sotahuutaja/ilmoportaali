@@ -8,7 +8,7 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
   const [editing, setEditing] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState({});
   const [error, setError] = useState('');
-
+  const [isRegistered, setIsRegistered] = useState(false);
   const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
   const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
   const displayName = lastName && firstName
@@ -169,7 +169,14 @@ export default function EventDetail() {
       // Fetch registrations if user is a captain
       api.get(`/registrations/${id}`)
         .then(res => setTeamRegistrations(res.data.registrations))
-        .catch(() => {}); // silently fail if not authorised
+        .catch(() => {});
+      // Check if user is already registered
+      api.get('/registrations/my/list')
+        .then(res => {
+          const registered = res.data.registrations.some(r => r.id === parseInt(id));
+          setIsRegistered(registered);
+        })
+        .catch(() => {});
     }
   }, [id, user]);
 
@@ -196,11 +203,24 @@ export default function EventDetail() {
         products: buildProducts(selectedProducts)
       });
       setMessage('Successfully registered!');
+      setIsRegistered(true);
       setEvent(e => ({ ...e, registration_count: e.registration_count + 1 }));
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed');
     }
   };
+
+const cancel = async () => {
+  setError(''); setMessage('');
+  try {
+    await api.delete(`/registrations/${id}`);
+    setMessage('Registration cancelled.');
+    setIsRegistered(false);
+    setEvent(e => ({ ...e, registration_count: e.registration_count - 1 }));
+  } catch (err) {
+    setError(err.response?.data?.error || 'Failed to cancel');
+  }
+};
 
   const cancel = async () => {
     setError(''); setMessage('');
@@ -336,7 +356,9 @@ export default function EventDetail() {
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button className="btn btn-primary" onClick={register}>Register</button>
-              <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
+			  {isRegistered && (
+                <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
+			  )}
             </div>
 
             {captainTeams.length > 0 && (
