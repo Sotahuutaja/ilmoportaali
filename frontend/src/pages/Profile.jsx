@@ -68,26 +68,6 @@ export default function Profile() {
 	  }
 	};
 
-    if (form.password && form.password !== form.confirmPassword) {
-      return setError('Passwords do not match');
-    }
-
-    try {
-      const payload = { first_name: form.first_name, last_name: form.last_name, email: form.email };
-      if (form.password) payload.password = form.password;
-      if (form.year_of_birth) payload.year_of_birth = parseInt(form.year_of_birth);
-      if (form.gender) payload.gender = form.gender;
-
-      const res = await api.put('/auth/profile', payload);
-      const token = localStorage.getItem('token');
-      login(token, res.data.user);
-      setForm(f => ({ ...f, password: '', confirmPassword: '' }));
-      setMessage('Profile updated!');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to update profile');
-    }
-  };
-
   if (!user) return null;
 
   return (
