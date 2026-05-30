@@ -4,7 +4,6 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const { canManageEvent } = require('../utils/eventAccess');
 const router = express.Router();
 
-
 // List all events (public)
 router.get('/', async (req, res) => {
   try {
