@@ -225,8 +225,6 @@ router.get('/:eventId', requireAuth, async (req, res) => {
           'quantity', rp.quantity,
           'price', ep.price,
           'field_values', rp.field_values,
-          'fields', ep.fields,
-          'field_values', rp.field_values,
           'fields', ep.fields
         )) FILTER (WHERE rp.id IS NOT NULL) as products
       FROM registrations r
@@ -361,4 +359,44 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
     // Update products
     if (products !== undefined) {
       await client.query('DELETE FROM registration_products WHERE registration_id = $1', [req.params.registrationId]);
-      if
+      if (products.length > 0) {
+        await insertProducts(client, req.params.registrationId, products, req.params.eventId);
+      }
+    }
+
+    await client.query('COMMIT');
+
+    // Return updated registration
+    const updated = await pool.query(`
+      SELECT
+        r.*,
+        u.first_name, u.last_name, u.email as user_email,
+        t.name as team_name,
+        json_agg(json_build_object(
+          'product_id', rp.product_id,
+          'name', ep.name,
+          'quantity', rp.quantity,
+          'price', ep.price,
+          'field_values', rp.field_values,
+          'fields', ep.fields
+        )) FILTER (WHERE rp.id IS NOT NULL) as products
+      FROM registrations r
+      LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN teams t ON r.team_id = t.id
+      LEFT JOIN registration_products rp ON r.id = rp.registration_id
+      LEFT JOIN event_products ep ON rp.product_id = ep.id
+      WHERE r.id = $1
+      GROUP BY r.id, u.first_name, u.last_name, u.email, t.name
+    `, [req.params.registrationId]);
+
+    res.json({ registration: updated.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Failed to update registration:', err.message);
+    res.status(500).json({ error: err.message || 'Failed to update registration' });
+  } finally {
+    client.release();
+  }
+});
+
+module.exports = router;
