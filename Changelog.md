@@ -1,3 +1,46 @@
+Completed so far (30.5.2026):
+
+**Code quality & maintenance (30.5.2026)**
+
+* Normalised all source files to consistent 2-space indentation and LF line endings
+* Removed three one-off dev scripts from the codebase (check-db.js, fix-name-column.js, verify-existing-users.js)
+* Removed dead `pool` import from utils/eventAccess.js
+* Removed duplicate `canManageEvent` function from routes/events.js — now imported from utils/eventAccess.js
+* Moved `handleSave` and `handlePasswordReset` in Profile.jsx to correct top-level scope
+* Moved `ProductSelector` component in EventDetail.jsx outside the render function to prevent unnecessary remounts
+* Fixed second `useEffect` in EventDetail.jsx missing indentation (was outside component body)
+* Fixed `buildProducts` being called twice in EventDetail.jsx register function
+* Fixed `EventRegistrants.jsx` search and cancel dialogs using non-existent `guest_name`/`user_name` fields
+
+
+**Security (30.5.2026)**
+
+* Added security headers middleware (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, removes X-Powered-By)
+* Added CORS middleware locked to APP_URL in production
+* Added in-memory rate limiting on auth endpoints: login (10/15 min), register (5/15 min), forgot-password and resend-verification (5/15 min)
+* Added try/catch error handling to /auth/me endpoint
+* Added JWT_SECRET presence check at server startup — fails fast if missing
+* Replaced hardcoded email in make-admin.js with a CLI argument
+
+
+**Infrastructure (30.5.2026)**
+
+* Updated GitHub Actions: azure/login and azure/cli bumped from v1 to v2
+* Moved hardcoded registry username to REGISTRY_USERNAME secret
+* Pinned azcliversion to 2.70.0 (was non-deterministic `latest`)
+* Added Docker layer caching (type=gha) to both build jobs
+* Added post-deploy health check polling to both jobs (2 min timeout)
+* migrate.js now runs automatically on container startup — no manual step required
+* Added 404 handler and global error handler to Express server
+
+
+**UX (30.5.2026)**
+
+* Added "Forgot password?" link to the login page
+
+
+---
+
 Completed so far (27.5.2026):
 
 **Infrastructure**

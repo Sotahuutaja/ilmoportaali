@@ -3,11 +3,11 @@ const pool = require('./db');
 async function migrate() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id        SERIAL PRIMARY KEY,
-      email     TEXT UNIQUE NOT NULL,
-      password  TEXT NOT NULL,
-      name      TEXT NOT NULL,
-      role      TEXT NOT NULL DEFAULT 'attendee',
+      id         SERIAL PRIMARY KEY,
+      email      TEXT UNIQUE NOT NULL,
+      password   TEXT NOT NULL,
+      name       TEXT NOT NULL,
+      role       TEXT NOT NULL DEFAULT 'attendee',
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
 
@@ -67,16 +67,16 @@ async function migrate() {
       quantity        INTEGER NOT NULL DEFAULT 1,
       UNIQUE(registration_id, product_id)
     );
-	
-	CREATE TABLE IF NOT EXISTS event_managers (
+
+    CREATE TABLE IF NOT EXISTS event_managers (
       id         SERIAL PRIMARY KEY,
       event_id   INTEGER REFERENCES events(id) ON DELETE CASCADE,
       user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(event_id, user_id)
     );
-	
-	CREATE TABLE IF NOT EXISTS event_teams (
+
+    CREATE TABLE IF NOT EXISTS event_teams (
       id         SERIAL PRIMARY KEY,
       event_id   INTEGER REFERENCES events(id) ON DELETE CASCADE,
       team_id    INTEGER REFERENCES teams(id) ON DELETE CASCADE,
@@ -87,21 +87,21 @@ async function migrate() {
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS guest_name TEXT;
-	ALTER TABLE registrations ADD COLUMN IF NOT EXISTS guest_first_name TEXT;
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS guest_first_name TEXT;
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS guest_last_name TEXT;
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS guest_email TEXT;
-	ALTER TABLE users ADD COLUMN IF NOT EXISTS year_of_birth INTEGER;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS year_of_birth INTEGER;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT;
-	ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;
-	ALTER TABLE users ALTER COLUMN name DROP NOT NULL;
-	ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ALTER COLUMN name DROP NOT NULL;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expires TIMESTAMPTZ;
-	ALTER TABLE event_products ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
-	ALTER TABLE events ADD COLUMN IF NOT EXISTS allow_individual_registration BOOLEAN NOT NULL DEFAULT TRUE;
+    ALTER TABLE event_products ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS allow_individual_registration BOOLEAN NOT NULL DEFAULT TRUE;
   `);
 
   console.log('Migration complete');

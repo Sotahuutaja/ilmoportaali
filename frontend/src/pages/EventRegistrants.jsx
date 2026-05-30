@@ -31,10 +31,10 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
     };
 
     if (reg.is_guest) {
-	  payload.guest_first_name = form.guest_first_name;
-	  payload.guest_last_name = form.guest_last_name;
-	  payload.guest_email = form.email;
-	} else {
+    payload.guest_first_name = form.guest_first_name;
+    payload.guest_last_name = form.guest_last_name;
+    payload.guest_email = form.email;
+  } else {
       payload.first_name = form.first_name;
       payload.last_name = form.last_name;
       payload.email = form.email;
@@ -57,9 +57,9 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
         {reg.is_guest ? (
           <>
             <label>Guest first name</label>
-			<input value={form.guest_first_name} onChange={e => setForm({ ...form, guest_first_name: e.target.value })} />
-			<label>Guest last name</label>
-			<input value={form.guest_last_name} onChange={e => setForm({ ...form, guest_last_name: e.target.value })} />
+      <input value={form.guest_first_name} onChange={e => setForm({ ...form, guest_first_name: e.target.value })} />
+      <label>Guest last name</label>
+      <input value={form.guest_last_name} onChange={e => setForm({ ...form, guest_last_name: e.target.value })} />
             <label>Guest email</label>
             <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
           </>
@@ -143,10 +143,10 @@ export default function EventRegistrants() {
     api.get(`/registrations/${id}`)
       .then(res => setRegistrations(res.data.registrations))
       .catch(() => setError('Failed to load registrations'));
-	api.get('/teams')
-	  .then(res => setTeams(res.data.teams));
-	api.get(`/events/${id}/products`)
-	  .then(res => setEventProducts(res.data.products));
+  api.get('/teams')
+    .then(res => setTeams(res.data.teams));
+  api.get(`/events/${id}/products`)
+    .then(res => setEventProducts(res.data.products));
   }, [id, user]);
 
   const handleCancel = async (registrationId, name) => {
@@ -172,43 +172,43 @@ export default function EventRegistrants() {
   };
   
   const exportRegistrantsCSV = () => {
-	const headers = ['First name', 'Last name', 'Email', 'Team', 'Products', 'Total price', 'Type', 'Registered'];
-	const rows = registrations.map(r => {
-		const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
-		const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
-		const email = r.is_guest ? r.guest_email : r.user_email;
-		const team = r.team_name || '';
-		const products = r.products
-			? r.products.map(p => `${p.name} x${p.quantity}`).join('; ')
-			: '';
-		const totalPrice = r.products
-			? r.products.reduce((sum, p) => sum + parseFloat(p.price) * p.quantity, 0).toFixed(2)
-			: '0.00';
-		const type = r.is_guest ? 'Guest' : 'Registered user';
-		const registered = new Date(r.created_at).toLocaleString('fi-FI', {
-		  day: 'numeric', month: 'numeric', year: 'numeric',
-		  hour: '2-digit', minute: '2-digit', second: '2-digit'
-		});
-		return [firstName, lastName, email, team, products, totalPrice, type, registered];
-	});
+  const headers = ['First name', 'Last name', 'Email', 'Team', 'Products', 'Total price', 'Type', 'Registered'];
+  const rows = registrations.map(r => {
+    const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
+    const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
+    const email = r.is_guest ? r.guest_email : r.user_email;
+    const team = r.team_name || '';
+    const products = r.products
+      ? r.products.map(p => `${p.name} x${p.quantity}`).join('; ')
+      : '';
+    const totalPrice = r.products
+      ? r.products.reduce((sum, p) => sum + parseFloat(p.price) * p.quantity, 0).toFixed(2)
+      : '0.00';
+    const type = r.is_guest ? 'Guest' : 'Registered user';
+    const registered = new Date(r.created_at).toLocaleString('fi-FI', {
+      day: 'numeric', month: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    return [firstName, lastName, email, team, products, totalPrice, type, registered];
+  });
 
-	const csv = [headers, ...rows]
-		.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-		.join('\n');
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
 
-	const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-	const url = URL.createObjectURL(blob);
-	const link = document.createElement('a');
-	link.href = url;
-	link.download = `registrants-${event.title.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
-	link.click();
-	URL.revokeObjectURL(url);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `registrants-${event.title.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
   };
 
   const filtered = registrations.filter(r => {
     const name = r.is_guest
-      ? r.guest_name
-      : fullName({ first_name: r.first_name, last_name: r.last_name, email: r.user_email });
+      ? `${r.guest_first_name || ''} ${r.guest_last_name || ''}`.trim() || r.guest_email
+      : `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.user_email;
     const term = search.toLowerCase();
     return (
       name?.toLowerCase().includes(term) ||
@@ -235,14 +235,14 @@ export default function EventRegistrants() {
             📅 {new Date(event.starts_at).toLocaleDateString('fi-FI')}
           </p>
         </div>
-		<div style={{ display: 'flex', gap: '0.5rem' }}>
-		  <button className="btn btn-secondary" onClick={exportRegistrantsCSV}>
-			Export CSV
-		  </button>
-		  <Link to="/dashboard">
-			<button className="btn btn-secondary">Back to dashboard</button>
-		  </Link>
-		</div>
+    <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <button className="btn btn-secondary" onClick={exportRegistrantsCSV}>
+      Export CSV
+      </button>
+      <Link to="/dashboard">
+      <button className="btn btn-secondary">Back to dashboard</button>
+      </Link>
+    </div>
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -282,7 +282,7 @@ export default function EventRegistrants() {
           <thead>
             <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>First name</th>
-			  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Last name</th>
+        <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Last name</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Team</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Products</th>
@@ -292,22 +292,24 @@ export default function EventRegistrants() {
           </thead>
           <tbody>
             {filtered.map(r => {
-              const name = r.is_guest ? r.guest_name : r.user_name;
+              const name = r.is_guest
+                ? `${r.guest_first_name || ''} ${r.guest_last_name || ''}`.trim() || r.guest_email
+                : `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.user_email;
               const email = r.is_guest ? r.guest_email : r.user_email;
               return (
                 <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                   <td style={{ padding: '0.8rem 1rem' }}>
-				    {r.is_guest ? (r.guest_first_name || r.guest_name || '—') : (r.first_name || '—')}
-				    {r.is_guest && (
-					  <span style={{
-					    marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.4rem',
-					    borderRadius: '8px', background: '#e67e22', color: 'white'
-					  }}>guest</span>
-				    )}
-				  </td>
-				  <td style={{ padding: '0.8rem 1rem' }}>
-				    {r.is_guest ? (r.guest_last_name || '') : (r.last_name || '—')}
-				  </td>
+            {r.is_guest ? (r.guest_first_name || r.guest_name || '—') : (r.first_name || '—')}
+            {r.is_guest && (
+            <span style={{
+              marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.4rem',
+              borderRadius: '8px', background: '#e67e22', color: 'white'
+            }}>guest</span>
+            )}
+          </td>
+          <td style={{ padding: '0.8rem 1rem' }}>
+            {r.is_guest ? (r.guest_last_name || '') : (r.last_name || '—')}
+          </td>
                   <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{email}</td>
                   <td style={{ padding: '0.8rem 1rem' }}>
                     {r.team_name ? (
@@ -334,16 +336,16 @@ export default function EventRegistrants() {
                   </td>
                   <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.85rem' }}>
                     {new Date(r.created_at).toLocaleString('fi-FI', {
-					  day: 'numeric', month: 'numeric', year: 'numeric',
-					  hour: '2-digit', minute: '2-digit', second: '2-digit'
-					})}
+            day: 'numeric', month: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+          })}
                   </td>
                   <td style={{ padding: '0.8rem 1rem' }}>
-				    <div style={{ display: 'flex', gap: '0.5rem' }}>
-					  <button className="btn btn-secondary" onClick={() => setEditingReg(r)}>Edit</button>
-					  <button className="btn btn-danger" onClick={() => handleCancel(r.id, name)}>Cancel</button>
-				    </div>
-				  </td>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-secondary" onClick={() => setEditingReg(r)}>Edit</button>
+            <button className="btn btn-danger" onClick={() => handleCancel(r.id, name)}>Cancel</button>
+            </div>
+          </td>
                 </tr>
               );
             })}
@@ -357,15 +359,15 @@ export default function EventRegistrants() {
           </tbody>
         </table>
       </div>
-	{editingReg && (
-	  <EditRegistrantModal
-		reg={editingReg}
-		teams={teams}
-		eventProducts={eventProducts}
-		onClose={() => setEditingReg(null)}
-		onSave={handleSaveReg}
-	  />
-	)}
+  {editingReg && (
+    <EditRegistrantModal
+    reg={editingReg}
+    teams={teams}
+    eventProducts={eventProducts}
+    onClose={() => setEditingReg(null)}
+    onSave={handleSaveReg}
+    />
+  )}
     </div>
   );
 }

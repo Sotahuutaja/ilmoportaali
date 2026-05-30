@@ -33,7 +33,7 @@ router.post('/', requireAuth, requireRole('creator', 'admin'), async (req, res) 
     if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
 
     const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
-	  if (!allowed) return res.status(403).json({ error: 'Not authorised to manage this event' });
+    if (!allowed) return res.status(403).json({ error: 'Not authorised to manage this event' });
 
     const result = await pool.query(
       'INSERT INTO event_products (event_id, name, description, price, quantity) VALUES ($1, $2, $3, $4, $5) RETURNING *',
@@ -80,7 +80,7 @@ router.put('/:productId', requireAuth, requireRole('creator', 'admin'), async (r
 
   try {
     const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
-	  if (!allowed) return res.status(403).json({ error: 'Not authorised' });
+    if (!allowed) return res.status(403).json({ error: 'Not authorised' });
 
     const result = await pool.query(`
       UPDATE event_products SET name=$1, description=$2, price=$3, quantity=$4
@@ -99,7 +99,7 @@ router.put('/:productId', requireAuth, requireRole('creator', 'admin'), async (r
 router.delete('/:productId', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
   try {
     const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
-	  if (!allowed) return res.status(403).json({ error: 'Not authorised' });
+    if (!allowed) return res.status(403).json({ error: 'Not authorised' });
 
     await pool.query('DELETE FROM event_products WHERE id=$1 AND event_id=$2', [req.params.productId, req.params.eventId]);
     res.json({ message: 'Product deleted' });

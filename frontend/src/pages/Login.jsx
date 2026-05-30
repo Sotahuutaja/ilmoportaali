@@ -44,15 +44,15 @@ export default function Login() {
       <div className="card">
         <h2 style={{ marginBottom: '1.5rem' }}>Log in</h2>
         {error && <p className="error">{error}</p>}
-		{unverified && (
-		  <div style={{ background: '#fff3cd', padding: '1rem', borderRadius: '6px', marginBottom: '1rem' }}>
-			<p style={{ marginBottom: '0.5rem' }}>Your email is not verified yet.</p>
-			{resendMessage
-			  ? <p className="success">{resendMessage}</p>
-			  : <button className="btn btn-secondary" onClick={handleResend}>Resend verification email</button>
-			}
-		  </div>
-		)}
+    {unverified && (
+      <div style={{ background: '#fff3cd', padding: '1rem', borderRadius: '6px', marginBottom: '1rem' }}>
+      <p style={{ marginBottom: '0.5rem' }}>Your email is not verified yet.</p>
+      {resendMessage
+        ? <p className="success">{resendMessage}</p>
+        : <button className="btn btn-secondary" onClick={handleResend}>Resend verification email</button>
+      }
+      </div>
+    )}
         <form onSubmit={handleSubmit}>
           <label>Email</label>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
@@ -61,6 +61,9 @@ export default function Login() {
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Log in</button>
         </form>
         <p style={{ marginTop: '1rem', textAlign: 'center' }}>
+          <Link to="/reset-password">Forgot password?</Link>
+        </p>
+        <p style={{ marginTop: '0.5rem', textAlign: 'center' }}>
           No account? <Link to="/register">Register</Link>
         </p>
       </div>

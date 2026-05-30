@@ -3,6 +3,52 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 
+function ProductSelector({ products, selected, setSelected, onToggle }) {
+  return (
+    <div style={{ margin: '1rem 0' }}>
+      <label>Products</label>
+      {products.length === 0 && <p style={{ color: '#888', fontSize: '0.9rem' }}>No products for this event.</p>}
+      {products.map(p => {
+        const isSelected = !!selected[p.id];
+        const outOfStock = p.quantity !== null && p.remaining <= 0;
+        return (
+          <div key={p.id} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '0.6rem', marginBottom: '0.4rem', borderRadius: '6px',
+            border: `2px solid ${isSelected ? '#1a1a2e' : '#eee'}`,
+            opacity: outOfStock ? 0.5 : 1, cursor: outOfStock ? 'not-allowed' : 'pointer',
+            background: isSelected ? '#f0f0f8' : 'white'
+          }}
+            onClick={() => !outOfStock && onToggle(p.id, setSelected)}
+          >
+            <div>
+              <strong>{p.name}</strong>
+              {p.description && <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
+              {outOfStock && <span style={{ color: '#c0392b', marginLeft: '0.5rem', fontSize: '0.85rem' }}>Sold out</span>}
+              {p.quantity !== null && !outOfStock && (
+                <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{p.remaining} left</span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <strong>€{parseFloat(p.price).toFixed(2)}</strong>
+              {isSelected && (
+                <input
+                  type="number" min="1"
+                  max={p.quantity !== null ? p.remaining : undefined}
+                  value={selected[p.id]}
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => setSelected(prev => ({ ...prev, [p.id]: parseInt(e.target.value) }))}
+                  style={{ width: '60px', margin: 0 }}
+                />
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -161,7 +207,7 @@ export default function EventDetail() {
   useEffect(() => {
     api.get(`/events/${id}`).then(res => setEvent(res.data.event));
     api.get(`/events/${id}/products`).then(res => setProducts(res.data.products));
-	api.get(`/events/${id}/teams`).then(res => setAllowedTeams(res.data.teams.map(t => t.team_id)));
+  api.get(`/events/${id}/teams`).then(res => setAllowedTeams(res.data.teams.map(t => t.team_id)));
     if (user) {
       api.get('/teams/my/memberships').then(res => {
         const approved = res.data.teams.filter(t => t.status === 'approved');
@@ -182,13 +228,13 @@ export default function EventDetail() {
     }
   }, [id, user]);
 
-useEffect(() => {
-  if (!event) return;
-  if (!event.allow_individual_registration && allowedTeams.length > 0 && myTeams.length > 0) {
-    const firstAllowed = myTeams.find(t => allowedTeams.includes(t.id));
-    if (firstAllowed) setSelectedTeam(String(firstAllowed.id));
-  }
-}, [event, allowedTeams, myTeams]);
+  useEffect(() => {
+    if (!event) return;
+    if (!event.allow_individual_registration && allowedTeams.length > 0 && myTeams.length > 0) {
+      const firstAllowed = myTeams.find(t => allowedTeams.includes(t.id));
+      if (firstAllowed) setSelectedTeam(String(firstAllowed.id));
+    }
+  }, [event, allowedTeams, myTeams]);
 
   const toggleProduct = (productId, setter) => {
     setter(prev => ({
@@ -204,13 +250,14 @@ useEffect(() => {
 
   const register = async () => {
     setError(''); setMessage('');
-    if (buildProducts(selectedProducts).length === 0) {
+    const products = buildProducts(selectedProducts);
+    if (products.length === 0) {
       return setError('Please select at least one product to register.');
     }
     try {
       await api.post(`/registrations/${id}`, {
         team_id: selectedTeam ? parseInt(selectedTeam) : null,
-        products: buildProducts(selectedProducts)
+        products
       });
       setMessage('Successfully registered!');
       setIsRegistered(true);
@@ -274,50 +321,6 @@ useEffect(() => {
 
   const full = event.capacity && event.registration_count >= event.capacity;
 
-  const ProductSelector = ({ selected, setSelected }) => (
-    <div style={{ margin: '1rem 0' }}>
-      <label>Products</label>
-      {products.length === 0 && <p style={{ color: '#888', fontSize: '0.9rem' }}>No products for this event.</p>}
-      {products.map(p => {
-        const isSelected = !!selected[p.id];
-        const outOfStock = p.quantity !== null && p.remaining <= 0;
-        return (
-          <div key={p.id} style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '0.6rem', marginBottom: '0.4rem', borderRadius: '6px',
-            border: `2px solid ${isSelected ? '#1a1a2e' : '#eee'}`,
-            opacity: outOfStock ? 0.5 : 1, cursor: outOfStock ? 'not-allowed' : 'pointer',
-            background: isSelected ? '#f0f0f8' : 'white'
-          }}
-            onClick={() => !outOfStock && toggleProduct(p.id, setSelected)}
-          >
-            <div>
-              <strong>{p.name}</strong>
-              {p.description && <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
-              {outOfStock && <span style={{ color: '#c0392b', marginLeft: '0.5rem', fontSize: '0.85rem' }}>Sold out</span>}
-              {p.quantity !== null && !outOfStock && (
-                <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{p.remaining} left</span>
-              )}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <strong>€{parseFloat(p.price).toFixed(2)}</strong>
-              {isSelected && (
-                <input
-                  type="number" min="1"
-                  max={p.quantity !== null ? p.remaining : undefined}
-                  value={selected[p.id]}
-                  onClick={e => e.stopPropagation()}
-                  onChange={e => setSelected(prev => ({ ...prev, [p.id]: parseInt(e.target.value) }))}
-                  style={{ width: '60px', margin: 0 }}
-                />
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-
   return (
     <div style={{ maxWidth: 640, margin: '2rem auto' }}>
       <div className="card">
@@ -338,46 +341,46 @@ useEffect(() => {
         {error && <p className="error">{error}</p>}
 
         {user && !full && (
-		  <>
-			<h3 style={{ marginBottom: '1rem' }}>Register yourself</h3>
+      <>
+      <h3 style={{ marginBottom: '1rem' }}>Register yourself</h3>
 
-			{(() => {
-			  const canRegisterIndividually = event.allow_individual_registration;
-			  const hasAllowedTeam = myTeams.filter(t => allowedTeams.includes(t.id)).length > 0;
+      {(() => {
+        const canRegisterIndividually = event.allow_individual_registration;
+        const hasAllowedTeam = myTeams.filter(t => allowedTeams.includes(t.id)).length > 0;
 
-			  if (!canRegisterIndividually && !hasAllowedTeam) {
-				return (
-				  <p style={{ color: '#c0392b' }}>
-					Individual registration is not allowed for this event and you are not a member of any allowed team.
-				  </p>
-				);
-			  }
+        if (!canRegisterIndividually && !hasAllowedTeam) {
+        return (
+          <p style={{ color: '#c0392b' }}>
+          Individual registration is not allowed for this event and you are not a member of any allowed team.
+          </p>
+        );
+        }
 
-			  return (
-				<>
-				  {hasAllowedTeam && (
-					<div>
-					  <label>Register as part of a team {!canRegisterIndividually ? '(required)' : '(optional)'}</label>
-					  <select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)}>
-						{canRegisterIndividually && <option value="">No team — register individually</option>}
-						{myTeams
-						  .filter(t => allowedTeams.includes(t.id))
-						  .map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-					  </select>
-					</div>
-				  )}
+        return (
+        <>
+          {hasAllowedTeam && (
+          <div>
+            <label>Register as part of a team {!canRegisterIndividually ? '(required)' : '(optional)'}</label>
+            <select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)}>
+            {canRegisterIndividually && <option value="">No team — register individually</option>}
+            {myTeams
+              .filter(t => allowedTeams.includes(t.id))
+              .map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          )}
 
-				  <ProductSelector selected={selectedProducts} setSelected={setSelectedProducts} />
+          <ProductSelector products={products} selected={selectedProducts} setSelected={setSelectedProducts} onToggle={toggleProduct} />
 
-				  <div style={{ display: 'flex', gap: '0.5rem' }}>
-					<button className="btn btn-primary" onClick={register}>Register</button>
-					{isRegistered && (
-					  <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
-					)}
-				  </div>
-				</>
-			  );
-			})()}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn btn-primary" onClick={register}>Register</button>
+          {isRegistered && (
+            <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
+          )}
+          </div>
+        </>
+        );
+      })()}
 
             {captainTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && (
               <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
@@ -391,17 +394,17 @@ useEffect(() => {
                 {showGuestForm && (
                   <form onSubmit={registerGuest} style={{ marginTop: '1rem' }}>
                     <label>Guest first name</label>
-					<input
-					  value={guestForm.guest_first_name}
-					  onChange={e => setGuestForm({ ...guestForm, guest_first_name: e.target.value })}
-					  required
-					/>
-					<label>Guest last name</label>
-					<input
-					  value={guestForm.guest_last_name}
-					  onChange={e => setGuestForm({ ...guestForm, guest_last_name: e.target.value })}
-					  required
-					/>
+          <input
+            value={guestForm.guest_first_name}
+            onChange={e => setGuestForm({ ...guestForm, guest_first_name: e.target.value })}
+            required
+          />
+          <label>Guest last name</label>
+          <input
+            value={guestForm.guest_last_name}
+            onChange={e => setGuestForm({ ...guestForm, guest_last_name: e.target.value })}
+            required
+          />
                     <label>Guest email</label>
                     <input
                       type="email"
@@ -419,45 +422,45 @@ useEffect(() => {
                       {captainTeams.filter(t => allowedTeams.includes(t.id)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
 
-                    <ProductSelector selected={guestProducts} setSelected={setGuestProducts} />
+                    <ProductSelector products={products} selected={guestProducts} setSelected={setGuestProducts} onToggle={toggleProduct} />
 
                     <button type="submit" className="btn btn-primary">Register guest</button>
                   </form>
                 )}
               </div>
             )}
-			{captainTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && teamRegistrations.length > 0 && (
-			  <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
-				<h3 style={{ marginBottom: '1rem' }}>Team registrations</h3>
-				{captainTeams.filter(t => allowedTeams.includes(t.id)).map(team => {
-				  const teamRegs = teamRegistrations
-					.filter(r => r.team_id === team.id)
-					.sort((a, b) => {
-					  const nameA = a.is_guest ? (a.guest_first_name || '') : (a.first_name || '');
-					  const nameB = b.is_guest ? (b.guest_first_name || '') : (b.first_name || '');
-					  return nameA.localeCompare(nameB, 'fi');
-					});
-				  if (teamRegs.length === 0) return null;
-				  return (
-					<div key={team.id} style={{ marginBottom: '1rem' }}>
-					  <h4 style={{ marginBottom: '0.5rem', color: '#1a1a2e' }}>
-						{team.name} ({teamRegs.length})
-					  </h4>
-					  {teamRegs.map(r => (
-					    <RegistrationRow
-						  key={r.id}
-						  r={r}
-						  eventId={id}
-						  eventProducts={products}
-						  onDelete={handleDeleteTeamReg}
-						  onUpdate={handleUpdateTeamReg}
-					    />
-					  ))}
-					</div>
-				  );
-				})}
-			  </div>
-			)}
+      {captainTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && teamRegistrations.length > 0 && (
+        <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
+        <h3 style={{ marginBottom: '1rem' }}>Team registrations</h3>
+        {captainTeams.filter(t => allowedTeams.includes(t.id)).map(team => {
+          const teamRegs = teamRegistrations
+          .filter(r => r.team_id === team.id)
+          .sort((a, b) => {
+            const nameA = a.is_guest ? (a.guest_first_name || '') : (a.first_name || '');
+            const nameB = b.is_guest ? (b.guest_first_name || '') : (b.first_name || '');
+            return nameA.localeCompare(nameB, 'fi');
+          });
+          if (teamRegs.length === 0) return null;
+          return (
+          <div key={team.id} style={{ marginBottom: '1rem' }}>
+            <h4 style={{ marginBottom: '0.5rem', color: '#1a1a2e' }}>
+            {team.name} ({teamRegs.length})
+            </h4>
+            {teamRegs.map(r => (
+              <RegistrationRow
+              key={r.id}
+              r={r}
+              eventId={id}
+              eventProducts={products}
+              onDelete={handleDeleteTeamReg}
+              onUpdate={handleUpdateTeamReg}
+              />
+            ))}
+          </div>
+          );
+        })}
+        </div>
+      )}
           </>
         )}
 

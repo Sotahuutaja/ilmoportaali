@@ -1,19 +1,8 @@
 const express = require('express');
 const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { canManageEvent } = require('../utils/eventAccess');
 const router = express.Router();
-
-async function canManageEvent(userId, userRole, eventId, pool) {
-  if (userRole === 'admin') return true;
-  const event = await pool.query('SELECT creator_id FROM events WHERE id = $1', [eventId]);
-  if (!event.rows[0]) return false;
-  if (event.rows[0].creator_id === userId) return true;
-  const manager = await pool.query(
-    'SELECT id FROM event_managers WHERE event_id = $1 AND user_id = $2',
-    [eventId, userId]
-  );
-  return manager.rows.length > 0;
-}
 
 // List all events (public)
 router.get('/', async (req, res) => {
@@ -110,12 +99,12 @@ router.put('/:id', requireAuth, requireRole('creator', 'admin'), async (req, res
     const existing = await pool.query('SELECT * FROM events WHERE id = $1', [req.params.id]);
     if (!existing.rows[0]) return res.status(404).json({ error: 'Event not found' });
 
-	const result = await pool.query(`
-	  UPDATE events
-	  SET title=$1, description=$2, location=$3, starts_at=$4, ends_at=$5, capacity=$6, allow_individual_registration=$7
-	  WHERE id=$8
-	  RETURNING *
-	`, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, req.params.id]);
+    const result = await pool.query(`
+      UPDATE events
+      SET title=$1, description=$2, location=$3, starts_at=$4, ends_at=$5, capacity=$6, allow_individual_registration=$7
+      WHERE id=$8
+      RETURNING *
+    `, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, req.params.id]);
 
     res.json({ event: result.rows[0] });
   } catch (err) {

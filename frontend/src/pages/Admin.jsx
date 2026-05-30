@@ -44,9 +44,9 @@ function EditUserModal({ user, onClose, onSave }) {
         {error && <p className="error">{error}</p>}
         {message && <p className="success">{message}</p>}
         <label>First name</label>
-		<input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} />
-		<label>Last name</label>
-		<input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} />
+    <input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} />
+    <label>Last name</label>
+    <input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} />
         <label>Email</label>
         <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
         <label>Role</label>
@@ -270,14 +270,14 @@ export default function Admin() {
     const headers = ['First name', 'Last name', 'Email', 'Role', 'Age', 'Gender', 'Joined'];
     const currentYear = new Date().getFullYear();
     const rows = users.map(u => [
-	  u.first_name || '',
-	  u.last_name || '',
-	  u.email,
-	  u.role,
-	  u.year_of_birth ? currentYear - u.year_of_birth : '',
-	  u.gender || '',
-	  new Date(u.created_at).toLocaleDateString('fi-FI')
-	]);
+    u.first_name || '',
+    u.last_name || '',
+    u.email,
+    u.role,
+    u.year_of_birth ? currentYear - u.year_of_birth : '',
+    u.gender || '',
+    new Date(u.created_at).toLocaleDateString('fi-FI')
+  ]);
 
     const csv = [headers, ...rows]
       .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
@@ -316,141 +316,141 @@ export default function Admin() {
   });
   
   const calculateAge = (yearOfBirth) => {
-	if (!yearOfBirth) return '—';
-	return new Date().getFullYear() - yearOfBirth;
+  if (!yearOfBirth) return '—';
+  return new Date().getFullYear() - yearOfBirth;
   };
   
   return (
     <div>
       {/* User management */}
       <div
-		onClick={() => setShowUsers(v => !v)}
-		style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '1.5rem 0', cursor: 'pointer', userSelect: 'none' }}
-	  >
-		<h2>User management</h2>
-		<span style={{ fontSize: '1rem', color: '#888', transition: 'transform 0.2s', display: 'inline-block', transform: showUsers ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
-		<button
-			className="btn btn-secondary"
-			onClick={e => { e.stopPropagation(); exportUsersCSV(); }}
-			style={{ marginLeft: 'auto' }}
-		>
-			Export CSV
-		</button>
-	  </div>
+    onClick={() => setShowUsers(v => !v)}
+    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '1.5rem 0', cursor: 'pointer', userSelect: 'none' }}
+    >
+    <h2>User management</h2>
+    <span style={{ fontSize: '1rem', color: '#888', transition: 'transform 0.2s', display: 'inline-block', transform: showUsers ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+    <button
+      className="btn btn-secondary"
+      onClick={e => { e.stopPropagation(); exportUsersCSV(); }}
+      style={{ marginLeft: 'auto' }}
+    >
+      Export CSV
+    </button>
+    </div>
       {error && <p className="error">{error}</p>}
 
       {showUsers && (
         <>
           <div className="card" style={{ marginBottom: '1rem' }}>
-			  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem' }}>
-				<div>
-				  <label>First name</label>
-				  <input
-					placeholder="Filter..."
-					value={filters.first_name}
-					onChange={e => setFilters({ ...filters, first_name: e.target.value })}
-					style={{ marginBottom: 0 }}
-				  />
-				</div>
-				<div>
-				  <label>Last name</label>
-				  <input
-					placeholder="Filter..."
-					value={filters.last_name}
-					onChange={e => setFilters({ ...filters, last_name: e.target.value })}
-					style={{ marginBottom: 0 }}
-				  />
-				</div>
-				<div>
-				  <label>Email</label>
-				  <input
-					placeholder="Filter..."
-					value={filters.email}
-					onChange={e => setFilters({ ...filters, email: e.target.value })}
-					style={{ marginBottom: 0 }}
-				  />
-				</div>
-				<div>
-				  <label>Role</label>
-				  <select
-					value={filters.role}
-					onChange={e => setFilters({ ...filters, role: e.target.value })}
-					style={{ marginBottom: 0 }}
-				  >
-					<option value="">All</option>
-					{ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-				  </select>
-				</div>
-				<div>
-				  <label>Age</label>
-				  <input
-					placeholder="Filter by age..."
-					value={filters.year_of_birth}
-					onChange={e => setFilters({ ...filters, year_of_birth: e.target.value })}
-					style={{ marginBottom: 0 }}
-				  />
-				</div>
-				<div>
-				  <label>Gender</label>
-				  <select
-					value={filters.gender}
-					onChange={e => setFilters({ ...filters, gender: e.target.value })}
-					style={{ marginBottom: 0 }}
-				  >
-					<option value="">All</option>
-					<option value="Male">Male</option>
-					<option value="Female">Female</option>
-					<option value="Other">Other</option>
-				  </select>
-				</div>
-			  </div>
-			  {Object.values(filters).some(v => v) && (
-				<button
-				  className="btn btn-secondary"
-				  onClick={() => setFilters({ first_name: '', last_name: '', email: '', role: '', year_of_birth: '', gender: '' })}
-				  style={{ marginTop: '0.5rem' }}
-				>
-				  Clear filters
-				</button>
-			  )}
-			</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem' }}>
+        <div>
+          <label>First name</label>
+          <input
+          placeholder="Filter..."
+          value={filters.first_name}
+          onChange={e => setFilters({ ...filters, first_name: e.target.value })}
+          style={{ marginBottom: 0 }}
+          />
+        </div>
+        <div>
+          <label>Last name</label>
+          <input
+          placeholder="Filter..."
+          value={filters.last_name}
+          onChange={e => setFilters({ ...filters, last_name: e.target.value })}
+          style={{ marginBottom: 0 }}
+          />
+        </div>
+        <div>
+          <label>Email</label>
+          <input
+          placeholder="Filter..."
+          value={filters.email}
+          onChange={e => setFilters({ ...filters, email: e.target.value })}
+          style={{ marginBottom: 0 }}
+          />
+        </div>
+        <div>
+          <label>Role</label>
+          <select
+          value={filters.role}
+          onChange={e => setFilters({ ...filters, role: e.target.value })}
+          style={{ marginBottom: 0 }}
+          >
+          <option value="">All</option>
+          {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+        <div>
+          <label>Age</label>
+          <input
+          placeholder="Filter by age..."
+          value={filters.year_of_birth}
+          onChange={e => setFilters({ ...filters, year_of_birth: e.target.value })}
+          style={{ marginBottom: 0 }}
+          />
+        </div>
+        <div>
+          <label>Gender</label>
+          <select
+          value={filters.gender}
+          onChange={e => setFilters({ ...filters, gender: e.target.value })}
+          style={{ marginBottom: 0 }}
+          >
+          <option value="">All</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+          </select>
+        </div>
+        </div>
+        {Object.values(filters).some(v => v) && (
+        <button
+          className="btn btn-secondary"
+          onClick={() => setFilters({ first_name: '', last_name: '', email: '', role: '', year_of_birth: '', gender: '' })}
+          style={{ marginTop: '0.5rem' }}
+        >
+          Clear filters
+        </button>
+        )}
+      </div>
 
           <div className="card" style={{ padding: 0, overflow: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-			  <thead>
-			    <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
-				  {[
-				    { label: 'First name', field: 'first_name' },
-				    { label: 'Last name', field: 'last_name' },
-				    { label: 'Email', field: 'email' },
-				    { label: 'Role', field: 'role' },
-				    { label: 'Age', field: 'age' },
-				    { label: 'Gender', field: 'gender' },
-				    { label: 'Joined', field: 'created_at' },
-				  ].map(({ label, field }) => (
-				    <th
-					  key={field}
-					  onClick={() => handleSort(field)}
-					  style={{
-					    padding: '0.8rem 1rem', textAlign: 'left',
-					    cursor: 'pointer', userSelect: 'none',
-					    whiteSpace: 'nowrap'
-					  }}
-				    >
-					  {label}
-					  <span style={{ marginLeft: '0.3rem', color: '#aaa' }}>
-					    {sortField === field ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
-					  </span>
-				    </th>
-				  ))}
-				  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
-			    </tr>
-			  </thead>
+        <thead>
+          <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
+          {[
+            { label: 'First name', field: 'first_name' },
+            { label: 'Last name', field: 'last_name' },
+            { label: 'Email', field: 'email' },
+            { label: 'Role', field: 'role' },
+            { label: 'Age', field: 'age' },
+            { label: 'Gender', field: 'gender' },
+            { label: 'Joined', field: 'created_at' },
+          ].map(({ label, field }) => (
+            <th
+            key={field}
+            onClick={() => handleSort(field)}
+            style={{
+              padding: '0.8rem 1rem', textAlign: 'left',
+              cursor: 'pointer', userSelect: 'none',
+              whiteSpace: 'nowrap'
+            }}
+            >
+            {label}
+            <span style={{ marginLeft: '0.3rem', color: '#aaa' }}>
+              {sortField === field ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+            </span>
+            </th>
+          ))}
+          <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
+          </tr>
+        </thead>
               <tbody>
                 {filtered.map(u => (
                   <tr key={u.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                     <td style={{ padding: '0.8rem 1rem' }}>{u.first_name}</td>
-					<td style={{ padding: '0.8rem 1rem' }}>{u.last_name}</td>
+          <td style={{ padding: '0.8rem 1rem' }}>{u.last_name}</td>
                     <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{u.email}</td>
                     <td style={{ padding: '0.8rem 1rem' }}>
                       <span style={{
@@ -493,12 +493,12 @@ export default function Admin() {
 
       {/* Team management */}
       <div
-		onClick={() => setShowTeams(v => !v)}
-		style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '2rem 0 1rem', cursor: 'pointer', userSelect: 'none' }}
-	  >
-		<h2>Team management</h2>
-		<span style={{ fontSize: '1rem', color: '#888', transition: 'transform 0.2s', display: 'inline-block', transform: showTeams ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
-	  </div>
+    onClick={() => setShowTeams(v => !v)}
+    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '2rem 0 1rem', cursor: 'pointer', userSelect: 'none' }}
+    >
+    <h2>Team management</h2>
+    <span style={{ fontSize: '1rem', color: '#888', transition: 'transform 0.2s', display: 'inline-block', transform: showTeams ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+    </div>
 
       {showTeams && (
         <>

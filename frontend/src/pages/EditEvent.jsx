@@ -34,27 +34,27 @@ export default function EditEvent() {
       return;
     }
     Promise.all([
-	  api.get(`/events/${id}`),
-	  api.get(`/events/${id}/products`),
-	  api.get(`/events/${id}/teams`),
-	  api.get('/teams')
-	]).then(([eventRes, productsRes, eventTeamsRes, allTeamsRes]) => {
-	  const e = eventRes.data.event;
-	  setForm({
-	    title: e.title,
-	    description: e.description || '',
-	    location: e.location || '',
-	    starts_at: e.starts_at ? e.starts_at.slice(0, 16) : '',
-	    ends_at: e.ends_at ? e.ends_at.slice(0, 16) : '',
-	    capacity: e.capacity || '',
-	    allow_individual_registration: e.allow_individual_registration ?? true
-	  });
-	  setProducts(productsRes.data.products);
-	  setEventTeams(eventTeamsRes.data.teams);
-	  setAllTeams(allTeamsRes.data.teams);
-	}).catch(() => {
-	  setError('Failed to load event');
-	}).finally(() => setLoading(false));
+    api.get(`/events/${id}`),
+    api.get(`/events/${id}/products`),
+    api.get(`/events/${id}/teams`),
+    api.get('/teams')
+  ]).then(([eventRes, productsRes, eventTeamsRes, allTeamsRes]) => {
+    const e = eventRes.data.event;
+    setForm({
+      title: e.title,
+      description: e.description || '',
+      location: e.location || '',
+      starts_at: e.starts_at ? e.starts_at.slice(0, 16) : '',
+      ends_at: e.ends_at ? e.ends_at.slice(0, 16) : '',
+      capacity: e.capacity || '',
+      allow_individual_registration: e.allow_individual_registration ?? true
+    });
+    setProducts(productsRes.data.products);
+    setEventTeams(eventTeamsRes.data.teams);
+    setAllTeams(allTeamsRes.data.teams);
+  }).catch(() => {
+    setError('Failed to load event');
+  }).finally(() => setLoading(false));
   }, [id, user]);
 
   const handleSave = async (e) => {
@@ -193,8 +193,8 @@ export default function EditEvent() {
           <label>Capacity (leave blank for unlimited)</label>
           <input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} />
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-		  <input type="checkbox" checked={form.allow_individual_registration} onChange={e => setForm({ ...form, allow_individual_registration: e.target.checked })} style={{ width: 'auto', margin: 0 }} />Allow individual registration (without a team)</label>
-		  <button type="submit" className="btn btn-primary">Save changes</button>
+      <input type="checkbox" checked={form.allow_individual_registration} onChange={e => setForm({ ...form, allow_individual_registration: e.target.checked })} style={{ width: 'auto', margin: 0 }} />Allow individual registration (without a team)</label>
+      <button type="submit" className="btn btn-primary">Save changes</button>
         </form>
       </div>
 
@@ -280,49 +280,49 @@ export default function EditEvent() {
           <button type="submit" className="btn btn-primary">Add product</button>
         </form>
       </div>
-	  
-	  <div className="card" style={{ marginTop: '1.5rem' }}>
-	    <h3 style={{ marginBottom: '1rem' }}>Allowed teams</h3>
-	    <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1rem' }}>
-		  Only members of these teams can register under a team for this event.
-	    </p>
-	    {teamError && <p className="error">{teamError}</p>}
-	    {teamMessage && <p className="success">{teamMessage}</p>}
+    
+    <div className="card" style={{ marginTop: '1.5rem' }}>
+      <h3 style={{ marginBottom: '1rem' }}>Allowed teams</h3>
+      <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1rem' }}>
+      Only members of these teams can register under a team for this event.
+      </p>
+      {teamError && <p className="error">{teamError}</p>}
+      {teamMessage && <p className="success">{teamMessage}</p>}
 
-	    {eventTeams.map(t => (
-		  <div key={t.team_id} style={{
-		    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-		    padding: '0.5rem 0', borderBottom: '1px solid #f0f0f0'
-		  }}>
-		    <div>
-			  <strong>{t.name}</strong>
-			  <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
-			    {t.member_count} members
-			  </span>
-		    </div>
-		    <button className="btn btn-danger" onClick={() => handleRemoveTeam(t.team_id)}>Remove</button>
-		  </div>
-	    ))}
+      {eventTeams.map(t => (
+      <div key={t.team_id} style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '0.5rem 0', borderBottom: '1px solid #f0f0f0'
+      }}>
+        <div>
+        <strong>{t.name}</strong>
+        <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+          {t.member_count} members
+        </span>
+        </div>
+        <button className="btn btn-danger" onClick={() => handleRemoveTeam(t.team_id)}>Remove</button>
+      </div>
+      ))}
 
-	    {eventTeams.length === 0 && (
-		  <p style={{ color: '#888', marginBottom: '1rem' }}>No teams allowed yet — all team registrations are blocked.</p>
-	    )}
+      {eventTeams.length === 0 && (
+      <p style={{ color: '#888', marginBottom: '1rem' }}>No teams allowed yet — all team registrations are blocked.</p>
+      )}
 
-	    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-		  <select
-		    defaultValue=""
-		    onChange={e => { if (e.target.value) { handleAddTeam(e.target.value); e.target.value = ''; } }}
-		    style={{ flex: 1, marginBottom: 0 }}
-		  >
-		    <option value="">Add a team...</option>
-		    {allTeams
-			  .filter(t => !eventTeams.find(et => et.team_id === t.id))
-			  .map(t => (
-			    <option key={t.id} value={t.id}>{t.name}</option>
-			  ))}
-		  </select>
-	    </div>
-	  </div>
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+      <select
+        defaultValue=""
+        onChange={e => { if (e.target.value) { handleAddTeam(e.target.value); e.target.value = ''; } }}
+        style={{ flex: 1, marginBottom: 0 }}
+      >
+        <option value="">Add a team...</option>
+        {allTeams
+        .filter(t => !eventTeams.find(et => et.team_id === t.id))
+        .map(t => (
+          <option key={t.id} value={t.id}>{t.name}</option>
+        ))}
+      </select>
+      </div>
+    </div>
     </div>
   );
 }

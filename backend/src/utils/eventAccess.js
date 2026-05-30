@@ -1,5 +1,3 @@
-const pool = require('../db');
-
 async function canManageEvent(userId, userRole, eventId, pool) {
   if (userRole === 'admin') return true;
   const event = await pool.query('SELECT creator_id FROM events WHERE id = $1', [eventId]);

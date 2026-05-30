@@ -4,11 +4,17 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
+const { rateLimit } = require('../middleware/security');
 const crypto = require('crypto');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email');
 
+// Rate limit presets for auth endpoints
+const loginLimit = rateLimit({ max: 10, windowMs: 15 * 60 * 1000 });
+const registerLimit = rateLimit({ max: 5, windowMs: 15 * 60 * 1000 });
+const emailLimit = rateLimit({ max: 5, windowMs: 15 * 60 * 1000 });
+
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimit, async (req, res) => {
   const { email, password, first_name, last_name, year_of_birth, gender } = req.body;
 
   if (!email || !password || !first_name || !last_name) {
@@ -57,7 +63,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimit, async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -121,7 +127,7 @@ router.get('/verify-email', async (req, res) => {
 });
 
 // Resend verification email
-router.post('/resend-verification', async (req, res) => {
+router.post('/resend-verification', emailLimit, async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
@@ -151,11 +157,16 @@ router.post('/resend-verification', async (req, res) => {
 
 // Get current user
 router.get('/me', requireAuth, async (req, res) => {
-  const result = await pool.query(
-    'SELECT id, email, first_name, last_name, role, year_of_birth, gender FROM users WHERE id = $1',
-    [req.user.id]
-  );
-  res.json({ user: result.rows[0] });
+  try {
+    const result = await pool.query(
+      'SELECT id, email, first_name, last_name, role, year_of_birth, gender FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    res.json({ user: result.rows[0] });
+  } catch (err) {
+    console.error('Failed to fetch current user:', err.message);
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
 });
 
 // Update own profile
@@ -210,7 +221,7 @@ router.put('/profile', requireAuth, async (req, res) => {
 
 
 // Request password reset
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', emailLimit, async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
 

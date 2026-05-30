@@ -1,9 +1,18 @@
 const express = require('express');
 const pool = require('./db');
+const { securityHeaders, cors } = require('./middleware/security');
+
+// Fail fast if critical environment variables are missing
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set.');
+  process.exit(1);
+}
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use(securityHeaders);
+app.use(cors);
 app.use(express.json());
 
 // Routes
@@ -25,6 +34,18 @@ app.get('/health', async (req, res) => {
   } catch (err) {
     res.status(500).json({ status: 'error', database: 'unreachable' });
   }
+});
+
+// 404 — no route matched
+app.use((req, res) => {
+  res.status(404).json({ error: `Cannot ${req.method} ${req.path}` });
+});
+
+// Global error handler — catches any unhandled error thrown in a route
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'An unexpected error occurred' });
 });
 
 app.listen(port, () => {

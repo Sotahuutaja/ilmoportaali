@@ -49,29 +49,29 @@ router.post('/:eventId', requireAuth, async (req, res) => {
         return res.status(409).json({ error: 'Event is full' });
       }
     }
-	
-	if (!team_id && !event.rows[0].allow_individual_registration) {
-	  return res.status(403).json({ error: 'Individual registration is not allowed for this event — you must register as part of a team' });
-	}
+
+    if (!team_id && !event.rows[0].allow_individual_registration) {
+      return res.status(403).json({ error: 'Individual registration is not allowed for this event — you must register as part of a team' });
+    }
 
     if (team_id) {
-	  const membership = await client.query(
-		'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND status = $3',
-		[team_id, req.user.id, 'approved']
-	  );
-	  if (!membership.rows[0]) return res.status(403).json({ error: 'Not an approved team member' });
+      const membership = await client.query(
+        'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND status = $3',
+        [team_id, req.user.id, 'approved']
+      );
+      if (!membership.rows[0]) return res.status(403).json({ error: 'Not an approved team member' });
 
-	  // Check if team is allowed for this event
-	  const eventTeam = await client.query(
-		'SELECT * FROM event_teams WHERE event_id = $1 AND team_id = $2',
-		[req.params.eventId, team_id]
-	  );
-	  if (!eventTeam.rows[0]) return res.status(403).json({ error: 'This team is not allowed for this event' });
-	}
-	
-	if (products.length === 0) {
-	  return res.status(400).json({ error: 'You must select at least one product to register' });
-	}
+      // Check if team is allowed for this event
+      const eventTeam = await client.query(
+        'SELECT * FROM event_teams WHERE event_id = $1 AND team_id = $2',
+        [req.params.eventId, team_id]
+      );
+      if (!eventTeam.rows[0]) return res.status(403).json({ error: 'This team is not allowed for this event' });
+    }
+
+    if (products.length === 0) {
+      return res.status(400).json({ error: 'You must select at least one product to register' });
+    }
 
     const reg = await client.query(
       'INSERT INTO registrations (user_id, event_id, team_id) VALUES ($1, $2, $3) RETURNING *',
@@ -115,13 +115,13 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
     if (!membership.rows[0] && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Only team captains can register guests' });
     }
-	
-	// Check if team is allowed for this event
-	const eventTeam = await client.query(
-	  'SELECT * FROM event_teams WHERE event_id = $1 AND team_id = $2',
-	  [req.params.eventId, team_id]
-	);
-	if (!eventTeam.rows[0]) return res.status(403).json({ error: 'This team is not allowed for this event' });
+
+    // Check if team is allowed for this event
+    const eventTeam = await client.query(
+      'SELECT * FROM event_teams WHERE event_id = $1 AND team_id = $2',
+      [req.params.eventId, team_id]
+    );
+    if (!eventTeam.rows[0]) return res.status(403).json({ error: 'This team is not allowed for this event' });
 
     const event = await client.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
     if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
@@ -135,10 +135,10 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
         return res.status(409).json({ error: 'Event is full' });
       }
     }
-	
-	if (products.length === 0) {
-	  return res.status(400).json({ error: 'You must select at least one product for the guest' });
-	}
+
+    if (products.length === 0) {
+      return res.status(400).json({ error: 'You must select at least one product for the guest' });
+    }
 
     const reg = await client.query(`
       INSERT INTO registrations (event_id, team_id, is_guest, guest_first_name, guest_last_name, guest_email)
@@ -291,29 +291,30 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
         return res.status(403).json({ error: 'Not authorised' });
       }
     }
+
     await client.query('BEGIN');
 
     if (reg.rows[0].is_guest) {
       // Update guest details
       await client.query(
-	  `UPDATE registrations SET 
-		guest_first_name = COALESCE($1, guest_first_name), 
-		guest_last_name = COALESCE($2, guest_last_name), 
-		guest_email = COALESCE($3, guest_email)
-		${team_id !== undefined ? ', team_id = $5' : ''}
-		WHERE id = $4`,
-	  team_id !== undefined 
-		? [guest_first_name, guest_last_name, guest_email, req.params.registrationId, team_id || null]
-		: [guest_first_name, guest_last_name, guest_email, req.params.registrationId]
-	);
+        `UPDATE registrations SET
+          guest_first_name = COALESCE($1, guest_first_name),
+          guest_last_name = COALESCE($2, guest_last_name),
+          guest_email = COALESCE($3, guest_email)
+          ${team_id !== undefined ? ', team_id = $5' : ''}
+          WHERE id = $4`,
+        team_id !== undefined
+          ? [guest_first_name, guest_last_name, guest_email, req.params.registrationId, team_id || null]
+          : [guest_first_name, guest_last_name, guest_email, req.params.registrationId]
+      );
     } else {
       // Update registered user details and team
       if (team_id !== undefined) {
-	    await client.query(
-		  'UPDATE registrations SET team_id = $1 WHERE id = $2',
-		  [team_id || null, req.params.registrationId]
-	    );
-	  }
+        await client.query(
+          'UPDATE registrations SET team_id = $1 WHERE id = $2',
+          [team_id || null, req.params.registrationId]
+        );
+      }
       // Update user's name and email if provided
       if (first_name || last_name || email) {
         await client.query(

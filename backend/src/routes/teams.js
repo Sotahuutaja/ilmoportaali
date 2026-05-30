@@ -284,13 +284,13 @@ router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     );
 
     if (captain_id) {
-	  // Add as approved member if not already one
-	  await client.query(`
-		INSERT INTO team_members (team_id, user_id, role, status)
-		VALUES ($1, $2, 'captain', 'approved')
-		ON CONFLICT (team_id, user_id) DO UPDATE SET role = 'captain', status = 'approved'
-	  `, [req.params.id, captain_id]);
-	}
+      // Add as approved member if not already one
+      await client.query(`
+        INSERT INTO team_members (team_id, user_id, role, status)
+        VALUES ($1, $2, 'captain', 'approved')
+        ON CONFLICT (team_id, user_id) DO UPDATE SET role = 'captain', status = 'approved'
+      `, [req.params.id, captain_id]);
+    }
 
     await client.query('COMMIT');
     res.json({ team: result.rows[0] });

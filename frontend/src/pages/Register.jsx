@@ -6,8 +6,8 @@ const currentYear = new Date().getFullYear();
 
 export default function Register() {
   const [form, setForm] = useState({
-	first_name: '', last_name: '', email: '', password: '',
-	year_of_birth: '', gender: ''
+  first_name: '', last_name: '', email: '', password: '',
+  year_of_birth: '', gender: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -36,17 +36,17 @@ export default function Register() {
         {success && <p className="success">{success}</p>}
         <form onSubmit={handleSubmit}>
           <label>First name</label>
-		  <input
-		    value={form.first_name}
-		    onChange={e => setForm({ ...form, first_name: e.target.value })}
-		    required
-		  />
-		  <label>Last name</label>
-		  <input
-		    value={form.last_name}
-		    onChange={e => setForm({ ...form, last_name: e.target.value })}
-		    required
-		  />
+      <input
+        value={form.first_name}
+        onChange={e => setForm({ ...form, first_name: e.target.value })}
+        required
+      />
+      <label>Last name</label>
+      <input
+        value={form.last_name}
+        onChange={e => setForm({ ...form, last_name: e.target.value })}
+        required
+      />
           <label>Email</label>
           <input
             type="email"

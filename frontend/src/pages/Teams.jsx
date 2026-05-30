@@ -120,21 +120,21 @@ export default function Teams() {
           <div style={{ marginBottom: '1.5rem' }}>
             <h3 style={{ marginBottom: '0.5rem' }}>My teams</h3>
             {myTeams.map(t => (
-			  <div className="card" key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-				<div>
-				  <strong>{t.name}</strong>
-				  <span style={{
-					marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
-					borderRadius: '12px',
-					background: t.status === 'approved' ? '#27ae60' : '#e67e22',
-					color: 'white'
-				  }}>{t.role} · {t.status}</span>
-				</div>
-				<button className="btn btn-danger" onClick={() => handleLeave(t.id, t.name)}>
-				  Leave
-				</button>
-			  </div>
-			))}
+        <div className="card" key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <strong>{t.name}</strong>
+          <span style={{
+          marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.2rem 0.5rem',
+          borderRadius: '12px',
+          background: t.status === 'approved' ? '#27ae60' : '#e67e22',
+          color: 'white'
+          }}>{t.role} · {t.status}</span>
+        </div>
+        <button className="btn btn-danger" onClick={() => handleLeave(t.id, t.name)}>
+          Leave
+        </button>
+        </div>
+      ))}
           </div>
         )}
 
