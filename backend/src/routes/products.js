@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
       FROM event_products p
       LEFT JOIN registration_products rp ON p.id = rp.product_id
       WHERE p.event_id = $1
-      GROUP BY p.id
+      GROUP BY p.id, p.event_id, p.name, p.description, p.price, p.quantity, p.created_at, p.sort_order, p.fields
       ORDER BY p.sort_order ASC, p.name ASC
     `, [req.params.eventId]);
     res.json({ products: result.rows });
