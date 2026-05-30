@@ -263,6 +263,8 @@ export default function EventDetail() {
       setMessage('Successfully registered!');
       setIsRegistered(true);
       setEvent(e => ({ ...e, registration_count: e.registration_count + 1 }));
+      const regs = await api.get(`/registrations/${id}`).catch(() => null);
+      if (regs) setTeamRegistrations(regs.data.registrations);
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed');
     }
