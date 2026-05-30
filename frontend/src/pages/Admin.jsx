@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { formatDate } from '../utils/datetime';
 
 const ROLES = ['attendee', 'creator', 'admin'];
 
@@ -276,7 +277,7 @@ export default function Admin() {
     u.role,
     u.year_of_birth ? currentYear - u.year_of_birth : '',
     u.gender || '',
-    new Date(u.created_at).toLocaleDateString('fi-FI')
+    formatDate(u.created_at)
   ]);
 
     const csv = [headers, ...rows]
@@ -466,7 +467,7 @@ export default function Admin() {
                     <td style={{ padding: '0.8rem 1rem' }}>{calculateAge(u.year_of_birth)}</td>
                     <td style={{ padding: '0.8rem 1rem' }}>{u.gender || '—'}</td>
                     <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.9rem' }}>
-                      {new Date(u.created_at).toLocaleDateString('fi-FI')}
+                      {formatDate(u.created_at)}
                     </td>
                     <td style={{ padding: '0.8rem 1rem' }}>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>

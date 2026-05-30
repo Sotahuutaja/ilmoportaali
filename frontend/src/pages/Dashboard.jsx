@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
+import { formatDate, helsinkiToUTC } from '../utils/datetime';
 
 
 export default function Dashboard() {
@@ -47,7 +48,11 @@ export default function Dashboard() {
     try {
       const res = await api.post('/events', {
         ...form,
-        capacity: form.capacity ? parseInt(form.capacity) : null
+        capacity: form.capacity ? parseInt(form.capacity) : null,
+        starts_at: helsinkiToUTC(form.starts_at),
+        ends_at: helsinkiToUTC(form.ends_at),
+        registration_starts_at: helsinkiToUTC(form.registration_starts_at),
+        registration_ends_at: helsinkiToUTC(form.registration_ends_at)
       });
       setEvents([...events, res.data.event]);
       setMessage('Event created!');
@@ -147,9 +152,9 @@ export default function Dashboard() {
           <textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           <label>Location</label>
           <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
-          <label>Starts at</label>
+          <label>Starts at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.starts_at} onChange={e => setForm({ ...form, starts_at: e.target.value })} required />
-          <label>Ends at</label>
+          <label>Ends at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.ends_at} onChange={e => setForm({ ...form, ends_at: e.target.value })} required />
           <label>Capacity (leave blank for unlimited)</label>
           <input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} />
@@ -162,9 +167,9 @@ export default function Dashboard() {
             />
             Allow individual registration (without a team)
           </label>
-          <label>Registration opens at</label>
+          <label>Registration opens at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_starts_at} onChange={e => setForm({ ...form, registration_starts_at: e.target.value })} required />
-          <label>Registration closes at</label>
+          <label>Registration closes at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_ends_at} onChange={e => setForm({ ...form, registration_ends_at: e.target.value })} required />
           <button type="submit" className="btn btn-primary">Create event</button>
         </form>
@@ -179,7 +184,7 @@ export default function Dashboard() {
         <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: '8px', background: '#8e44ad', color: 'white' }}>co-manager</span>
         )}
         <p style={{ color: '#666', fontSize: '0.9rem' }}>
-        {new Date(event.starts_at).toLocaleDateString('fi-FI')} &nbsp;|&nbsp;
+        {formatDate(event.starts_at)} &nbsp;|&nbsp;
         {event.registration_count} registered
         {event.capacity ? ` / ${event.capacity}` : ''}
         </p>

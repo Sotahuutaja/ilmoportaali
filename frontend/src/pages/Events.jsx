@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import { formatDateTime } from '../utils/datetime';
 
 function EventCard({ event }) {
   return (
@@ -8,10 +9,7 @@ function EventCard({ event }) {
       <h3>{event.title}</h3>
       <p style={{ color: '#666', margin: '0.3rem 0' }}>
         📍 {event.location} &nbsp;|&nbsp;
-        📅 {new Date(event.starts_at).toLocaleDateString('fi-FI', {
-          day: 'numeric', month: 'long', year: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        })}
+        📅 {formatDateTime(event.starts_at, { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
       </p>
       <p style={{ margin: '0.5rem 0' }}>{event.description}</p>
       <p style={{ color: '#888', fontSize: '0.9rem' }}>

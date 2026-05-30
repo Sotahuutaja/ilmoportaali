@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
+import { formatDateTime } from '../utils/datetime';
 
 function ProductSelector({ products, selected, setSelected, onToggle }) {
   return (
@@ -331,8 +332,7 @@ export default function EventDetail() {
         <h2>{event.title}</h2>
         <p style={{ color: '#666', margin: '0.5rem 0' }}>
           📍 {event.location}<br />
-          📅 {new Date(event.starts_at).toLocaleString('fi-FI')} —{' '}
-          {new Date(event.ends_at).toLocaleString('fi-FI')}
+          📅 {formatDateTime(event.starts_at)} — {formatDateTime(event.ends_at)}
         </p>
         <p style={{ margin: '1rem 0' }}>{event.description}</p>
         <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
@@ -342,9 +342,8 @@ export default function EventDetail() {
         </p>
         {event.registration_starts_at && (
           <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            🗓 Registration:{' '}
-            {new Date(event.registration_starts_at).toLocaleString('fi-FI')} —{' '}
-            {new Date(event.registration_ends_at).toLocaleString('fi-FI')}
+            🗓 Ilmoittautumisaika (EET/EEST):{' '}
+            {formatDateTime(event.registration_starts_at)} — {formatDateTime(event.registration_ends_at)}
           </p>
         )}
 
@@ -477,7 +476,7 @@ export default function EventDetail() {
 
         {user && regNotOpen && (
           <p style={{ color: '#e67e22', marginTop: '1rem' }}>
-            Registration opens on {new Date(event.registration_starts_at).toLocaleString('fi-FI')}.
+            Registration opens on {formatDateTime(event.registration_starts_at)}.
           </p>
         )}
         {user && regClosed && (

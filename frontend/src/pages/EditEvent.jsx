@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
+import { toHelsinki, helsinkiToUTC } from '../utils/datetime';
 
 export default function EditEvent() {
   const { id } = useParams();
@@ -45,12 +46,12 @@ export default function EditEvent() {
       title: e.title,
       description: e.description || '',
       location: e.location || '',
-      starts_at: e.starts_at ? e.starts_at.slice(0, 16) : '',
-      ends_at: e.ends_at ? e.ends_at.slice(0, 16) : '',
+      starts_at: toHelsinki(e.starts_at),
+      ends_at: toHelsinki(e.ends_at),
       capacity: e.capacity || '',
       allow_individual_registration: e.allow_individual_registration ?? true,
-      registration_starts_at: e.registration_starts_at ? e.registration_starts_at.slice(0, 16) : '',
-      registration_ends_at: e.registration_ends_at ? e.registration_ends_at.slice(0, 16) : ''
+      registration_starts_at: toHelsinki(e.registration_starts_at),
+      registration_ends_at: toHelsinki(e.registration_ends_at)
     });
     setProducts(productsRes.data.products);
     setEventTeams(eventTeamsRes.data.teams);
@@ -66,7 +67,11 @@ export default function EditEvent() {
     try {
       await api.put(`/events/${id}`, {
         ...form,
-        capacity: form.capacity ? parseInt(form.capacity) : null
+        capacity: form.capacity ? parseInt(form.capacity) : null,
+        starts_at: helsinkiToUTC(form.starts_at),
+        ends_at: helsinkiToUTC(form.ends_at),
+        registration_starts_at: helsinkiToUTC(form.registration_starts_at),
+        registration_ends_at: helsinkiToUTC(form.registration_ends_at)
       });
       setMessage('Event updated successfully!');
     } catch (err) {
@@ -189,9 +194,9 @@ export default function EditEvent() {
           <textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           <label>Location</label>
           <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
-          <label>Starts at</label>
+          <label>Starts at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.starts_at} onChange={e => setForm({ ...form, starts_at: e.target.value })} required />
-          <label>Ends at</label>
+          <label>Ends at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.ends_at} onChange={e => setForm({ ...form, ends_at: e.target.value })} required />
           <label>Capacity (leave blank for unlimited)</label>
           <input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} />
@@ -199,9 +204,9 @@ export default function EditEvent() {
             <input type="checkbox" checked={form.allow_individual_registration} onChange={e => setForm({ ...form, allow_individual_registration: e.target.checked })} style={{ width: 'auto', margin: 0 }} />
             Allow individual registration (without a team)
           </label>
-          <label>Registration opens at</label>
+          <label>Registration opens at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_starts_at} onChange={e => setForm({ ...form, registration_starts_at: e.target.value })} required />
-          <label>Registration closes at</label>
+          <label>Registration closes at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_ends_at} onChange={e => setForm({ ...form, registration_ends_at: e.target.value })} required />
           <button type="submit" className="btn btn-primary">Save changes</button>
         </form>

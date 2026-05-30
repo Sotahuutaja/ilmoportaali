@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import { fullName } from '../AuthContext';
+import { formatDate, formatDateTime } from '../utils/datetime';
 
 function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
   const [form, setForm] = useState({
@@ -185,7 +186,7 @@ export default function EventRegistrants() {
       ? r.products.reduce((sum, p) => sum + parseFloat(p.price) * p.quantity, 0).toFixed(2)
       : '0.00';
     const type = r.is_guest ? 'Guest' : 'Registered user';
-    const registered = new Date(r.created_at).toLocaleString('fi-FI', {
+    const registered = formatDateTime(r.created_at, {
       day: 'numeric', month: 'numeric', year: 'numeric',
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
@@ -232,7 +233,7 @@ export default function EventRegistrants() {
           <h2>{event.title}</h2>
           <p style={{ color: '#666', fontSize: '0.9rem' }}>
             📍 {event.location} &nbsp;|&nbsp;
-            📅 {new Date(event.starts_at).toLocaleDateString('fi-FI')}
+            📅 {formatDate(event.starts_at)}
           </p>
         </div>
     <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -335,10 +336,10 @@ export default function EventRegistrants() {
                     )}
                   </td>
                   <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.85rem' }}>
-                    {new Date(r.created_at).toLocaleString('fi-FI', {
-            day: 'numeric', month: 'numeric', year: 'numeric',
-            hour: '2-digit', minute: '2-digit', second: '2-digit'
-          })}
+                    {formatDateTime(r.created_at, {
+                      day: 'numeric', month: 'numeric', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    })}
                   </td>
                   <td style={{ padding: '0.8rem 1rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem' }}>

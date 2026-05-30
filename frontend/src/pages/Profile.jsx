@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
+import { formatDate } from '../utils/datetime';
 
 const currentYear = new Date().getFullYear();
 
@@ -201,9 +202,7 @@ export default function Profile() {
                 <strong>{r.title}</strong>
                 <p style={{ color: '#666', fontSize: '0.9rem', margin: '0.2rem 0' }}>
                   📍 {r.location} &nbsp;|&nbsp;
-                  📅 {new Date(r.starts_at).toLocaleDateString('fi-FI', {
-                    day: 'numeric', month: 'long', year: 'numeric'
-                  })}
+                  📅 {formatDate(r.starts_at, { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
                 {r.team_name && (
                   <p style={{ color: '#888', fontSize: '0.85rem' }}>Team: {r.team_name}</p>
