@@ -146,8 +146,8 @@ export default function Teams() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <strong>{team.name}</strong>
-                  <p style={{ color: '#666', fontSize: '0.9rem', margin: '0.3rem 0' }}>{team.description}</p>
-                  <p style={{ color: '#888', fontSize: '0.85rem' }}>{team.member_count} members</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.3rem 0' }}>{team.description}</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{team.member_count} members</p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                   <button className="btn btn-secondary" onClick={() => selectTeam(team)}>View</button>
@@ -171,7 +171,7 @@ export default function Teams() {
           );
         })}
 
-        {teams.length === 0 && <p style={{ color: '#888' }}>No teams yet.</p>}
+        {teams.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No teams yet.</p>}
       </div>
 
       {selected && (
@@ -183,14 +183,14 @@ export default function Teams() {
           <div className="card">
             <h3 style={{ marginBottom: '1rem' }}>Members</h3>
             {members === null ? (
-              <p style={{ color: '#888' }}>You must be a member of this team to see its members.</p>
+              <p style={{ color: 'var(--text-muted)' }}>You must be a member of this team to see its members.</p>
             ) : members.length === 0 ? (
-              <p style={{ color: '#888' }}>No members yet.</p>
+              <p style={{ color: 'var(--text-muted)' }}>No members yet.</p>
             ) : (
               members.map((member) => (
                 <div key={member.user_id} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '0.6rem 0', borderBottom: '1px solid #f0f0f0'
+                  padding: '0.6rem 0', borderBottom: '1px solid var(--border)'
                 }}>
                   <div>
                     <strong>{fullName({ first_name: member.first_name, last_name: member.last_name, email: member.email })}</strong>

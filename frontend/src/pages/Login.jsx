@@ -45,7 +45,7 @@ export default function Login() {
         <h2 style={{ marginBottom: '1.5rem' }}>Log in</h2>
         {error && <p className="error">{error}</p>}
     {unverified && (
-      <div style={{ background: '#fff3cd', padding: '1rem', borderRadius: '6px', marginBottom: '1rem' }}>
+      <div style={{ background: 'var(--warning-bg)', padding: '1rem', borderRadius: '6px', marginBottom: '1rem' }}>
       <p style={{ marginBottom: '0.5rem' }}>Your email is not verified yet.</p>
       {resendMessage
         ? <p className="success">{resendMessage}</p>
@@ -63,10 +63,4 @@ export default function Login() {
         <p style={{ marginTop: '1rem', textAlign: 'center' }}>
           <Link to="/reset-password">Forgot password?</Link>
         </p>
-        <p style={{ marginTop: '0.5rem', textAlign: 'center' }}>
-          No account? <Link to="/register">Register</Link>
-        </p>
-      </div>
-    </div>
-  );
-}
+        <p style={{ marginTo

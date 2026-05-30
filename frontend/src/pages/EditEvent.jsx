@@ -194,9 +194,9 @@ export default function EditEvent() {
           <textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           <label>Location</label>
           <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
-          <label>Starts at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
+          <label>Starts at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.starts_at} onChange={e => setForm({ ...form, starts_at: e.target.value })} required />
-          <label>Ends at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
+          <label>Ends at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.ends_at} onChange={e => setForm({ ...form, ends_at: e.target.value })} required />
           <label>Capacity (leave blank for unlimited)</label>
           <input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} />
@@ -204,9 +204,9 @@ export default function EditEvent() {
             <input type="checkbox" checked={form.allow_individual_registration} onChange={e => setForm({ ...form, allow_individual_registration: e.target.checked })} style={{ width: 'auto', margin: 0 }} />
             Allow individual registration (without a team)
           </label>
-          <label>Registration opens at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
+          <label>Registration opens at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_starts_at} onChange={e => setForm({ ...form, registration_starts_at: e.target.value })} required />
-          <label>Registration closes at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
+          <label>Registration closes at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_ends_at} onChange={e => setForm({ ...form, registration_ends_at: e.target.value })} required />
           <button type="submit" className="btn btn-primary">Save changes</button>
         </form>
@@ -215,7 +215,7 @@ export default function EditEvent() {
       {/* Products */}
       <div className="card">
         <h3 style={{ marginBottom: '0.5rem' }}>Products</h3>
-        <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1rem' }}>Drag to reorder</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>Drag to reorder</p>
         {productError && <p className="error">{productError}</p>}
         {productMessage && <p className="success">{productMessage}</p>}
 
@@ -230,8 +230,8 @@ export default function EditEvent() {
             style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '0.6rem 0.5rem', marginBottom: '0.3rem',
-              borderRadius: '6px', border: '1px solid #eee',
-              background: 'white', cursor: 'grab'
+              borderRadius: '6px', border: '1px solid var(--border)',
+              background: 'var(--surface-2)', cursor: 'grab'
             }}
           >
             {editingProduct?.id === p.id ? (
@@ -261,9 +261,9 @@ export default function EditEvent() {
               <div style={{ flex: 1 }}>
                 <span style={{ cursor: 'grab', marginRight: '0.5rem', color: '#aaa' }}>⠿</span>
                 <strong>{p.name}</strong>
-                {p.description && <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
+                {p.description && <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
                 <span style={{ marginLeft: '0.5rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
-                <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
                   {p.quantity !== null ? `${p.remaining ?? p.quantity} / ${p.quantity} left` : 'Unlimited'}
                 </span>
               </div>
@@ -278,10 +278,10 @@ export default function EditEvent() {
         ))}
 
         {products.length === 0 && (
-          <p style={{ color: '#888', marginBottom: '1rem' }}>No products yet.</p>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No products yet.</p>
         )}
 
-        <form onSubmit={handleAddProduct} style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+        <form onSubmit={handleAddProduct} style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
           <h4 style={{ marginBottom: '0.5rem' }}>Add product</h4>
           <label>Name</label>
           <input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} required />
@@ -297,46 +297,8 @@ export default function EditEvent() {
     
     <div className="card" style={{ marginTop: '1.5rem' }}>
       <h3 style={{ marginBottom: '1rem' }}>Allowed teams</h3>
-      <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1rem' }}>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
       Only members of these teams can register under a team for this event.
       </p>
       {teamError && <p className="error">{teamError}</p>}
-      {teamMessage && <p className="success">{teamMessage}</p>}
-
-      {eventTeams.map(t => (
-      <div key={t.team_id} style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '0.5rem 0', borderBottom: '1px solid #f0f0f0'
-      }}>
-        <div>
-        <strong>{t.name}</strong>
-        <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
-          {t.member_count} members
-        </span>
-        </div>
-        <button className="btn btn-danger" onClick={() => handleRemoveTeam(t.team_id)}>Remove</button>
-      </div>
-      ))}
-
-      {eventTeams.length === 0 && (
-      <p style={{ color: '#888', marginBottom: '1rem' }}>No teams allowed yet — all team registrations are blocked.</p>
-      )}
-
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-      <select
-        defaultValue=""
-        onChange={e => { if (e.target.value) { handleAddTeam(e.target.value); e.target.value = ''; } }}
-        style={{ flex: 1, marginBottom: 0 }}
-      >
-        <option value="">Add a team...</option>
-        {allTeams
-        .filter(t => !eventTeams.find(et => et.team_id === t.id))
-        .map(t => (
-          <option key={t.id} value={t.id}>{t.name}</option>
-        ))}
-      </select>
-      </div>
-    </div>
-    </div>
-  );
-}
+      {teamMessage && <p className=

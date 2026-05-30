@@ -30,7 +30,7 @@ export default function ResetPassword() {
     <div style={{ maxWidth: 400, margin: '3rem auto' }}>
       <div className="card" style={{ textAlign: 'center' }}>
         <h2 style={{ marginBottom: '1rem' }}>Invalid link</h2>
-        <p style={{ color: '#888' }}>This password reset link is invalid.</p>
+        <p style={{ color: 'var(--text-muted)' }}>This password reset link is invalid.</p>
         <Link to="/login"><button className="btn btn-secondary" style={{ marginTop: '1rem' }}>Back to login</button></Link>
       </div>
     </div>
@@ -43,7 +43,7 @@ export default function ResetPassword() {
         {error && <p className="error">{error}</p>}
         {message && <p className="success">{message}</p>}
         {done ? (
-          <p style={{ color: '#888' }}>Redirecting to login...</p>
+          <p style={{ color: 'var(--text-muted)' }}>Redirecting to login...</p>
         ) : (
           <form onSubmit={handleSubmit}>
             <label>New password</label>

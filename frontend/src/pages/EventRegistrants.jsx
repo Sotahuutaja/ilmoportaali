@@ -82,13 +82,13 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
         </select>
 
         <label style={{ marginBottom: '0.5rem', display: 'block' }}>Products</label>
-        {eventProducts.length === 0 && <p style={{ color: '#888', fontSize: '0.9rem' }}>No products for this event.</p>}
+        {eventProducts.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No products for this event.</p>}
         {eventProducts.map(p => (
           <div key={p.id} style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             padding: '0.5rem', marginBottom: '0.3rem', borderRadius: '6px',
-            border: `2px solid ${selectedProducts[p.id] ? '#1a1a2e' : '#eee'}`,
-            background: selectedProducts[p.id] ? '#f0f0f8' : 'white',
+            border: `2px solid ${selectedProducts[p.id] ? 'var(--accent)' : 'var(--border)'}`,
+            background: selectedProducts[p.id] ? 'var(--surface-3)' : 'var(--surface-2)',
             cursor: 'pointer'
           }}
             onClick={() => setSelectedProducts(prev => ({
@@ -98,7 +98,7 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
           >
             <div>
               <strong>{p.name}</strong>
-              <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.9rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
+              <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
             </div>
             {selectedProducts[p.id] > 0 && (
               <input
@@ -231,7 +231,7 @@ export default function EventRegistrants() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.5rem 0' }}>
         <div>
           <h2>{event.title}</h2>
-          <p style={{ color: '#666', fontSize: '0.9rem' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
             📍 {event.location} &nbsp;|&nbsp;
             📅 {formatDate(event.starts_at)}
           </p>
@@ -251,20 +251,20 @@ export default function EventRegistrants() {
 
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="card" style={{ flex: 1, textAlign: 'center' }}>
-          <p style={{ color: '#888', fontSize: '0.9rem' }}>Total participants</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Total participants</p>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{registrations.length}</p>
           {event.capacity && (
-            <p style={{ color: '#888', fontSize: '0.85rem' }}>of {event.capacity} capacity</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>of {event.capacity} capacity</p>
           )}
         </div>
         <div className="card" style={{ flex: 1, textAlign: 'center' }}>
-          <p style={{ color: '#888', fontSize: '0.9rem' }}>Guest participants</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Guest participants</p>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>
             {registrations.filter(r => r.is_guest).length}
           </p>
         </div>
         <div className="card" style={{ flex: 1, textAlign: 'center' }}>
-          <p style={{ color: '#888', fontSize: '0.9rem' }}>Total product revenue</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Total product revenue</p>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>€{totalRevenue.toFixed(2)}</p>
         </div>
       </div>
@@ -281,7 +281,7 @@ export default function EventRegistrants() {
       <div className="card" style={{ padding: 0, overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
+            <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>First name</th>
         <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Last name</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
@@ -298,7 +298,7 @@ export default function EventRegistrants() {
                 : `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.user_email;
               const email = r.is_guest ? r.guest_email : r.user_email;
               return (
-                <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '0.8rem 1rem' }}>
             {r.is_guest ? (r.guest_first_name || r.guest_name || '—') : (r.first_name || '—')}
             {r.is_guest && (
@@ -311,7 +311,7 @@ export default function EventRegistrants() {
           <td style={{ padding: '0.8rem 1rem' }}>
             {r.is_guest ? (r.guest_last_name || '') : (r.last_name || '—')}
           </td>
-                  <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{email}</td>
+                  <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)' }}>{email}</td>
                   <td style={{ padding: '0.8rem 1rem' }}>
                     {r.team_name ? (
                       <span style={{
@@ -326,7 +326,7 @@ export default function EventRegistrants() {
                     {r.products && r.products.length > 0 ? (
                       <div>
                         {r.products.map((p, i) => (
-                          <div key={i} style={{ fontSize: '0.85rem', color: '#444' }}>
+                          <div key={i} style={{ fontSize: '0.85rem', color: 'var(--text)' }}>
                             {p.name} x{p.quantity} — €{(parseFloat(p.price) * p.quantity).toFixed(2)}
                           </div>
                         ))}
@@ -335,7 +335,7 @@ export default function EventRegistrants() {
                       <span style={{ color: '#aaa', fontSize: '0.85rem' }}>None</span>
                     )}
                   </td>
-                  <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.85rem' }}>
+                  <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                     {formatDateTime(r.created_at, {
                       day: 'numeric', month: 'numeric', year: 'numeric',
                       hour: '2-digit', minute: '2-digit', second: '2-digit'
@@ -352,23 +352,10 @@ export default function EventRegistrants() {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                   No participants found
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
-      </div>
-  {editingReg && (
-    <EditRegistrantModal
-    reg={editingReg}
-    teams={teams}
-    eventProducts={eventProducts}
-    onClose={() => setEditingReg(null)}
-    onSave={handleSaveReg}
-    />
-  )}
-    </div>
-  );
-}
+   

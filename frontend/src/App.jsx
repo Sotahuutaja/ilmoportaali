@@ -17,24 +17,22 @@ function Nav() {
   const { user, logout } = useAuth();
   return (
     <nav>
-      <Link to="/" style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Ilmoportaali</Link>
+      <Link to="/" className="site-title">Ilmoportaali</Link>
       <div>
         <Link to="/">Events</Link>
-    <Link to="/teams">Teams</Link>
+        <Link to="/teams">Teams</Link>
         {user ? (
           <>
             {(user.role === 'admin' || user.role === 'creator') && (
-              <Link to="/dashboard">Event Management</Link>
+              <Link to="/dashboard">Management</Link>
             )}
             {user.role === 'admin' && (
               <Link to="/admin">Admin</Link>
             )}
-      <Link to="/profile" style={{ marginLeft: '1rem', opacity: 0.7 }}>{fullName(user)}</Link>
-            <button
-              onClick={logout}
-              className="btn btn-secondary"
-              style={{ marginLeft: '1rem' }}
-            >Log out</button>
+            <Link to="/profile">{fullName(user)}</Link>
+            <button onClick={logout} className="btn btn-secondary" style={{ marginLeft: '1rem' }}>
+              Log out
+            </button>
           </>
         ) : (
           <>

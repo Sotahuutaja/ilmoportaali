@@ -32,7 +32,7 @@ export default function VerifyEmail() {
         {status === 'verifying' && (
           <>
             <h2 style={{ marginBottom: '1rem' }}>Verifying your email...</h2>
-            <p style={{ color: '#888' }}>Please wait.</p>
+            <p style={{ color: 'var(--text-muted)' }}>Please wait.</p>
           </>
         )}
         {status === 'success' && (
@@ -48,7 +48,7 @@ export default function VerifyEmail() {
           <>
             <h2 style={{ marginBottom: '1rem' }}>Verification failed</h2>
             <p style={{ color: '#c0392b', marginBottom: '1.5rem' }}>{message}</p>
-            <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
               The link may have expired. Request a new one below.
             </p>
             <ResendVerification />

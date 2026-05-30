@@ -57,7 +57,7 @@ function EditUserModal({ user, onClose, onSave }) {
         <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%', marginBottom: '1rem' }}>
           Save changes
         </button>
-        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
         <h4 style={{ marginBottom: '0.5rem' }}>Reset password</h4>
         <input
           type="password"
@@ -131,13 +131,13 @@ function EditTeamModal({ team, users, onClose, onSave }) {
           Save changes
         </button>
 
-        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
         <h4 style={{ marginBottom: '1rem' }}>Current captains</h4>
-        {captains.length === 0 && <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1rem' }}>No captains assigned.</p>}
+        {captains.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>No captains assigned.</p>}
         {captains.map(m => (
           <div key={m.user_id} style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '0.5rem 0', borderBottom: '1px solid #f0f0f0'
+            padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
           }}>
             <span>{m.first_name || m.last_name ? `${m.last_name || ''}, ${m.first_name || ''}`.trim() : m.email}</span>
             <button className="btn btn-danger" onClick={() => handleDemote(m.user_id)}>
@@ -146,7 +146,7 @@ function EditTeamModal({ team, users, onClose, onSave }) {
           </div>
         ))}
 
-        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
         <h4 style={{ marginBottom: '0.5rem' }}>Assign new captain</h4>
         <select value={form.captain_id} onChange={e => setForm({ ...form, captain_id: e.target.value })}>
           <option value="">Select a user...</option>
@@ -329,7 +329,7 @@ export default function Admin() {
     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '1.5rem 0', cursor: 'pointer', userSelect: 'none' }}
     >
     <h2>User management</h2>
-    <span style={{ fontSize: '1rem', color: '#888', transition: 'transform 0.2s', display: 'inline-block', transform: showUsers ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+    <span style={{ fontSize: '1rem', color: 'var(--text-muted)', transition: 'transform 0.2s', display: 'inline-block', transform: showUsers ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
     <button
       className="btn btn-secondary"
       onClick={e => { e.stopPropagation(); exportUsersCSV(); }}
@@ -419,7 +419,7 @@ export default function Admin() {
           <div className="card" style={{ padding: 0, overflow: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
+          <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
           {[
             { label: 'First name', field: 'first_name' },
             { label: 'Last name', field: 'last_name' },
@@ -449,10 +449,10 @@ export default function Admin() {
         </thead>
               <tbody>
                 {filtered.map(u => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                  <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '0.8rem 1rem' }}>{u.first_name}</td>
           <td style={{ padding: '0.8rem 1rem' }}>{u.last_name}</td>
-                    <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{u.email}</td>
+                    <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)' }}>{u.email}</td>
                     <td style={{ padding: '0.8rem 1rem' }}>
                       <span style={{
                         background: roleColor(u.role),
@@ -466,7 +466,7 @@ export default function Admin() {
                     </td>
                     <td style={{ padding: '0.8rem 1rem' }}>{calculateAge(u.year_of_birth)}</td>
                     <td style={{ padding: '0.8rem 1rem' }}>{u.gender || '—'}</td>
-                    <td style={{ padding: '0.8rem 1rem', color: '#888', fontSize: '0.9rem' }}>
+                    <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                       {formatDate(u.created_at)}
                     </td>
                     <td style={{ padding: '0.8rem 1rem' }}>
@@ -481,7 +481,7 @@ export default function Admin() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                    <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                       No users found
                     </td>
                   </tr>
@@ -498,7 +498,7 @@ export default function Admin() {
     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '2rem 0 1rem', cursor: 'pointer', userSelect: 'none' }}
     >
     <h2>Team management</h2>
-    <span style={{ fontSize: '1rem', color: '#888', transition: 'transform 0.2s', display: 'inline-block', transform: showTeams ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
+    <span style={{ fontSize: '1rem', color: 'var(--text-muted)', transition: 'transform 0.2s', display: 'inline-block', transform: showTeams ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
     </div>
 
       {showTeams && (
@@ -538,7 +538,7 @@ export default function Admin() {
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#f9f9f9', borderBottom: '1px solid #eee' }}>
+                <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Name</th>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Description</th>
                   <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Members</th>
@@ -547,9 +547,9 @@ export default function Admin() {
               </thead>
               <tbody>
                 {teams.map(t => (
-                  <tr key={t.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                  <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '0.8rem 1rem' }}><strong>{t.name}</strong></td>
-                    <td style={{ padding: '0.8rem 1rem', color: '#666' }}>{t.description}</td>
+                    <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)' }}>{t.description}</td>
                     <td style={{ padding: '0.8rem 1rem' }}>{t.member_count}</td>
                     <td style={{ padding: '0.8rem 1rem' }}>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -561,7 +561,7 @@ export default function Admin() {
                 ))}
                 {teams.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                    <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                       No teams yet
                     </td>
                   </tr>
@@ -589,4 +589,4 @@ export default function Admin() {
       )}
     </div>
   );
-}
+}    

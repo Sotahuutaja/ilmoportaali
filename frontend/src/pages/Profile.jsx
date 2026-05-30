@@ -92,27 +92,27 @@ export default function Profile() {
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div>
-                <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.2rem' }}>First name</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.2rem' }}>First name</p>
                 <p><strong>{user.first_name || '—'}</strong></p>
               </div>
               <div>
-                <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Last name</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Last name</p>
                 <p><strong>{user.last_name || '—'}</strong></p>
               </div>
               <div>
-                <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Email</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Email</p>
                 <p><strong>{user.email}</strong></p>
               </div>
               <div>
-                <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Year of birth</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Year of birth</p>
                 <p><strong>{user.year_of_birth || '—'}</strong></p>
               </div>
               <div>
-                <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Gender</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.2rem' }}>Gender</p>
                 <p><strong>{user.gender || '—'}</strong></p>
               </div>
             </div>
-            <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+            <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
             <h4 style={{ marginBottom: '0.5rem' }}>Password</h4>
             {resetMessage && <p className="success">{resetMessage}</p>}
             {resetError && <p className="error">{resetError}</p>}
@@ -153,16 +153,16 @@ export default function Profile() {
       {/* Team memberships */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
         <h3 style={{ marginBottom: '1rem' }}>My teams</h3>
-        {loading && <p style={{ color: '#888' }}>Loading...</p>}
+        {loading && <p style={{ color: 'var(--text-muted)' }}>Loading...</p>}
         {!loading && myTeams.length === 0 && (
-          <p style={{ color: '#888' }}>
+          <p style={{ color: 'var(--text-muted)' }}>
             You are not a member of any team. <Link to="/teams">Browse teams</Link>
           </p>
         )}
         {myTeams.map(t => (
           <div key={t.id} style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '0.6rem 0', borderBottom: '1px solid #f0f0f0'
+            padding: '0.6rem 0', borderBottom: '1px solid var(--border)'
           }}>
             <div>
               <strong>{t.name}</strong>
@@ -189,23 +189,23 @@ export default function Profile() {
       {/* Registered events */}
       <div className="card">
         <h3 style={{ marginBottom: '1rem' }}>My registrations</h3>
-        {loading && <p style={{ color: '#888' }}>Loading...</p>}
+        {loading && <p style={{ color: 'var(--text-muted)' }}>Loading...</p>}
         {!loading && registrations.length === 0 && (
-          <p style={{ color: '#888' }}>
+          <p style={{ color: 'var(--text-muted)' }}>
             You have not registered for any events. <Link to="/">Browse events</Link>
           </p>
         )}
         {registrations.map(r => (
-          <div key={r.id} style={{ padding: '0.8rem 0', borderBottom: '1px solid #f0f0f0' }}>
+          <div key={r.id} style={{ padding: '0.8rem 0', borderBottom: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <strong>{r.title}</strong>
-                <p style={{ color: '#666', fontSize: '0.9rem', margin: '0.2rem 0' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.2rem 0' }}>
                   📍 {r.location} &nbsp;|&nbsp;
                   📅 {formatDate(r.starts_at, { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
                 {r.team_name && (
-                  <p style={{ color: '#888', fontSize: '0.85rem' }}>Team: {r.team_name}</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Team: {r.team_name}</p>
                 )}
                 {r.products && r.products.length > 0 && (
                   <div style={{ marginTop: '0.3rem' }}>
@@ -213,21 +213,8 @@ export default function Profile() {
                       <span key={i} style={{
                         display: 'inline-block', marginRight: '0.4rem',
                         fontSize: '0.8rem', padding: '0.1rem 0.5rem',
-                        borderRadius: '8px', background: '#f0f0f0', color: '#444'
+                        borderRadius: '8px', background: 'var(--surface-3)', color: 'var(--text)'
                       }}>
                         {p.name} x{p.quantity}
                       </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <Link to={`/events/${r.id}`}>
-                <button className="btn btn-secondary">View event</button>
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+                    

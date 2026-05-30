@@ -8,7 +8,7 @@ function ProductSelector({ products, selected, setSelected, onToggle }) {
   return (
     <div style={{ margin: '1rem 0' }}>
       <label>Products</label>
-      {products.length === 0 && <p style={{ color: '#888', fontSize: '0.9rem' }}>No products for this event.</p>}
+      {products.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No products for this event.</p>}
       {products.map(p => {
         const isSelected = !!selected[p.id];
         const outOfStock = p.quantity !== null && p.remaining <= 0;
@@ -16,18 +16,18 @@ function ProductSelector({ products, selected, setSelected, onToggle }) {
           <div key={p.id} style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             padding: '0.6rem', marginBottom: '0.4rem', borderRadius: '6px',
-            border: `2px solid ${isSelected ? '#1a1a2e' : '#eee'}`,
+            border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
             opacity: outOfStock ? 0.5 : 1, cursor: outOfStock ? 'not-allowed' : 'pointer',
-            background: isSelected ? '#f0f0f8' : 'white'
+            background: isSelected ? 'var(--surface-3)' : 'var(--surface-2)'
           }}
             onClick={() => !outOfStock && onToggle(p.id, setSelected)}
           >
             <div>
               <strong>{p.name}</strong>
-              {p.description && <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
+              {p.description && <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
               {outOfStock && <span style={{ color: '#c0392b', marginLeft: '0.5rem', fontSize: '0.85rem' }}>Sold out</span>}
               {p.quantity !== null && !outOfStock && (
-                <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{p.remaining} left</span>
+                <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{p.remaining} left</span>
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -97,7 +97,7 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
         style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '0.4rem 0.6rem', borderRadius: open ? '6px 6px 0 0' : '6px',
-          background: '#f9f9f9', cursor: editing ? 'default' : 'pointer',
+          background: 'var(--surface-2)', cursor: editing ? 'default' : 'pointer',
           userSelect: 'none'
         }}
       >
@@ -111,14 +111,14 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
             }}>guest</span>
           )}
         </div>
-        <span style={{ color: '#888', fontSize: '0.8rem' }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
           {r.products ? r.products.length : 0} product{r.products?.length !== 1 ? 's' : ''}
         </span>
       </div>
 
       {open && (
         <div style={{
-          padding: '0.5rem 1rem', background: '#f0f0f8',
+          padding: '0.5rem 1rem', background: 'var(--surface-3)',
           borderRadius: '0 0 6px 6px', fontSize: '0.85rem'
         }}>
           {error && <p className="error" style={{ fontSize: '0.85rem' }}>{error}</p>}
@@ -129,11 +129,11 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
                 r.products.map((p, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
                     <span>{p.name} x{p.quantity}</span>
-                    <span style={{ color: '#888' }}>€{(parseFloat(p.price) * p.quantity).toFixed(2)}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>€{(parseFloat(p.price) * p.quantity).toFixed(2)}</span>
                   </div>
                 ))
               ) : (
-                <p style={{ color: '#888', marginBottom: '0.5rem' }}>No products selected.</p>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>No products selected.</p>
               )}
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid #ddd', paddingTop: '0.5rem' }}>
                 <button className="btn btn-secondary" onClick={e => { e.stopPropagation(); startEditing(); }}>
@@ -146,7 +146,7 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
             </>
           ) : (
             <>
-              <p style={{ color: '#666', marginBottom: '0.5rem' }}>Select products:</p>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Select products:</p>
               {eventProducts.map(p => {
                 const isSelected = !!selectedProducts[p.id] && selectedProducts[p.id] > 0;
                 return (
@@ -156,8 +156,8 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
                     style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '0.4rem', marginBottom: '0.3rem', borderRadius: '4px',
-                      border: `2px solid ${isSelected ? '#1a1a2e' : '#ddd'}`,
-                      background: isSelected ? '#e8e8f0' : 'white', cursor: 'pointer'
+                      border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                      background: isSelected ? 'var(--surface-3)' : 'var(--surface-2)', cursor: 'pointer'
                     }}
                   >
                     <span>{p.name} — €{parseFloat(p.price).toFixed(2)}</span>
@@ -330,18 +330,18 @@ export default function EventDetail() {
     <div style={{ maxWidth: 640, margin: '2rem auto' }}>
       <div className="card">
         <h2>{event.title}</h2>
-        <p style={{ color: '#666', margin: '0.5rem 0' }}>
+        <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0' }}>
           📍 {event.location}<br />
           📅 {formatDateTime(event.starts_at)} — {formatDateTime(event.ends_at)}
         </p>
         <p style={{ margin: '1rem 0' }}>{event.description}</p>
-        <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
           {event.registration_count} registered
           {event.capacity ? ` / ${event.capacity} spots` : ''}
           {full ? ' — FULL' : ''}
         </p>
         {event.registration_starts_at && (
-          <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1rem' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
             🗓 Registration period (EET/EEST):{' '}
             {formatDateTime(event.registration_starts_at)} — {formatDateTime(event.registration_ends_at)}
           </p>
@@ -393,7 +393,7 @@ export default function EventDetail() {
       })()}
 
             {captainTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && (
-              <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
+              <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3>Register a guest</h3>
                   <button className="btn btn-secondary" onClick={() => setShowGuestForm(v => !v)}>
@@ -440,7 +440,7 @@ export default function EventDetail() {
               </div>
             )}
       {captainTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && teamRegistrations.length > 0 && (
-        <div style={{ marginTop: '1.5rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
+        <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
         <h3 style={{ marginBottom: '1rem' }}>Team registrations</h3>
         {captainTeams.filter(t => allowedTeams.includes(t.id)).map(team => {
           const teamRegs = teamRegistrations
@@ -450,40 +450,4 @@ export default function EventDetail() {
             const nameB = b.is_guest ? (b.guest_first_name || '') : (b.first_name || '');
             return nameA.localeCompare(nameB, 'fi');
           });
-          if (teamRegs.length === 0) return null;
-          return (
-          <div key={team.id} style={{ marginBottom: '1rem' }}>
-            <h4 style={{ marginBottom: '0.5rem', color: '#1a1a2e' }}>
-            {team.name} ({teamRegs.length})
-            </h4>
-            {teamRegs.map(r => (
-              <RegistrationRow
-              key={r.id}
-              r={r}
-              eventId={id}
-              eventProducts={products}
-              onDelete={handleDeleteTeamReg}
-              onUpdate={handleUpdateTeamReg}
-              />
-            ))}
-          </div>
-          );
-        })}
-        </div>
-      )}
-          </>
-        )}
-
-        {user && regNotOpen && (
-          <p style={{ color: '#e67e22', marginTop: '1rem' }}>
-            Registration opens on {formatDateTime(event.registration_starts_at)}.
-          </p>
-        )}
-        {user && regClosed && (
-          <p style={{ color: '#c0392b', marginTop: '1rem' }}>Registration is closed.</p>
-        )}
-        {!user && <p>Please <a href="/login">log in</a> to register for this event.</p>}
-      </div>
-    </div>
-  );
-}
+          if (teamRegs.length === 0) re

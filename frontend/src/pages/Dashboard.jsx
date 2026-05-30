@@ -152,9 +152,9 @@ export default function Dashboard() {
           <textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           <label>Location</label>
           <input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
-          <label>Starts at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
+          <label>Starts at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.starts_at} onChange={e => setForm({ ...form, starts_at: e.target.value })} required />
-          <label>Ends at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
+          <label>Ends at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.ends_at} onChange={e => setForm({ ...form, ends_at: e.target.value })} required />
           <label>Capacity (leave blank for unlimited)</label>
           <input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} />
@@ -167,9 +167,9 @@ export default function Dashboard() {
             />
             Allow individual registration (without a team)
           </label>
-          <label>Registration opens at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
+          <label>Registration opens at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_starts_at} onChange={e => setForm({ ...form, registration_starts_at: e.target.value })} required />
-          <label>Registration closes at <span style={{ color: '#888', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
+          <label>Registration closes at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_ends_at} onChange={e => setForm({ ...form, registration_ends_at: e.target.value })} required />
           <button type="submit" className="btn btn-primary">Create event</button>
         </form>
@@ -183,7 +183,7 @@ export default function Dashboard() {
         {!event.is_owner && (
         <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: '8px', background: '#8e44ad', color: 'white' }}>co-manager</span>
         )}
-        <p style={{ color: '#666', fontSize: '0.9rem' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
         {formatDate(event.starts_at)} &nbsp;|&nbsp;
         {event.registration_count} registered
         {event.capacity ? ` / ${event.capacity}` : ''}
@@ -214,15 +214,15 @@ export default function Dashboard() {
           {eventProducts.map(p => (
             <div key={p.id} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '0.5rem 0', borderBottom: '1px solid #f0f0f0'
+              padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
             }}>
               <div>
                 <strong>{p.name}</strong>
                 {p.description && (
-                  <span style={{ color: '#666', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>
+                  <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>
                 )}
                 <span style={{ marginLeft: '0.5rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
-                <span style={{ color: '#888', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
                   {p.quantity !== null ? `${p.remaining ?? p.quantity} / ${p.quantity} left` : 'Unlimited'}
                 </span>
               </div>
@@ -231,10 +231,10 @@ export default function Dashboard() {
           ))}
 
           {eventProducts.length === 0 && (
-            <p style={{ color: '#888', marginBottom: '1rem' }}>No products yet.</p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No products yet.</p>
           )}
 
-          <form onSubmit={handleCreateProduct} style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+          <form onSubmit={handleCreateProduct} style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
             <h4 style={{ marginBottom: '0.5rem' }}>Add product</h4>
             <label>Name</label>
             <input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} required />
@@ -262,41 +262,8 @@ export default function Dashboard() {
       {eventManagers.map(m => (
         <div key={m.user_id} style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '0.5rem 0', borderBottom: '1px solid #f0f0f0'
+        padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
         }}>
         <span>
           {m.first_name || m.last_name
-          ? `${m.last_name || ''}, ${m.first_name || ''}`.trim()
-          : m.email}
-        </span>
-        <button className="btn btn-danger" onClick={() => handleRemoveManager(m.user_id)}>Remove</button>
-        </div>
-      ))}
-      {eventManagers.length === 0 && <p style={{ color: '#888', marginBottom: '1rem' }}>No co-managers yet.</p>}
-
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-        <select
-        value={newManagerId}
-        onChange={e => setNewManagerId(e.target.value)}
-        style={{ flex: 1, marginBottom: 0 }}
-        >
-        <option value="">Select a user to add...</option>
-        {allUsers
-          .filter(u => !eventManagers.find(m => m.user_id === u.id) && u.id !== managingManagers.creator_id)
-          .map(u => (
-          <option key={u.id} value={u.id}>
-            {u.first_name || u.last_name
-            ? `${u.last_name || ''}, ${u.first_name || ''}`.trim()
-            : u.email}
-          </option>
-          ))}
-        </select>
-        <button className="btn btn-primary" onClick={handleAddManager} disabled={!newManagerId}>
-        Add manager
-        </button>
-      </div>
-      </div>
-    )}
-    </div>
-  );
-}
+   
