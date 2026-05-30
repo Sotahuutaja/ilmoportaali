@@ -18,17 +18,19 @@ function Nav() {
   return (
     <nav>
       <Link to="/" className="site-title">Ilmoportaali</Link>
-      <div>
+      <div className="nav-center">
         <Link to="/">Events</Link>
         <Link to="/teams">Teams</Link>
+        {(user?.role === 'admin' || user?.role === 'creator') && (
+          <Link to="/dashboard">Management</Link>
+        )}
+        {user?.role === 'admin' && (
+          <Link to="/admin">Admin</Link>
+        )}
+      </div>
+      <div className="nav-right">
         {user ? (
           <>
-            {(user.role === 'admin' || user.role === 'creator') && (
-              <Link to="/dashboard">Management</Link>
-            )}
-            {user.role === 'admin' && (
-              <Link to="/admin">Admin</Link>
-            )}
             <Link to="/profile">{fullName(user)}</Link>
             <button onClick={logout} className="btn btn-secondary" style={{ marginLeft: '1rem' }}>
               Log out
