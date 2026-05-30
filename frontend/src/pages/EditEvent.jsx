@@ -301,4 +301,42 @@ export default function EditEvent() {
       Only members of these teams can register under a team for this event.
       </p>
       {teamError && <p className="error">{teamError}</p>}
-      {teamMessage && <p className=
+      {teamMessage && <p className="success">{teamMessage}</p>}
+
+      {eventTeams.map(t => (
+      <div key={t.team_id} style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
+      }}>
+        <div>
+        <strong>{t.name}</strong>
+        <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+          {t.member_count} members
+        </span>
+        </div>
+        <button className="btn btn-danger" onClick={() => handleRemoveTeam(t.team_id)}>Remove</button>
+      </div>
+      ))}
+
+      {eventTeams.length === 0 && (
+      <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No teams allowed yet — all team registrations are blocked.</p>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+      <select
+        defaultValue=""
+        onChange={e => { if (e.target.value) { handleAddTeam(e.target.value); e.target.value = ''; } }}
+        style={{ flex: 1, marginBottom: 0 }}
+      >
+        <option value="">Add a team...</option>
+        {allTeams
+        .filter(t => !eventTeams.find(et => et.team_id === t.id))
+        .map(t => (
+          <option key={t.id} value={t.id}>{t.name}</option>
+        ))}
+      </select>
+      </div>
+    </div>
+    </div>
+  );
+}

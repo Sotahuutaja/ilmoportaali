@@ -217,4 +217,17 @@ export default function Profile() {
                       }}>
                         {p.name} x{p.quantity}
                       </span>
-                    
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Link to={`/events/${r.id}`}>
+                <button className="btn btn-secondary">View event</button>
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

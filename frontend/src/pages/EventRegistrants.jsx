@@ -358,4 +358,17 @@ export default function EventRegistrants() {
               </tr>
             )}
           </tbody>
-   
+        </table>
+      </div>
+  {editingReg && (
+    <EditRegistrantModal
+    reg={editingReg}
+    teams={teams}
+    eventProducts={eventProducts}
+    onClose={() => setEditingReg(null)}
+    onSave={handleSaveReg}
+    />
+  )}
+    </div>
+  );
+}
