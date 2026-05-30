@@ -3,7 +3,6 @@ import { useAuth } from '../AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { formatDate, helsinkiToUTC } from '../utils/datetime';
-import ProductFieldEditor from '../components/ProductFieldEditor';
 
 
 export default function Dashboard() {
@@ -18,13 +17,6 @@ export default function Dashboard() {
   });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-
-  // Product management
-  const [managingProducts, setManagingProducts] = useState(null);
-  const [eventProducts, setEventProducts] = useState([]);
-  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [] });
-  const [productMessage, setProductMessage] = useState('');
-  const [productError, setProductError] = useState('');
   const [managingManagers, setManagingManagers] = useState(null);
   const [eventManagers, setEventManagers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -70,41 +62,6 @@ export default function Dashboard() {
       setEvents(events.filter(e => e.id !== id));
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to delete event');
-    }
-  };
-
-  const openProducts = async (event) => {
-    setManagingProducts(event);
-    setProductMessage(''); setProductError('');
-    const res = await api.get(`/events/${event.id}/products`);
-    setEventProducts(res.data.products);
-  };
-
-  const handleCreateProduct = async (e) => {
-    e.preventDefault();
-    setProductError(''); setProductMessage('');
-    try {
-      const res = await api.post(`/events/${managingProducts.id}/products`, {
-        ...productForm,
-        price: parseFloat(productForm.price) || 0,
-        quantity: productForm.quantity ? parseInt(productForm.quantity) : null,
-        fields: productForm.fields
-      });
-      setEventProducts([...eventProducts, res.data.product]);
-      setProductMessage('Product created!');
-      setProductForm({ name: '', description: '', price: '', quantity: '', fields: [] });
-    } catch (err) {
-      setProductError(err.response?.data?.error || 'Failed to create product');
-    }
-  };
-
-  const handleDeleteProduct = async (productId) => {
-    if (!window.confirm('Delete this product?')) return;
-    try {
-      await api.delete(`/events/${managingProducts.id}/products/${productId}`);
-      setEventProducts(eventProducts.filter(p => p.id !== productId));
-    } catch (err) {
-      setProductError(err.response?.data?.error || 'Failed to delete product');
     }
   };
 
@@ -178,131 +135,78 @@ export default function Dashboard() {
       </div>
 
       <h3 style={{ margin: '1.5rem 0 1rem' }}>Your events</h3>
-    {events.map(event => (
-      <div className="card" key={event.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div>
-        <strong>{event.title}</strong>
-        {!event.is_owner && (
-        <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: '8px', background: '#8e44ad', color: 'white' }}>co-manager</span>
-        )}
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-        {formatDate(event.starts_at)} &nbsp;|&nbsp;
-        {event.registration_count} registered
-        {event.capacity ? ` / ${event.capacity}` : ''}
-        </p>
-      </div>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <Link to={`/events/${event.id}/registrants`}><button className="btn btn-secondary">Participants</button></Link>
-        <button className="btn btn-secondary" onClick={() => openManagers(event)}>Managers</button>
-        <button className="btn btn-secondary" onClick={() => openProducts(event)}>Products</button>
-        <Link to={`/events/${event.id}/edit`}><button className="btn btn-secondary">Edit</button></Link>
-        {(event.is_owner || user.role === 'admin') && (
-        <button className="btn btn-danger" onClick={() => handleDelete(event.id)}>Delete</button>
-        )}
-      </div>
-      </div>
-    ))}
+      {events.map(event => (
+        <div className="card" key={event.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <strong>{event.title}</strong>
+            {!event.is_owner && (
+              <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: '8px', background: '#8e44ad', color: 'white' }}>co-manager</span>
+            )}
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              {formatDate(event.starts_at)} &nbsp;|&nbsp;
+              {event.registration_count} registered
+              {event.capacity ? ` / ${event.capacity}` : ''}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Link to={`/events/${event.id}/registrants`}><button className="btn btn-secondary">Participants</button></Link>
+            <button className="btn btn-secondary" onClick={() => openManagers(event)}>Managers</button>
+            <Link to={`/events/${event.id}/edit`}><button className="btn btn-secondary">Edit</button></Link>
+            {(event.is_owner || user.role === 'admin') && (
+              <button className="btn btn-danger" onClick={() => handleDelete(event.id)}>Delete</button>
+            )}
+          </div>
+        </div>
+      ))}
 
-      {managingProducts && (
+      {managingManagers && (
         <div className="card" style={{ marginTop: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3>Products for: {managingProducts.title}</h3>
-            <button className="btn btn-secondary" onClick={() => setManagingProducts(null)}>Close</button>
+            <h3>Managers for: {managingManagers.title}</h3>
+            <button className="btn btn-secondary" onClick={() => setManagingManagers(null)}>Close</button>
           </div>
 
-          {productError && <p className="error">{productError}</p>}
-          {productMessage && <p className="success">{productMessage}</p>}
+          {managerError && <p className="error">{managerError}</p>}
+          {managerMessage && <p className="success">{managerMessage}</p>}
 
-          {eventProducts.map(p => (
-            <div key={p.id} style={{
+          {eventManagers.map(m => (
+            <div key={m.user_id} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
             }}>
-              <div>
-                <strong>{p.name}</strong>
-                {p.description && (
-                  <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>
-                )}
-                <span style={{ marginLeft: '0.5rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
-                <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
-                  {p.quantity !== null ? `${p.remaining ?? p.quantity} / ${p.quantity} left` : 'Unlimited'}
-                </span>
-              </div>
-              <button className="btn btn-danger" onClick={() => handleDeleteProduct(p.id)}>Delete</button>
+              <span>
+                {m.first_name || m.last_name
+                  ? `${m.last_name || ''}, ${m.first_name || ''}`.trim()
+                  : m.email}
+              </span>
+              <button className="btn btn-danger" onClick={() => handleRemoveManager(m.user_id)}>Remove</button>
             </div>
           ))}
+          {eventManagers.length === 0 && <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No co-managers yet.</p>}
 
-          {eventProducts.length === 0 && (
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No products yet.</p>
-          )}
-
-          <form onSubmit={handleCreateProduct} style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-            <h4 style={{ marginBottom: '0.5rem' }}>Add product</h4>
-            <label>Name</label>
-            <input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} required />
-            <label>Description</label>
-            <input value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} />
-            <label>Price (€)</label>
-            <input type="number" step="0.01" min="0" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required />
-            <label>Quantity limit (leave blank for unlimited)</label>
-            <input type="number" min="1" value={productForm.quantity} onChange={e => setProductForm({ ...productForm, quantity: e.target.value })} />
-            <ProductFieldEditor
-              fields={productForm.fields}
-              onChange={fields => setProductForm({ ...productForm, fields })}
-            />
-            <button type="submit" className="btn btn-primary" style={{ marginTop: '0.75rem' }}>Add product</button>
-          </form>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+            <select
+              value={newManagerId}
+              onChange={e => setNewManagerId(e.target.value)}
+              style={{ flex: 1, marginBottom: 0 }}
+            >
+              <option value="">Select a user to add...</option>
+              {allUsers
+                .filter(u => !eventManagers.find(m => m.user_id === u.id) && u.id !== managingManagers.creator_id)
+                .map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.first_name || u.last_name
+                      ? `${u.last_name || ''}, ${u.first_name || ''}`.trim()
+                      : u.email}
+                  </option>
+                ))}
+            </select>
+            <button className="btn btn-primary" onClick={handleAddManager} disabled={!newManagerId}>
+              Add manager
+            </button>
+          </div>
         </div>
       )}
-    
-    {managingManagers && (
-      <div className="card" style={{ marginTop: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3>Managers for: {managingManagers.title}</h3>
-        <button className="btn btn-secondary" onClick={() => setManagingManagers(null)}>Close</button>
-      </div>
-
-      {managerError && <p className="error">{managerError}</p>}
-      {managerMessage && <p className="success">{managerMessage}</p>}
-
-      {eventManagers.map(m => (
-        <div key={m.user_id} style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
-        }}>
-        <span>
-          {m.first_name || m.last_name
-          ? `${m.last_name || ''}, ${m.first_name || ''}`.trim()
-          : m.email}
-        </span>
-        <button className="btn btn-danger" onClick={() => handleRemoveManager(m.user_id)}>Remove</button>
-        </div>
-      ))}
-      {eventManagers.length === 0 && <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No co-managers yet.</p>}
-
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-        <select
-        value={newManagerId}
-        onChange={e => setNewManagerId(e.target.value)}
-        style={{ flex: 1, marginBottom: 0 }}
-        >
-        <option value="">Select a user to add...</option>
-        {allUsers
-          .filter(u => !eventManagers.find(m => m.user_id === u.id) && u.id !== managingManagers.creator_id)
-          .map(u => (
-          <option key={u.id} value={u.id}>
-            {u.first_name || u.last_name
-            ? `${u.last_name || ''}, ${u.first_name || ''}`.trim()
-            : u.email}
-          </option>
-          ))}
-        </select>
-        <button className="btn btn-primary" onClick={handleAddManager} disabled={!newManagerId}>
-        Add manager
-        </button>
-      </div>
-      </div>
-    )}
     </div>
   );
 }
