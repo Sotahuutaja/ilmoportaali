@@ -43,11 +43,20 @@ export default function Teams() {
     }
   };
 
+  const refreshTeamCount = async (teamId) => {
+    const res = await api.get(`/teams/${teamId}`).catch(() => null);
+    if (res) {
+      const approvedCount = res.data.members.filter(m => m.status === 'approved').length;
+      setTeams(prev => prev.map(t => t.id === teamId ? { ...t, member_count: approvedCount } : t));
+    }
+  };
+
   const handleApprove = async (teamId, userId) => {
     try {
       await api.put(`/teams/${teamId}/members/${userId}`, { status: 'approved' });
       const res = await api.get(`/teams/${teamId}`);
       setMembers(res.data.members);
+      refreshTeamCount(teamId);
       setMessage('Member approved!');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to approve');
@@ -59,6 +68,7 @@ export default function Teams() {
       await api.put(`/teams/${teamId}/members/${userId}`, { status: 'rejected' });
       const res = await api.get(`/teams/${teamId}`);
       setMembers(res.data.members);
+      refreshTeamCount(teamId);
       setMessage('Member rejected.');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to reject');
@@ -70,6 +80,7 @@ export default function Teams() {
     try {
       await api.delete(`/teams/${teamId}/members/${userId}`);
       setMembers(members.filter(m => m.user_id !== userId));
+      refreshTeamCount(teamId);
       setMessage('Member removed.');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to remove');

@@ -301,6 +301,8 @@ export default function EventDetail() {
       setGuestForm({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
       setGuestProducts({});
       setEvent(e => ({ ...e, registration_count: e.registration_count + 1 }));
+      const regs = await api.get(`/registrations/${id}`).catch(() => null);
+      if (regs) setTeamRegistrations(regs.data.registrations);
     } catch (err) {
       setError(err.response?.data?.error || 'Guest registration failed');
     }
