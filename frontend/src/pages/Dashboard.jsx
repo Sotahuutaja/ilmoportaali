@@ -3,6 +3,7 @@ import { useAuth } from '../AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 
+
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
