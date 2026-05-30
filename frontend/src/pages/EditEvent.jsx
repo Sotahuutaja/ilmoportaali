@@ -259,7 +259,7 @@ export default function EditEvent() {
               </form>
             ) : (
               <div style={{ flex: 1 }}>
-                <span style={{ cursor: 'grab', marginRight: '0.5rem', color: '#aaa' }}>⠿</span>
+                <span style={{ cursor: 'grab', marginRight: '0.5rem', color: 'var(--text-muted)' }}>⠿</span>
                 <strong>{p.name}</strong>
                 {p.description && <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
                 <span style={{ marginLeft: '0.5rem' }}>€{parseFloat(p.price).toFixed(2)}</span>

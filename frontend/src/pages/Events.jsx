@@ -41,4 +41,31 @@ export default function Events() {
   const now = new Date();
   const upcoming = events.filter(e => new Date(e.ends_at) >= now);
   const past = events.filter(e => new Date(e.ends_at) < now)
-    .sort((a, 
+    .sort((a, b) => new Date(b.ends_at) - new Date(a.ends_at)); // most recent first
+
+  return (
+    <div>
+      <h2 style={{ margin: '1.5rem 0' }}>Upcoming Events</h2>
+      {upcoming.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No upcoming events.</p>}
+      {upcoming.map(event => <EventCard key={event.id} event={event} />)}
+
+      {past.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <div
+            onClick={() => setShowPast(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none', marginBottom: '1rem' }}
+          >
+            <h2>Past Events</h2>
+            <span style={{
+              fontSize: '1rem', color: 'var(--text-muted)', display: 'inline-block',
+              transition: 'transform 0.2s',
+              transform: showPast ? 'rotate(0deg)' : 'rotate(-90deg)'
+            }}>▼</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>({past.length})</span>
+          </div>
+          {showPast && past.map(event => <EventCard key={event.id} event={event} />)}
+        </div>
+      )}
+    </div>
+  );
+}

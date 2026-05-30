@@ -319,7 +319,7 @@ export default function EventRegistrants() {
                         background: '#1a1a2e', color: 'white', fontSize: '0.85rem'
                       }}>{r.team_name}</span>
                     ) : (
-                      <span style={{ color: '#aaa', fontSize: '0.85rem' }}>Individual</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Individual</span>
                     )}
                   </td>
                   <td style={{ padding: '0.8rem 1rem' }}>
@@ -332,7 +332,7 @@ export default function EventRegistrants() {
                         ))}
                       </div>
                     ) : (
-                      <span style={{ color: '#aaa', fontSize: '0.85rem' }}>None</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>None</span>
                     )}
                   </td>
                   <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>

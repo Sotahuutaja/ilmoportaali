@@ -102,7 +102,7 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ color: '#aaa', fontSize: '0.8rem' }}>{open ? '▼' : '▶'}</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{open ? '▼' : '▶'}</span>
           <span style={{ fontSize: '0.9rem' }}>{displayName}</span>
           {r.is_guest && (
             <span style={{
@@ -342,7 +342,7 @@ export default function EventDetail() {
         </p>
         {event.registration_starts_at && (
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            🗓 Registration period (EET/EEST):{' '}
+            🗓 Ilmoittautumisaika (EET/EEST):{' '}
             {formatDateTime(event.registration_starts_at)} — {formatDateTime(event.registration_ends_at)}
           </p>
         )}
@@ -450,4 +450,40 @@ export default function EventDetail() {
             const nameB = b.is_guest ? (b.guest_first_name || '') : (b.first_name || '');
             return nameA.localeCompare(nameB, 'fi');
           });
-          if (teamRegs.length === 0) re
+          if (teamRegs.length === 0) return null;
+          return (
+          <div key={team.id} style={{ marginBottom: '1rem' }}>
+            <h4 style={{ marginBottom: '0.5rem', color: '#1a1a2e' }}>
+            {team.name} ({teamRegs.length})
+            </h4>
+            {teamRegs.map(r => (
+              <RegistrationRow
+              key={r.id}
+              r={r}
+              eventId={id}
+              eventProducts={products}
+              onDelete={handleDeleteTeamReg}
+              onUpdate={handleUpdateTeamReg}
+              />
+            ))}
+          </div>
+          );
+        })}
+        </div>
+      )}
+          </>
+        )}
+
+        {user && regNotOpen && (
+          <p style={{ color: '#e67e22', marginTop: '1rem' }}>
+            Registration opens on {formatDateTime(event.registration_starts_at)}.
+          </p>
+        )}
+        {user && regClosed && (
+          <p style={{ color: '#c0392b', marginTop: '1rem' }}>Registration is closed.</p>
+        )}
+        {!user && <p>Please <a href="/login">log in</a> to register for this event.</p>}
+      </div>
+    </div>
+  );
+}

@@ -439,7 +439,7 @@ export default function Admin() {
             }}
             >
             {label}
-            <span style={{ marginLeft: '0.3rem', color: '#aaa' }}>
+            <span style={{ marginLeft: '0.3rem', color: 'var(--text-muted)' }}>
               {sortField === field ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
             </span>
             </th>
@@ -589,4 +589,4 @@ export default function Admin() {
       )}
     </div>
   );
-}    
+}

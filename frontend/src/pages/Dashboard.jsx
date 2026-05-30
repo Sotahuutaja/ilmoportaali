@@ -266,4 +266,37 @@ export default function Dashboard() {
         }}>
         <span>
           {m.first_name || m.last_name
-   
+          ? `${m.last_name || ''}, ${m.first_name || ''}`.trim()
+          : m.email}
+        </span>
+        <button className="btn btn-danger" onClick={() => handleRemoveManager(m.user_id)}>Remove</button>
+        </div>
+      ))}
+      {eventManagers.length === 0 && <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No co-managers yet.</p>}
+
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+        <select
+        value={newManagerId}
+        onChange={e => setNewManagerId(e.target.value)}
+        style={{ flex: 1, marginBottom: 0 }}
+        >
+        <option value="">Select a user to add...</option>
+        {allUsers
+          .filter(u => !eventManagers.find(m => m.user_id === u.id) && u.id !== managingManagers.creator_id)
+          .map(u => (
+          <option key={u.id} value={u.id}>
+            {u.first_name || u.last_name
+            ? `${u.last_name || ''}, ${u.first_name || ''}`.trim()
+            : u.email}
+          </option>
+          ))}
+        </select>
+        <button className="btn btn-primary" onClick={handleAddManager} disabled={!newManagerId}>
+        Add manager
+        </button>
+      </div>
+      </div>
+    )}
+    </div>
+  );
+}
