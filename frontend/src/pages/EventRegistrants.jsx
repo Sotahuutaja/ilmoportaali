@@ -180,7 +180,13 @@ export default function EventRegistrants() {
     const email = r.is_guest ? r.guest_email : r.user_email;
     const team = r.team_name || '';
     const products = r.products
-      ? r.products.map(p => `${p.name} x${p.quantity}`).join('; ')
+      ? r.products.map(p => {
+          const fieldParts = Object.entries(p.field_values || {}).map(([fid, val]) => {
+            const fieldDef = (p.fields || []).find(f => f.id === fid);
+            return `${fieldDef?.label || fid}: ${val}`;
+          });
+          return `${p.name} x${p.quantity}${fieldParts.length ? ` (${fieldParts.join(', ')})` : ''}`;
+        }).join('; ')
       : '';
     const totalPrice = r.products
       ? r.products.reduce((sum, p) => sum + parseFloat(p.price) * p.quantity, 0).toFixed(2)
@@ -325,11 +331,22 @@ export default function EventRegistrants() {
                   <td style={{ padding: '0.8rem 1rem' }}>
                     {r.products && r.products.length > 0 ? (
                       <div>
-                        {r.products.map((p, i) => (
-                          <div key={i} style={{ fontSize: '0.85rem', color: 'var(--text)' }}>
-                            {p.name} x{p.quantity} — €{(parseFloat(p.price) * p.quantity).toFixed(2)}
-                          </div>
-                        ))}
+                        {r.products.map((p, i) => {
+                          const fieldParts = Object.entries(p.field_values || {}).map(([fid, val]) => {
+                            const fieldDef = (p.fields || []).find(f => f.id === fid);
+                            return { label: fieldDef?.label || fid, val };
+                          });
+                          return (
+                            <div key={i} style={{ fontSize: '0.85rem', marginBottom: '0.2rem' }}>
+                              <span>{p.name} x{p.quantity} — €{(parseFloat(p.price) * p.quantity).toFixed(2)}</span>
+                              {fieldParts.map(({ label, val }) => (
+                                <span key={label} style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.8rem', paddingLeft: '0.5rem' }}>
+                                  {label}: {val}
+                                </span>
+                              ))}
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>None</span>

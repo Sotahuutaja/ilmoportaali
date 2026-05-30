@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import { toHelsinki, helsinkiToUTC } from '../utils/datetime';
+import ProductFieldEditor from '../components/ProductFieldEditor';
 
 export default function EditEvent() {
   const { id } = useParams();
@@ -16,7 +17,7 @@ export default function EditEvent() {
     registration_starts_at: '', registration_ends_at: ''
   });
   const [products, setProducts] = useState([]);
-  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '' });
+  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [] });
   const [editingProduct, setEditingProduct] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -86,11 +87,12 @@ export default function EditEvent() {
       const res = await api.post(`/events/${id}/products`, {
         ...productForm,
         price: parseFloat(productForm.price) || 0,
-        quantity: productForm.quantity ? parseInt(productForm.quantity) : null
+        quantity: productForm.quantity ? parseInt(productForm.quantity) : null,
+        fields: productForm.fields
       });
       setProducts([...products, res.data.product]);
       setProductMessage('Product added!');
-      setProductForm({ name: '', description: '', price: '', quantity: '' });
+      setProductForm({ name: '', description: '', price: '', quantity: '', fields: [] });
     } catch (err) {
       setProductError(err.response?.data?.error || 'Failed to add product');
     }
@@ -104,7 +106,8 @@ export default function EditEvent() {
         name: editingProduct.name,
         description: editingProduct.description,
         price: parseFloat(editingProduct.price) || 0,
-        quantity: editingProduct.quantity ? parseInt(editingProduct.quantity) : null
+        quantity: editingProduct.quantity ? parseInt(editingProduct.quantity) : null,
+        fields: editingProduct.fields || []
       });
       setProducts(products.map(p => p.id === editingProduct.id ? res.data.product : p));
       setProductMessage('Product updated!');
@@ -235,24 +238,30 @@ export default function EditEvent() {
             }}
           >
             {editingProduct?.id === p.id ? (
-              <form onSubmit={handleUpdateProduct} style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginRight: '0.5rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem' }}>Name</label>
-                  <input value={editingProduct.name} onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })} required style={{ marginBottom: 0 }} />
+              <form onSubmit={handleUpdateProduct} style={{ flex: 1, marginRight: '0.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8rem' }}>Name</label>
+                    <input value={editingProduct.name} onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })} required style={{ marginBottom: 0 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem' }}>Description</label>
+                    <input value={editingProduct.description || ''} onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })} style={{ marginBottom: 0 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem' }}>Price (€)</label>
+                    <input type="number" step="0.01" min="0" value={editingProduct.price} onChange={e => setEditingProduct({ ...editingProduct, price: e.target.value })} required style={{ marginBottom: 0 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem' }}>Quantity limit</label>
+                    <input type="number" min="1" value={editingProduct.quantity || ''} onChange={e => setEditingProduct({ ...editingProduct, quantity: e.target.value })} style={{ marginBottom: 0 }} />
+                  </div>
                 </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem' }}>Description</label>
-                  <input value={editingProduct.description || ''} onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })} style={{ marginBottom: 0 }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem' }}>Price (€)</label>
-                  <input type="number" step="0.01" min="0" value={editingProduct.price} onChange={e => setEditingProduct({ ...editingProduct, price: e.target.value })} required style={{ marginBottom: 0 }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem' }}>Quantity limit</label>
-                  <input type="number" min="1" value={editingProduct.quantity || ''} onChange={e => setEditingProduct({ ...editingProduct, quantity: e.target.value })} style={{ marginBottom: 0 }} />
-                </div>
-                <div style={{ gridColumn: 'span 2', display: 'flex', gap: '0.5rem' }}>
+                <ProductFieldEditor
+                  fields={editingProduct.fields || []}
+                  onChange={fields => setEditingProduct({ ...editingProduct, fields })}
+                />
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
                   <button type="submit" className="btn btn-primary">Save</button>
                   <button type="button" className="btn btn-secondary" onClick={() => setEditingProduct(null)}>Cancel</button>
                 </div>
@@ -291,7 +300,11 @@ export default function EditEvent() {
           <input type="number" step="0.01" min="0" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required />
           <label>Quantity limit (leave blank for unlimited)</label>
           <input type="number" min="1" value={productForm.quantity} onChange={e => setProductForm({ ...productForm, quantity: e.target.value })} />
-          <button type="submit" className="btn btn-primary">Add product</button>
+          <ProductFieldEditor
+            fields={productForm.fields}
+            onChange={fields => setProductForm({ ...productForm, fields })}
+          />
+          <button type="submit" className="btn btn-primary" style={{ marginTop: '0.75rem' }}>Add product</button>
         </form>
       </div>
     

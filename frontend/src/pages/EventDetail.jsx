@@ -4,7 +4,7 @@ import { useAuth } from '../AuthContext';
 import api from '../api';
 import { formatDateTime } from '../utils/datetime';
 
-function ProductSelector({ products, selected, setSelected, onToggle }) {
+function ProductSelector({ products, selected, setSelected, onToggle, fieldValues, setFieldValues }) {
   return (
     <div style={{ margin: '1rem 0' }}>
       <label>Products</label>
@@ -12,37 +12,85 @@ function ProductSelector({ products, selected, setSelected, onToggle }) {
       {products.map(p => {
         const isSelected = !!selected[p.id];
         const outOfStock = p.quantity !== null && p.remaining <= 0;
+        const fields = p.fields || [];
         return (
-          <div key={p.id} style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '0.6rem', marginBottom: '0.4rem', borderRadius: '6px',
-            border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
-            opacity: outOfStock ? 0.5 : 1, cursor: outOfStock ? 'not-allowed' : 'pointer',
-            background: isSelected ? 'var(--surface-3)' : 'var(--surface-2)'
-          }}
-            onClick={() => !outOfStock && onToggle(p.id, setSelected)}
-          >
-            <div>
-              <strong>{p.name}</strong>
-              {p.description && <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
-              {outOfStock && <span style={{ color: '#c0392b', marginLeft: '0.5rem', fontSize: '0.85rem' }}>Sold out</span>}
-              {p.quantity !== null && !outOfStock && (
-                <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{p.remaining} left</span>
-              )}
+          <div key={p.id} style={{ marginBottom: '0.4rem' }}>
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '0.6rem',
+              borderRadius: isSelected && fields.length > 0 ? '6px 6px 0 0' : '6px',
+              border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+              borderBottom: isSelected && fields.length > 0 ? 'none' : undefined,
+              opacity: outOfStock ? 0.5 : 1, cursor: outOfStock ? 'not-allowed' : 'pointer',
+              background: isSelected ? 'var(--surface-3)' : 'var(--surface-2)'
+            }}
+              onClick={() => !outOfStock && onToggle(p.id, setSelected)}
+            >
+              <div>
+                <strong>{p.name}</strong>
+                {p.description && <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
+                {outOfStock && <span style={{ color: '#c0392b', marginLeft: '0.5rem', fontSize: '0.85rem' }}>Sold out</span>}
+                {p.quantity !== null && !outOfStock && (
+                  <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{p.remaining} left</span>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <strong>€{parseFloat(p.price).toFixed(2)}</strong>
+                {isSelected && (
+                  <input
+                    type="number" min="1"
+                    max={p.quantity !== null ? p.remaining : undefined}
+                    value={selected[p.id]}
+                    onClick={e => e.stopPropagation()}
+                    onChange={e => setSelected(prev => ({ ...prev, [p.id]: parseInt(e.target.value) }))}
+                    style={{ width: '60px', margin: 0 }}
+                  />
+                )}
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <strong>€{parseFloat(p.price).toFixed(2)}</strong>
-              {isSelected && (
-                <input
-                  type="number" min="1"
-                  max={p.quantity !== null ? p.remaining : undefined}
-                  value={selected[p.id]}
-                  onClick={e => e.stopPropagation()}
-                  onChange={e => setSelected(prev => ({ ...prev, [p.id]: parseInt(e.target.value) }))}
-                  style={{ width: '60px', margin: 0 }}
-                />
-              )}
-            </div>
+            {isSelected && fields.length > 0 && (
+              <div style={{
+                padding: '0.75rem',
+                background: 'var(--surface-3)',
+                border: `2px solid var(--accent)`,
+                borderTop: 'none',
+                borderRadius: '0 0 6px 6px'
+              }}
+                onClick={e => e.stopPropagation()}
+              >
+                {fields.map(field => (
+                  <div key={field.id} style={{ marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '0.78rem' }}>
+                      {field.label}
+                      {field.required && <span style={{ color: '#c0392b', marginLeft: '0.2rem' }}>*</span>}
+                    </label>
+                    {field.type === 'select' ? (
+                      <select
+                        value={fieldValues?.[p.id]?.[field.id] || ''}
+                        onChange={e => setFieldValues(prev => ({
+                          ...prev,
+                          [p.id]: { ...(prev[p.id] || {}), [field.id]: e.target.value }
+                        }))}
+                        style={{ marginBottom: 0 }}
+                      >
+                        <option value="">Select...</option>
+                        {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                    ) : (
+                      <input
+                        value={fieldValues?.[p.id]?.[field.id] || ''}
+                        onChange={e => setFieldValues(prev => ({
+                          ...prev,
+                          [p.id]: { ...(prev[p.id] || {}), [field.id]: e.target.value }
+                        }))}
+                        placeholder={field.label}
+                        style={{ marginBottom: 0 }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
@@ -193,6 +241,7 @@ export default function EventDetail() {
   const [myTeams, setMyTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState('');
   const [selectedProducts, setSelectedProducts] = useState({});
+  const [fieldValues, setFieldValues] = useState({});
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [teamRegistrations, setTeamRegistrations] = useState([]);
@@ -203,6 +252,7 @@ export default function EventDetail() {
   const [showGuestForm, setShowGuestForm] = useState(false);
   const [guestForm, setGuestForm] = useState({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
   const [guestProducts, setGuestProducts] = useState({});
+  const [guestFieldValues, setGuestFieldValues] = useState({});
   const [captainTeams, setCaptainTeams] = useState([]);
 
   useEffect(() => {
@@ -244,14 +294,33 @@ export default function EventDetail() {
     }));
   };
 
-  const buildProducts = (selected) =>
+  const buildProducts = (selected, fv = {}) =>
     Object.entries(selected)
       .filter(([, qty]) => qty)
-      .map(([product_id, quantity]) => ({ product_id: parseInt(product_id), quantity }));
+      .map(([product_id, quantity]) => ({
+        product_id: parseInt(product_id),
+        quantity,
+        field_values: fv[product_id] || {}
+      }));
+
+  const validateFields = (selected, fv) => {
+    for (const [productId, qty] of Object.entries(selected)) {
+      if (!qty) continue;
+      const product = products.find(p => p.id === parseInt(productId));
+      for (const field of (product?.fields || [])) {
+        if (field.required && !fv?.[productId]?.[field.id]) {
+          return `"${field.label}" is required for ${product.name}`;
+        }
+      }
+    }
+    return null;
+  };
 
   const register = async () => {
     setError(''); setMessage('');
-    const products = buildProducts(selectedProducts);
+    const fieldError = validateFields(selectedProducts, fieldValues);
+    if (fieldError) return setError(fieldError);
+    const products = buildProducts(selectedProducts, fieldValues);
     if (products.length === 0) {
       return setError('Please select at least one product to register.');
     }
@@ -287,19 +356,23 @@ export default function EventDetail() {
   const registerGuest = async (e) => {
     e.preventDefault();
     setError(''); setMessage('');
-    if (buildProducts(guestProducts).length === 0) {
+    const fieldError = validateFields(guestProducts, guestFieldValues);
+    if (fieldError) return setError(fieldError);
+    const guestProductList = buildProducts(guestProducts, guestFieldValues);
+    if (guestProductList.length === 0) {
       return setError('Please select at least one product for the guest.');
     }
     try {
       await api.post(`/registrations/${id}/guest`, {
         ...guestForm,
         team_id: parseInt(guestForm.team_id),
-        products: buildProducts(guestProducts)
+        products: guestProductList
       });
       setMessage(`Guest ${guestForm.guest_first_name} registered successfully!`);
       setShowGuestForm(false);
       setGuestForm({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
       setGuestProducts({});
+      setGuestFieldValues({});
       setEvent(e => ({ ...e, registration_count: e.registration_count + 1 }));
       const regs = await api.get(`/registrations/${id}`).catch(() => null);
       if (regs) setTeamRegistrations(regs.data.registrations);
@@ -386,7 +459,7 @@ export default function EventDetail() {
           </div>
           )}
 
-          <ProductSelector products={products} selected={selectedProducts} setSelected={setSelectedProducts} onToggle={toggleProduct} />
+          <ProductSelector products={products} selected={selectedProducts} setSelected={setSelectedProducts} onToggle={toggleProduct} fieldValues={fieldValues} setFieldValues={setFieldValues} />
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn btn-primary" onClick={register}>Register</button>
@@ -438,7 +511,7 @@ export default function EventDetail() {
                       {captainTeams.filter(t => allowedTeams.includes(t.id)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
 
-                    <ProductSelector products={products} selected={guestProducts} setSelected={setGuestProducts} onToggle={toggleProduct} />
+                    <ProductSelector products={products} selected={guestProducts} setSelected={setGuestProducts} onToggle={toggleProduct} fieldValues={guestFieldValues} setFieldValues={setGuestFieldValues} />
 
                     <button type="submit" className="btn btn-primary">Register guest</button>
                   </form>

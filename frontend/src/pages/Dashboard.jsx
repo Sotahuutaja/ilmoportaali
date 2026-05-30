@@ -3,6 +3,7 @@ import { useAuth } from '../AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { formatDate, helsinkiToUTC } from '../utils/datetime';
+import ProductFieldEditor from '../components/ProductFieldEditor';
 
 
 export default function Dashboard() {
@@ -21,7 +22,7 @@ export default function Dashboard() {
   // Product management
   const [managingProducts, setManagingProducts] = useState(null);
   const [eventProducts, setEventProducts] = useState([]);
-  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '' });
+  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [] });
   const [productMessage, setProductMessage] = useState('');
   const [productError, setProductError] = useState('');
   const [managingManagers, setManagingManagers] = useState(null);
@@ -86,11 +87,12 @@ export default function Dashboard() {
       const res = await api.post(`/events/${managingProducts.id}/products`, {
         ...productForm,
         price: parseFloat(productForm.price) || 0,
-        quantity: productForm.quantity ? parseInt(productForm.quantity) : null
+        quantity: productForm.quantity ? parseInt(productForm.quantity) : null,
+        fields: productForm.fields
       });
       setEventProducts([...eventProducts, res.data.product]);
       setProductMessage('Product created!');
-      setProductForm({ name: '', description: '', price: '', quantity: '' });
+      setProductForm({ name: '', description: '', price: '', quantity: '', fields: [] });
     } catch (err) {
       setProductError(err.response?.data?.error || 'Failed to create product');
     }
@@ -244,7 +246,11 @@ export default function Dashboard() {
             <input type="number" step="0.01" min="0" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required />
             <label>Quantity limit (leave blank for unlimited)</label>
             <input type="number" min="1" value={productForm.quantity} onChange={e => setProductForm({ ...productForm, quantity: e.target.value })} />
-            <button type="submit" className="btn btn-primary">Add product</button>
+            <ProductFieldEditor
+              fields={productForm.fields}
+              onChange={fields => setProductForm({ ...productForm, fields })}
+            />
+            <button type="submit" className="btn btn-primary" style={{ marginTop: '0.75rem' }}>Add product</button>
           </form>
         </div>
       )}

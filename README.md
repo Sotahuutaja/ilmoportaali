@@ -1,6 +1,6 @@
 # Ilmoportaali — Project Documentation
 
-> An event registration and team management portal built for the Sotahuuto LARP event community.
+> An event registration and team management portal built for the Boffering event community.
 
 ---
 
@@ -249,9 +249,10 @@ az containerapp update --name ilmoportaali-frontend ...
 
 ### Planned Features
 
-- Custom domain
-- Payment handling for products
+- Custom domain (boffaus.fi)
+- Payment handling for products (MobilePay, Paytrail)
 - Captain invite flow UI (backend exists, frontend UI incomplete)
 - Bulk event registration via Excel file import
 - Pin Azure CLI version in GitHub Actions (currently using `latest` due to credential mounting limitations with `azure/cli@v2`)
 - Enable users to register vehicles or other machines they might bring to an event
+- "Comments" -field for users when they register to an event

@@ -6,7 +6,7 @@ const { canManageEvent } = require('../utils/eventAccess');
 
 // Helper: validate and reserve products
 async function insertProducts(client, registrationId, products, eventId) {
-  for (const { product_id, quantity = 1 } of products) {
+  for (const { product_id, quantity = 1, field_values = {} } of products) {
     const product = await client.query(
       'SELECT * FROM event_products WHERE id = $1 AND event_id = $2',
       [product_id, eventId]
@@ -22,9 +22,17 @@ async function insertProducts(client, registrationId, products, eventId) {
       if (remaining < quantity) throw new Error(`Product "${product.rows[0].name}" has insufficient stock`);
     }
 
+    // Validate required custom fields
+    const fields = product.rows[0].fields || [];
+    for (const field of fields) {
+      if (field.required && !field_values[field.id]) {
+        throw new Error(`"${field.label}" is required for product "${product.rows[0].name}"`);
+      }
+    }
+
     await client.query(
-      'INSERT INTO registration_products (registration_id, product_id, quantity) VALUES ($1, $2, $3)',
-      [registrationId, product_id, quantity]
+      'INSERT INTO registration_products (registration_id, product_id, quantity, field_values) VALUES ($1, $2, $3, $4)',
+      [registrationId, product_id, quantity, JSON.stringify(field_values)]
     );
   }
 }
@@ -215,7 +223,11 @@ router.get('/:eventId', requireAuth, async (req, res) => {
           'product_id', rp.product_id,
           'name', ep.name,
           'quantity', rp.quantity,
-          'price', ep.price
+          'price', ep.price,
+          'field_values', rp.field_values,
+          'fields', ep.fields,
+          'field_values', rp.field_values,
+          'fields', ep.fields
         )) FILTER (WHERE rp.id IS NOT NULL) as products
       FROM registrations r
       LEFT JOIN users u ON r.user_id = u.id
@@ -265,7 +277,9 @@ router.get('/my/list', requireAuth, async (req, res) => {
         json_agg(json_build_object(
           'name', ep.name,
           'quantity', rp.quantity,
-          'price', ep.price
+          'price', ep.price,
+          'field_values', rp.field_values,
+          'fields', ep.fields
         )) FILTER (WHERE rp.id IS NOT NULL) as products
       FROM registrations r
       JOIN events e ON r.event_id = e.id
@@ -347,42 +361,4 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
     // Update products
     if (products !== undefined) {
       await client.query('DELETE FROM registration_products WHERE registration_id = $1', [req.params.registrationId]);
-      if (products.length > 0) {
-        await insertProducts(client, req.params.registrationId, products, req.params.eventId);
-      }
-    }
-
-    await client.query('COMMIT');
-
-    // Return updated registration
-    const updated = await pool.query(`
-      SELECT
-        r.*,
-        u.first_name, u.last_name, u.email as user_email,
-        t.name as team_name,
-        json_agg(json_build_object(
-          'product_id', rp.product_id,
-          'name', ep.name,
-          'quantity', rp.quantity,
-          'price', ep.price
-        )) FILTER (WHERE rp.id IS NOT NULL) as products
-      FROM registrations r
-      LEFT JOIN users u ON r.user_id = u.id
-      LEFT JOIN teams t ON r.team_id = t.id
-      LEFT JOIN registration_products rp ON r.id = rp.registration_id
-      LEFT JOIN event_products ep ON rp.product_id = ep.id
-      WHERE r.id = $1
-      GROUP BY r.id, u.first_name, u.last_name, u.email, t.name
-    `, [req.params.registrationId]);
-
-    res.json({ registration: updated.rows[0] });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Failed to update registration:', err.message);
-    res.status(500).json({ error: err.message || 'Failed to update registration' });
-  } finally {
-    client.release();
-  }
-});
-
-module.exports = router;
+      if
