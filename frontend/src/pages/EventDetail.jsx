@@ -342,7 +342,7 @@ export default function EventDetail() {
         </p>
         {event.registration_starts_at && (
           <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            🗓 Ilmoittautumisaika (EET/EEST):{' '}
+            🗓 Registration period (EET/EEST):{' '}
             {formatDateTime(event.registration_starts_at)} — {formatDateTime(event.registration_ends_at)}
           </p>
         )}
