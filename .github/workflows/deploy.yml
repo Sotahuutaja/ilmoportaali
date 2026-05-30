@@ -56,7 +56,7 @@ jobs:
       - name: Deploy backend
         uses: azure/cli@v1
         with:
-          azcliversion: 2.70.0
+          azcliversion: latest
           inlineScript: |
             SUFFIX=$(date +%Y%m%d%H%M%S)
             az containerapp update \
@@ -115,7 +115,7 @@ jobs:
       - name: Deploy frontend
         uses: azure/cli@v1
         with:
-          azcliversion: 2.70.0
+          azcliversion: latest
           inlineScript: |
             SUFFIX=$(date +%Y%m%d%H%M%S)
             az containerapp update \
