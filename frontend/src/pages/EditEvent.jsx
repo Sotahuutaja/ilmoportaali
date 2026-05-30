@@ -275,6 +275,11 @@ export default function EditEvent() {
                 <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
                   {p.quantity !== null ? `${p.remaining ?? p.quantity} / ${p.quantity} left` : 'Unlimited'}
                 </span>
+                {p.fields && p.fields.length > 0 && (
+                  <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    · {p.fields.map(f => `${f.label} (${f.type === 'select' ? f.options.join(', ') : 'text'})`).join(' · ')}
+                  </span>
+                )}
               </div>
             )}
             {editingProduct?.id !== p.id && (
