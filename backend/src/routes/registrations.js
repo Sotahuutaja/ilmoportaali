@@ -39,7 +39,7 @@ async function insertProducts(client, registrationId, products, eventId) {
 
 // Register self for an event
 router.post('/:eventId', requireAuth, async (req, res) => {
-  const { team_id, products = [] } = req.body;
+  const { team_id, products = [], comments = '' } = req.body;
   const client = await pool.connect();
 
   try {
@@ -90,8 +90,8 @@ router.post('/:eventId', requireAuth, async (req, res) => {
     }
 
     const reg = await client.query(
-      'INSERT INTO registrations (user_id, event_id, team_id) VALUES ($1, $2, $3) RETURNING *',
-      [req.user.id, req.params.eventId, team_id || null]
+      'INSERT INTO registrations (user_id, event_id, team_id, comments) VALUES ($1, $2, $3, $4) RETURNING *',
+      [req.user.id, req.params.eventId, team_id || null, comments || null]
     );
 
     if (products.length > 0) {
@@ -111,7 +111,7 @@ router.post('/:eventId', requireAuth, async (req, res) => {
 
 // Captain registers a guest
 router.post('/:eventId/guest', requireAuth, async (req, res) => {
-  const { guest_first_name, guest_last_name, guest_email, team_id, products = [] } = req.body;
+  const { guest_first_name, guest_last_name, guest_email, team_id, products = [], comments = '' } = req.body;
 
   if (!guest_first_name || !guest_last_name || !guest_email) {
     return res.status(400).json({ error: 'Guest first name, last name and email are required' });
@@ -165,9 +165,9 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
     }
 
     const reg = await client.query(`
-      INSERT INTO registrations (event_id, team_id, is_guest, guest_first_name, guest_last_name, guest_email)
-      VALUES ($1, $2, TRUE, $3, $4, $5) RETURNING *
-    `, [req.params.eventId, team_id, guest_first_name, guest_last_name, guest_email]);
+      INSERT INTO registrations (event_id, team_id, is_guest, guest_first_name, guest_last_name, guest_email, comments)
+      VALUES ($1, $2, TRUE, $3, $4, $5, $6) RETURNING *
+    `, [req.params.eventId, team_id, guest_first_name, guest_last_name, guest_email, comments || null]);
 
     if (products.length > 0) {
       await insertProducts(client, reg.rows[0].id, products, req.params.eventId);
@@ -296,7 +296,7 @@ router.get('/my/list', requireAuth, async (req, res) => {
 
 // Update a registration (admin or event creator)
 router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, res) => {
-  const { guest_first_name, guest_last_name, guest_email, first_name, last_name, email, team_id, products } = req.body;
+  const { guest_first_name, guest_last_name, guest_email, first_name, last_name, email, team_id, products, comments } = req.body;
 
   const client = await pool.connect();
   try {
@@ -330,9 +330,14 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
           guest_last_name = COALESCE($2, guest_last_name),
           guest_email = COALESCE($3, guest_email)
           ${team_id !== undefined ? ', team_id = $5' : ''}
+          ${comments !== undefined ? `, comments = $${team_id !== undefined ? 6 : 5}` : ''}
           WHERE id = $4`,
-        team_id !== undefined
+        team_id !== undefined && comments !== undefined
+          ? [guest_first_name, guest_last_name, guest_email, req.params.registrationId, team_id || null, comments || null]
+          : team_id !== undefined
           ? [guest_first_name, guest_last_name, guest_email, req.params.registrationId, team_id || null]
+          : comments !== undefined
+          ? [guest_first_name, guest_last_name, guest_email, req.params.registrationId, comments || null]
           : [guest_first_name, guest_last_name, guest_email, req.params.registrationId]
       );
     } else {
@@ -354,6 +359,14 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
           [first_name, last_name, email, reg.rows[0].user_id]
         );
       }
+    }
+
+    // Update comments if provided
+    if (comments !== undefined) {
+      await client.query(
+        'UPDATE registrations SET comments = $1 WHERE id = $2',
+        [comments || null, req.params.registrationId]
+      );
     }
 
     // Update products

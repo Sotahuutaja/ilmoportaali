@@ -106,6 +106,7 @@ async function migrate() {
     ALTER TABLE registration_products ADD COLUMN IF NOT EXISTS field_values JSONB NOT NULL DEFAULT '{}';
     ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_starts_at TIMESTAMPTZ;
     ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_ends_at TIMESTAMPTZ;
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS comments TEXT;
   `);
 
   console.log('Migration complete');

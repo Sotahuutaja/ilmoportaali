@@ -242,6 +242,7 @@ export default function EventDetail() {
   const [selectedTeam, setSelectedTeam] = useState('');
   const [selectedProducts, setSelectedProducts] = useState({});
   const [fieldValues, setFieldValues] = useState({});
+  const [comments, setComments] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [teamRegistrations, setTeamRegistrations] = useState([]);
@@ -253,6 +254,7 @@ export default function EventDetail() {
   const [guestForm, setGuestForm] = useState({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
   const [guestProducts, setGuestProducts] = useState({});
   const [guestFieldValues, setGuestFieldValues] = useState({});
+  const [guestComments, setGuestComments] = useState('');
   const [captainTeams, setCaptainTeams] = useState([]);
 
   useEffect(() => {
@@ -327,7 +329,8 @@ export default function EventDetail() {
     try {
       await api.post(`/registrations/${id}`, {
         team_id: selectedTeam ? parseInt(selectedTeam) : null,
-        products
+        products,
+        comments
       });
       setMessage('Successfully registered!');
       setIsRegistered(true);
@@ -366,13 +369,15 @@ export default function EventDetail() {
       await api.post(`/registrations/${id}/guest`, {
         ...guestForm,
         team_id: parseInt(guestForm.team_id),
-        products: guestProductList
+        products: guestProductList,
+        comments: guestComments
       });
       setMessage(`Guest ${guestForm.guest_first_name} registered successfully!`);
       setShowGuestForm(false);
       setGuestForm({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
       setGuestProducts({});
       setGuestFieldValues({});
+      setGuestComments('');
       setEvent(e => ({ ...e, registration_count: e.registration_count + 1 }));
       const regs = await api.get(`/registrations/${id}`).catch(() => null);
       if (regs) setTeamRegistrations(regs.data.registrations);
@@ -461,6 +466,17 @@ export default function EventDetail() {
 
           <ProductSelector products={products} selected={selectedProducts} setSelected={setSelectedProducts} onToggle={toggleProduct} fieldValues={fieldValues} setFieldValues={setFieldValues} />
 
+          <div style={{ margin: '1rem 0' }}>
+            <label>Comments (optional)</label>
+            <textarea
+              value={comments}
+              onChange={e => setComments(e.target.value)}
+              placeholder="Any additional information for the organizers..."
+              rows={4}
+              style={{ marginBottom: 0 }}
+            />
+          </div>
+
           <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn btn-primary" onClick={register}>Register</button>
           {isRegistered && (
@@ -512,6 +528,17 @@ export default function EventDetail() {
                     </select>
 
                     <ProductSelector products={products} selected={guestProducts} setSelected={setGuestProducts} onToggle={toggleProduct} fieldValues={guestFieldValues} setFieldValues={setGuestFieldValues} />
+
+                    <div style={{ margin: '1rem 0' }}>
+                      <label>Comments (optional)</label>
+                      <textarea
+                        value={guestComments}
+                        onChange={e => setGuestComments(e.target.value)}
+                        placeholder="Any additional information for the organizers..."
+                        rows={4}
+                        style={{ marginBottom: 0 }}
+                      />
+                    </div>
 
                     <button type="submit" className="btn btn-primary">Register guest</button>
                   </form>
