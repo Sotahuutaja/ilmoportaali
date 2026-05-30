@@ -115,7 +115,7 @@ Once running:
 - Backend API: http://localhost:3000
 - PostgreSQL: localhost:5432
 
-The database container includes a health check and the backend will wait for it to be ready before starting.
+The database container includes a health check and the backend will wait for it to be ready before starting. Database migrations run automatically on backend startup — no manual step required.
 
 ---
 
@@ -135,6 +135,10 @@ JWT_SECRET=<a_long_random_secret_string>
 
 # Email (SendGrid)
 SENDGRID_API_KEY=<your_sendgrid_api_key>
+SENDGRID_FROM_EMAIL=<verified_sender_email>
+
+# App URL (used in email links)
+APP_URL=http://localhost
 ```
 
 > **Security note:** Never commit `.env` files or real credentials to version control.
@@ -154,11 +158,13 @@ SENDGRID_API_KEY=<your_sendgrid_api_key>
 ### Events
 
 - Create, edit, and delete events
-- Event fields: title, description, location, start/end dates, and capacity
+- Event fields: title, description, location, start/end dates, capacity, and registration period
+- **Registration period** — each event requires a registration open and close datetime; users can only sign up within that window. Outside it, the event page shows "Registration opens on [date]" or "Registration is closed"
 - **Products** — each event can have multiple purchasable products with name, description, price, and optional quantity limits
 - Products support drag-and-drop reordering on the edit page and inline editing
 - At least one product must be selected when registering for an event
 - **Co-managers** — event creators can grant other creators full management access over their events
+- Past events are shown in a separate collapsed section on the events listing page
 
 ### Teams
 
@@ -172,6 +178,7 @@ SENDGRID_API_KEY=<your_sendgrid_api_key>
 ### Event Registration
 
 - Registered users select products when signing up for an event
+- Registration is only possible within the event's registration period
 - Optional team linking during registration
 - **Guest registration** — captains can register guests by providing first name, last name, email, team, and product selections
 - Capacity checking with sold-out handling
@@ -240,16 +247,10 @@ az containerapp update --name ilmoportaali-frontend ...
 
 ## Known Issues & Backlog
 
-### Bugs
-
-- Changing profile information may not save correctly in all cases
-- Age and gender may not display on the profile page immediately after registration
-- Changing profile details may require the user to also reset their password
-- User deletion has foreign key constraint issues that need cleanup logic
-
 ### Planned Features
 
 - Custom domain
 - Payment handling for products
 - Captain invite flow UI (backend exists, frontend UI incomplete)
 - Bulk event registration via Excel file import
+- Pin Azure CLI version in GitHub Actions (currently using `latest` due to credential mounting limitations with `azure/cli@v2`)

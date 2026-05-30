@@ -70,18 +70,21 @@ router.get('/:id', async (req, res) => {
 
 // Create event (creator or admin only)
 router.post('/', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
-  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration } = req.body;
+  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at } = req.body;
 
   if (!title || !starts_at || !ends_at) {
     return res.status(400).json({ error: 'Title, start time and end time are required' });
   }
+  if (!registration_starts_at || !registration_ends_at) {
+    return res.status(400).json({ error: 'Registration start and end times are required' });
+  }
 
   try {
     const result = await pool.query(`
-      INSERT INTO events (title, description, location, starts_at, ends_at, capacity, creator_id, allow_individual_registration)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO events (title, description, location, starts_at, ends_at, capacity, creator_id, allow_individual_registration, registration_starts_at, registration_ends_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
-    `, [title, description, location, starts_at, ends_at, capacity, req.user.id, allow_individual_registration ?? true]);
+    `, [title, description, location, starts_at, ends_at, capacity, req.user.id, allow_individual_registration ?? true, registration_starts_at, registration_ends_at]);
 
     res.status(201).json({ event: result.rows[0] });
   } catch (err) {
@@ -92,7 +95,12 @@ router.post('/', requireAuth, requireRole('creator', 'admin'), async (req, res) 
 
 // Update event (creator, co-manager, or admin)
 router.put('/:id', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
-  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration } = req.body;
+  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at } = req.body;
+
+  if (!registration_starts_at || !registration_ends_at) {
+    return res.status(400).json({ error: 'Registration start and end times are required' });
+  }
+
   try {
     const allowed = await canManageEvent(req.user.id, req.user.role, req.params.id, pool);
     if (!allowed) return res.status(403).json({ error: 'Not authorised to edit this event' });
@@ -102,10 +110,10 @@ router.put('/:id', requireAuth, requireRole('creator', 'admin'), async (req, res
 
     const result = await pool.query(`
       UPDATE events
-      SET title=$1, description=$2, location=$3, starts_at=$4, ends_at=$5, capacity=$6, allow_individual_registration=$7
-      WHERE id=$8
+      SET title=$1, description=$2, location=$3, starts_at=$4, ends_at=$5, capacity=$6, allow_individual_registration=$7, registration_starts_at=$8, registration_ends_at=$9
+      WHERE id=$10
       RETURNING *
-    `, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, req.params.id]);
+    `, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, req.params.id]);
 
     res.json({ event: result.rows[0] });
   } catch (err) {

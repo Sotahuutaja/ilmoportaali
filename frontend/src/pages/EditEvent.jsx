@@ -11,7 +11,8 @@ export default function EditEvent() {
   const [form, setForm] = useState({
     title: '', description: '', location: '',
     starts_at: '', ends_at: '', capacity: '',
-    allow_individual_registration: true
+    allow_individual_registration: true,
+    registration_starts_at: '', registration_ends_at: ''
   });
   const [products, setProducts] = useState([]);
   const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '' });
@@ -47,7 +48,9 @@ export default function EditEvent() {
       starts_at: e.starts_at ? e.starts_at.slice(0, 16) : '',
       ends_at: e.ends_at ? e.ends_at.slice(0, 16) : '',
       capacity: e.capacity || '',
-      allow_individual_registration: e.allow_individual_registration ?? true
+      allow_individual_registration: e.allow_individual_registration ?? true,
+      registration_starts_at: e.registration_starts_at ? e.registration_starts_at.slice(0, 16) : '',
+      registration_ends_at: e.registration_ends_at ? e.registration_ends_at.slice(0, 16) : ''
     });
     setProducts(productsRes.data.products);
     setEventTeams(eventTeamsRes.data.teams);
@@ -193,8 +196,14 @@ export default function EditEvent() {
           <label>Capacity (leave blank for unlimited)</label>
           <input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} />
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-      <input type="checkbox" checked={form.allow_individual_registration} onChange={e => setForm({ ...form, allow_individual_registration: e.target.checked })} style={{ width: 'auto', margin: 0 }} />Allow individual registration (without a team)</label>
-      <button type="submit" className="btn btn-primary">Save changes</button>
+            <input type="checkbox" checked={form.allow_individual_registration} onChange={e => setForm({ ...form, allow_individual_registration: e.target.checked })} style={{ width: 'auto', margin: 0 }} />
+            Allow individual registration (without a team)
+          </label>
+          <label>Registration opens at</label>
+          <input type="datetime-local" value={form.registration_starts_at} onChange={e => setForm({ ...form, registration_starts_at: e.target.value })} required />
+          <label>Registration closes at</label>
+          <input type="datetime-local" value={form.registration_ends_at} onChange={e => setForm({ ...form, registration_ends_at: e.target.value })} required />
+          <button type="submit" className="btn btn-primary">Save changes</button>
         </form>
       </div>
 

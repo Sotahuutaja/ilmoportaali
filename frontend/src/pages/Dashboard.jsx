@@ -11,7 +11,8 @@ export default function Dashboard() {
   const [form, setForm] = useState({
     title: '', description: '', location: '',
     starts_at: '', ends_at: '', capacity: '',
-    allow_individual_registration: true
+    allow_individual_registration: true,
+    registration_starts_at: '', registration_ends_at: ''
   });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -50,7 +51,7 @@ export default function Dashboard() {
       });
       setEvents([...events, res.data.event]);
       setMessage('Event created!');
-      setForm({ title: '', description: '', location: '', starts_at: '', ends_at: '', capacity: '', allow_individual_registration: true });
+      setForm({ title: '', description: '', location: '', starts_at: '', ends_at: '', capacity: '', allow_individual_registration: true, registration_starts_at: '', registration_ends_at: '' });
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create event');
     }
@@ -161,6 +162,10 @@ export default function Dashboard() {
             />
             Allow individual registration (without a team)
           </label>
+          <label>Registration opens at</label>
+          <input type="datetime-local" value={form.registration_starts_at} onChange={e => setForm({ ...form, registration_starts_at: e.target.value })} required />
+          <label>Registration closes at</label>
+          <input type="datetime-local" value={form.registration_ends_at} onChange={e => setForm({ ...form, registration_ends_at: e.target.value })} required />
           <button type="submit" className="btn btn-primary">Create event</button>
         </form>
       </div>

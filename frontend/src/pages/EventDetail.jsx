@@ -320,6 +320,10 @@ export default function EventDetail() {
   if (!event) return <p>Loading...</p>;
 
   const full = event.capacity && event.registration_count >= event.capacity;
+  const now = new Date();
+  const regNotOpen = event.registration_starts_at && now < new Date(event.registration_starts_at);
+  const regClosed = event.registration_ends_at && now > new Date(event.registration_ends_at);
+  const registrationOpen = !regNotOpen && !regClosed;
 
   return (
     <div style={{ maxWidth: 640, margin: '2rem auto' }}>
@@ -331,16 +335,23 @@ export default function EventDetail() {
           {new Date(event.ends_at).toLocaleString('fi-FI')}
         </p>
         <p style={{ margin: '1rem 0' }}>{event.description}</p>
-        <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1rem' }}>
+        <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
           {event.registration_count} registered
           {event.capacity ? ` / ${event.capacity} spots` : ''}
           {full ? ' — FULL' : ''}
         </p>
+        {event.registration_starts_at && (
+          <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            🗓 Registration:{' '}
+            {new Date(event.registration_starts_at).toLocaleString('fi-FI')} —{' '}
+            {new Date(event.registration_ends_at).toLocaleString('fi-FI')}
+          </p>
+        )}
 
         {message && <p className="success">{message}</p>}
         {error && <p className="error">{error}</p>}
 
-        {user && !full && (
+        {user && !full && registrationOpen && (
       <>
       <h3 style={{ marginBottom: '1rem' }}>Register yourself</h3>
 
@@ -464,6 +475,14 @@ export default function EventDetail() {
           </>
         )}
 
+        {user && regNotOpen && (
+          <p style={{ color: '#e67e22', marginTop: '1rem' }}>
+            Registration opens on {new Date(event.registration_starts_at).toLocaleString('fi-FI')}.
+          </p>
+        )}
+        {user && regClosed && (
+          <p style={{ color: '#c0392b', marginTop: '1rem' }}>Registration is closed.</p>
+        )}
         {!user && <p>Please <a href="/login">log in</a> to register for this event.</p>}
       </div>
     </div>

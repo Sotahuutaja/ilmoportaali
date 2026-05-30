@@ -1,5 +1,17 @@
 Completed so far (30.5.2026):
 
+**Events (30.5.2026)**
+
+* Registration period — events now require a registration open and close datetime
+* Users can only register within the period; outside it the event page shows "Registration opens on [date]" or "Registration is closed"
+* Registration period is enforced on both self-registration and guest registration on the backend
+* Past events moved to a separate collapsed section on the events listing page
+
+
+---
+
+Completed so far (30.5.2026):
+
 **Code quality & maintenance (30.5.2026)**
 
 * Normalised all source files to consistent 2-space indentation and LF line endings

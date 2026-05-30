@@ -40,6 +40,14 @@ router.post('/:eventId', requireAuth, async (req, res) => {
     const event = await client.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
     if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
 
+    const now = new Date();
+    if (event.rows[0].registration_starts_at && now < new Date(event.rows[0].registration_starts_at)) {
+      return res.status(403).json({ error: 'Registration has not opened yet' });
+    }
+    if (event.rows[0].registration_ends_at && now > new Date(event.rows[0].registration_ends_at)) {
+      return res.status(403).json({ error: 'Registration is closed' });
+    }
+
     if (event.rows[0].capacity) {
       const count = await client.query(
         'SELECT COUNT(*) FROM registrations WHERE event_id = $1',
@@ -125,6 +133,14 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
 
     const event = await client.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
     if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
+
+    const now = new Date();
+    if (event.rows[0].registration_starts_at && now < new Date(event.rows[0].registration_starts_at)) {
+      return res.status(403).json({ error: 'Registration has not opened yet' });
+    }
+    if (event.rows[0].registration_ends_at && now > new Date(event.rows[0].registration_ends_at)) {
+      return res.status(403).json({ error: 'Registration is closed' });
+    }
 
     if (event.rows[0].capacity) {
       const count = await client.query(
