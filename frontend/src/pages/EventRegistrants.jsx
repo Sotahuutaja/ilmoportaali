@@ -173,7 +173,7 @@ export default function EventRegistrants() {
   };
   
   const exportRegistrantsCSV = () => {
-  const headers = ['First name', 'Last name', 'Email', 'Team', 'Products', 'Total price', 'Type', 'Registered'];
+  const headers = ['First name', 'Last name', 'Email', 'Team', 'Products', 'Total price', 'Type', 'Registered', 'Comments'];
   const rows = registrations.map(r => {
     const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
     const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
@@ -196,7 +196,8 @@ export default function EventRegistrants() {
       day: 'numeric', month: 'numeric', year: 'numeric',
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
-    return [firstName, lastName, email, team, products, totalPrice, type, registered];
+    const comments = r.comments || '';
+    return [firstName, lastName, email, team, products, totalPrice, type, registered, comments];
   });
 
   const csv = [headers, ...rows]
