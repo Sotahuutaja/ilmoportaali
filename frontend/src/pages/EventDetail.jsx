@@ -559,7 +559,7 @@ export default function EventDetail() {
           if (teamRegs.length === 0) return null;
           return (
           <div key={team.id} style={{ marginBottom: '1rem' }}>
-            <h4 style={{ marginBottom: '0.5rem', color: '#1a1a2e' }}>
+            <h4 style={{ marginBottom: '0.5rem', color: 'var(--accent)' }}>
             {team.name} ({teamRegs.length})
             </h4>
             {teamRegs.map(r => (
