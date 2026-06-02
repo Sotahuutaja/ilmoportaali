@@ -251,13 +251,12 @@ az containerapp update --name ilmoportaali-frontend ...
 ## Known Issues & Backlog
 
 - Admins cant delete events if there are registered participants
+- Users cannot cancel applications to teams or leave teams
 
 ### Planned Features
 
-- Team captains should be able to decide whether a team join request needs approval or if all requests are automatically approved
 - Custom domain (boffaus.fi)
 - Payment handling for products (MobilePay, Paytrail)
-- Captain invite flow UI (backend exists, frontend UI incomplete)
 - Bulk event registration via Excel file import
 - Pin Azure CLI version in GitHub Actions (currently using `latest` due to credential mounting limitations with `azure/cli@v2`)
 - Enable users to register vehicles or other machines they might bring to an event

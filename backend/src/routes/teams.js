@@ -219,10 +219,51 @@ router.delete('/:id/reject/:userId', requireAuth, async (req, res) => {
   }
 });
 
-// Remove a member (captain or admin)
+// Update member (admin only)
+router.put('/:id/members/:userId', requireAuth, requireRole('admin'), async (req, res) => {
+  const { status, role } = req.body;
+
+  try {
+    const updateFields = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (status !== undefined) {
+      updateFields.push(`status = $${paramIndex++}`);
+      params.push(status);
+    }
+    if (role !== undefined) {
+      updateFields.push(`role = $${paramIndex++}`);
+      params.push(role);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    params.push(req.params.id);
+    params.push(req.params.userId);
+
+    const result = await pool.query(
+      `UPDATE team_members SET ${updateFields.join(', ')} WHERE team_id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`,
+      params
+    );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Member not found' });
+    res.json({ membership: result.rows[0] });
+  } catch (err) {
+    console.error('Failed to update member:', err.message);
+    res.status(500).json({ error: 'Failed to update member' });
+  }
+});
+
+// Remove a member (captain or admin, or remove yourself)
 router.delete('/:id/members/:userId', requireAuth, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    // Allow users to remove themselves, or allow captains/admins to remove others
+    const isRemovingSelf = parseInt(req.params.userId) === req.user.id;
+
+    if (!isRemovingSelf && req.user.role !== 'admin') {
       const membership = await pool.query(
         'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
         [req.params.id, req.user.id, 'captain', 'approved']
