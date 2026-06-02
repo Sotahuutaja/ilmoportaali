@@ -169,16 +169,34 @@ export default function Dashboard() {
           {managerError && <p className="error">{managerError}</p>}
           {managerMessage && <p className="success">{managerMessage}</p>}
 
+          {managingManagers && (
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
+            }}>
+              <div>
+                <span>
+                  {managingManagers.first_name || managingManagers.last_name
+                    ? `${managingManagers.last_name || ''}, ${managingManagers.first_name || ''}`.trim()
+                    : 'Unknown'}
+                </span>
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: '8px', background: '#27ae60', color: 'white' }}>creator</span>
+              </div>
+            </div>
+          )}
           {eventManagers.map(m => (
             <div key={m.user_id} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
             }}>
-              <span>
-                {m.first_name || m.last_name
-                  ? `${m.last_name || ''}, ${m.first_name || ''}`.trim()
-                  : m.email}
-              </span>
+              <div>
+                <span>
+                  {m.first_name || m.last_name
+                    ? `${m.last_name || ''}, ${m.first_name || ''}`.trim()
+                    : m.email}
+                </span>
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: '8px', background: '#8e44ad', color: 'white' }}>co-manager</span>
+              </div>
               <button className="btn btn-danger" onClick={() => handleRemoveManager(m.user_id)}>Remove</button>
             </div>
           ))}
