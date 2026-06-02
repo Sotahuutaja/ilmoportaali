@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
 import Events from './pages/Events';
 import EventDetail from './pages/EventDetail';
 import Login from './pages/Login';
@@ -15,6 +15,13 @@ import ResetPassword from './pages/ResetPassword';
 
 function Nav() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <nav>
       <Link to="/" className="site-title">Ilmoportaali</Link>
@@ -32,7 +39,7 @@ function Nav() {
         {user ? (
           <>
             <Link to="/profile">{fullName(user)}</Link>
-            <button onClick={logout} className="btn btn-secondary" style={{ marginLeft: '1rem' }}>
+            <button onClick={handleLogout} className="btn btn-secondary" style={{ marginLeft: '1rem' }}>
               Log out
             </button>
           </>
