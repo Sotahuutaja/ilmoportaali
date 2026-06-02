@@ -123,18 +123,30 @@ router.put('/:id', requireAuth, requireRole('creator', 'admin'), async (req, res
 
 // Delete event (creator, co-manager, or admin)
 router.delete('/:id', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+  const client = await pool.connect();
   try {
     const allowed = await canManageEvent(req.user.id, req.user.role, req.params.id, pool);
     if (!allowed) return res.status(403).json({ error: 'Not authorised to delete this event' });
 
-    const existing = await pool.query('SELECT * FROM events WHERE id = $1', [req.params.id]);
+    const existing = await client.query('SELECT * FROM events WHERE id = $1', [req.params.id]);
     if (!existing.rows[0]) return res.status(404).json({ error: 'Event not found' });
 
-    await pool.query('DELETE FROM events WHERE id = $1', [req.params.id]);
+    await client.query('BEGIN');
+
+    // Delete all registrations for this event
+    await client.query('DELETE FROM registrations WHERE event_id = $1', [req.params.id]);
+
+    // Delete the event
+    await client.query('DELETE FROM events WHERE id = $1', [req.params.id]);
+
+    await client.query('COMMIT');
     res.json({ message: 'Event deleted' });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Failed to delete event:', err.message);
     res.status(500).json({ error: 'Failed to delete event' });
+  } finally {
+    client.release();
   }
 });
 

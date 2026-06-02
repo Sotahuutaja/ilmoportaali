@@ -171,9 +171,12 @@ APP_URL=http://localhost
 
 - Admins create teams and assign captains
 - Multiple captains per team (all admin-managed)
+- Admins can set whether team joins require approval or are auto-approved when creating/editing teams
+- Captains can toggle auto-approval setting for their teams
 - Captains can transfer captaincy to a member (which demotes themselves)
 - Users can request to join a team or be directly invited by a captain
 - Captains can approve/reject join requests and remove members
+- Users can leave teams at any time
 - Team member lists are visible only to members, captains, and admins
 
 ### Event Registration
@@ -192,7 +195,7 @@ APP_URL=http://localhost
 - Edit user details: name, email, role, and trigger a password reset
 - View age (calculated from year of birth), year of birth, and gender
 - Delete users (with foreign key cleanup)
-- **Team management** — create, edit, and delete teams; assign and remove captains
+- **Team management** — create, edit, and delete teams; assign and remove captains; configure auto-approval settings
 
 ### Event Management Dashboard
 
@@ -202,6 +205,16 @@ Accessible by event creators and co-managers:
 - Manage products and co-managers per event
 - **Participant view** — summary stats (total participants, guests, revenue), search by name/email/team, edit or cancel any registration, CSV export
 - Guest registrations are shown with a guest badge
+
+### Teams Page
+
+- **My teams** section showing teams you are a member of with role and status
+- **Other teams** section showing available teams you can join (filtered to exclude your teams)
+- Intelligent join button: shows "Join" for teams with auto-approval enabled, "Request to join" for teams requiring approval
+- View team members (visible to members, captains, and admins only)
+- Captains can manage team settings: toggle auto-approval of join requests
+- Leave a team at any time
+- Captain-only tools: approve/reject join requests, remove members, make another member captain
 
 ---
 

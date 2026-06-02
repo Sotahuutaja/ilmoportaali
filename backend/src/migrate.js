@@ -26,7 +26,7 @@ async function migrate() {
     CREATE TABLE IF NOT EXISTS registrations (
       id         SERIAL PRIMARY KEY,
       user_id    INTEGER REFERENCES users(id),
-      event_id   INTEGER REFERENCES events(id),
+      event_id   INTEGER REFERENCES events(id) ON DELETE CASCADE,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(user_id, event_id)
     );

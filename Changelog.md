@@ -1,3 +1,32 @@
+Completed so far (2.6.2026):
+
+**Event Deletion (2.6.2026)**
+
+* Admins can now delete events with registered participants — registrations are automatically deleted with the event
+* Database schema updated to use ON DELETE CASCADE for event registrations (future-proof)
+* Backend uses transactions to ensure atomic deletion (event + all registrations)
+
+**Team Management Improvements (2.6.2026)**
+
+* Admins can now set auto-approval for teams during team creation
+* Admins can change the auto-approval setting when editing teams
+* Fixed critical team membership bug: GET /my/memberships now returns team_id instead of membership id, fixing UI recognition of team membership
+* Users can now leave teams (previously only captains could remove members)
+* Type conversion fixes in team member endpoints (DELETE and PUT)
+* Improved Teams page UX: "All teams" renamed to "Other teams" and now filters out teams user is already a member of
+* Dynamic button text on Teams page: shows "Join" for auto-approved teams, "Request to join" for teams requiring approval
+* Fixed captain selection dropdown in admin team creation to properly display names with first/last name fallback
+
+**Bug Fixes (2.6.2026)**
+
+* Fixed team membership not being recognized in frontend due to ID field mismatch
+* Fixed users unable to leave teams
+* Fixed admin panel endpoint for demoting captains (added missing PUT /teams/:id/members/:userId endpoint)
+* Fixed Teams.jsx approve/reject functions to use correct backend endpoints
+* Fixed captain name display in team creation form
+
+---
+
 Completed so far (31.5.2026):
 
 **Event Registration & Comments (31.5.2026)**
