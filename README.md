@@ -145,6 +145,21 @@ APP_URL=http://localhost
 
 ---
 
+## Security
+
+The application implements defense-in-depth security practices:
+
+- **CORS Protection** — Whitelist-based CORS restricts API access to whitelisted origins only; rejects requests from unauthorized origins
+- **JWT Security** — JWT tokens use secure signing with HS256 algorithm and configurable expiration; role claims are verified against the database on each request
+- **Database Security** — Parameterized queries prevent SQL injection; transactions ensure data consistency; foreign key constraints maintain referential integrity
+- **Password Security** — bcrypt hashing with salt for all passwords
+- **Security Headers** — X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy prevent common attacks
+- **Rate Limiting** — In-memory rate limiting on authentication endpoints prevents brute-force attacks
+- **Role-Based Access Control** — Database-verified roles prevent privilege escalation even if JWT_SECRET is compromised
+- **Error Handling** — Error messages do not expose system internals or database details
+
+---
+
 ## Features
 
 ### Authentication & Users

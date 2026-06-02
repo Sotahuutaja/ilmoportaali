@@ -1,5 +1,23 @@
 Completed so far (2.6.2026):
 
+**Security Fixes - Critical Vulnerabilities (2.6.2026)**
+
+* **CRITICAL: Fixed CORS Wildcard Misconfiguration** - Replaced insecure `|| '*'` fallback with whitelist-based CORS
+  - API now only accepts requests from whitelisted origins (APP_URL + localhost for development)
+  - Prevents CSRF attacks and cross-origin data theft
+  - Rejects requests from unauthorized origins
+  - Logs privilege escalation attempts
+* **CRITICAL: Fixed JWT Role Verification** - No longer trusts JWT role claims without database verification
+  - `requireRole()` middleware now re-verifies role against database on each request
+  - Prevents privilege escalation if JWT_SECRET is compromised
+  - Detects and logs unauthorized role claims
+  - Updated all route files to pass pool parameter to requireRole middleware
+* **Security Improvements:**
+  - Added proper CORS credentials policy
+  - Implemented database verification for role-based access control
+  - Added logging for privilege escalation attempts
+  - Configuration validation (warns if APP_URL not set in production)
+
 **Event Deletion (2.6.2026)**
 
 * Admins can now delete events with registered participants — registrations are automatically deleted with the event

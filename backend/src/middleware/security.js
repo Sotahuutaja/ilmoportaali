@@ -18,18 +18,42 @@ function securityHeaders(req, res, next) {
 }
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
-// Locks the API to the frontend origin defined in APP_URL.
-// Falls back to permissive '*' in development when APP_URL is not set.
+// Whitelist-based CORS: only allows requests from APP_URL (production) or
+// localhost (development). Rejects all other origins.
 
-const ALLOWED_ORIGIN = process.env.APP_URL || '*';
+function getAllowedOrigins() {
+  const allowedOrigins = [];
+
+  // Production origin
+  if (process.env.APP_URL) {
+    allowedOrigins.push(process.env.APP_URL);
+  }
+
+  // Development origins (only if explicitly enabled or no APP_URL)
+  if (!process.env.APP_URL || process.env.NODE_ENV !== 'production') {
+    allowedOrigins.push('http://localhost:80');
+    allowedOrigins.push('http://localhost:3000');
+    allowedOrigins.push('http://127.0.0.1:80');
+    allowedOrigins.push('http://127.0.0.1:3000');
+  }
+
+  return allowedOrigins;
+}
+
+const ALLOWED_ORIGINS = getAllowedOrigins();
+
+// Validate configuration
+if (process.env.NODE_ENV === 'production' && !process.env.APP_URL) {
+  console.warn('WARNING: APP_URL not set in production. CORS will only allow localhost.');
+}
 
 function cors(req, res, next) {
   const origin = req.headers.origin;
 
-  if (ALLOWED_ORIGIN === '*') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  } else if (origin === ALLOWED_ORIGIN) {
+  // Only set CORS header if origin is in whitelist
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Vary', 'Origin');
   }
 

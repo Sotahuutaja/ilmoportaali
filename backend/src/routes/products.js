@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create product (creator who owns event, or admin)
-router.post('/', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
   const { name, description, price, quantity, fields = [] } = req.body;
   if (!name) return res.status(400).json({ error: 'Product name is required' });
 
@@ -47,7 +47,7 @@ router.post('/', requireAuth, requireRole('creator', 'admin'), async (req, res) 
 });
 
 // Reorder products
-router.put('/reorder', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+router.put('/reorder', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
   const { order } = req.body;
   if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be an array' });
 
@@ -75,7 +75,7 @@ router.put('/reorder', requireAuth, requireRole('creator', 'admin'), async (req,
 });
 
 // Update product
-router.put('/:productId', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+router.put('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
   const { name, description, price, quantity, fields = [] } = req.body;
 
   try {
@@ -96,7 +96,7 @@ router.put('/:productId', requireAuth, requireRole('creator', 'admin'), async (r
 });
 
 // Delete product
-router.delete('/:productId', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+router.delete('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
   try {
     const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
     if (!allowed) return res.status(403).json({ error: 'Not authorised' });

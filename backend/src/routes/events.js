@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get events I can manage (creator, co-manager, or admin)
-router.get('/manageable', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+router.get('/manageable', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT DISTINCT ON (e.id) e.*, u.first_name, u.last_name,
@@ -68,7 +68,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create event (creator or admin only)
-router.post('/', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
   const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at } = req.body;
 
   if (!title || !starts_at || !ends_at) {
@@ -93,7 +93,7 @@ router.post('/', requireAuth, requireRole('creator', 'admin'), async (req, res) 
 });
 
 // Update event (creator, co-manager, or admin)
-router.put('/:id', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+router.put('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
   const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at } = req.body;
 
   if (!registration_starts_at || !registration_ends_at) {
@@ -122,7 +122,7 @@ router.put('/:id', requireAuth, requireRole('creator', 'admin'), async (req, res
 });
 
 // Delete event (creator, co-manager, or admin)
-router.delete('/:id', requireAuth, requireRole('creator', 'admin'), async (req, res) => {
+router.delete('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
   const client = await pool.connect();
   try {
     const allowed = await canManageEvent(req.user.id, req.user.role, req.params.id, pool);

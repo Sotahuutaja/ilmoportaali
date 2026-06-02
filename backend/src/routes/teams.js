@@ -61,7 +61,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create team (admin only)
-router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
+router.post('/', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
   const { name, description, captain_id, auto_approve_joins } = req.body;
   if (!name) return res.status(400).json({ error: 'Team name is required' });
   if (!captain_id) return res.status(400).json({ error: 'A captain must be assigned' });
@@ -93,7 +93,7 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
 });
 
 // Delete team (admin only)
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/:id', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
   try {
     const result = await pool.query('DELETE FROM teams WHERE id = $1 RETURNING id', [req.params.id]);
     if (!result.rows[0]) return res.status(404).json({ error: 'Team not found' });
@@ -237,7 +237,7 @@ router.delete('/:id/reject/:userId', requireAuth, async (req, res) => {
 });
 
 // Update member (admin only)
-router.put('/:id/members/:userId', requireAuth, requireRole('admin'), async (req, res) => {
+router.put('/:id/members/:userId', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
   const { status, role } = req.body;
 
   try {
@@ -353,7 +353,7 @@ router.put('/:id/captain', requireAuth, async (req, res) => {
 });
 
 // Update team name and description (admin only)
-router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.put('/:id', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
   const { name, description, captain_id } = req.body;
 
   const client = await pool.connect();
