@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/my/memberships', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT tm.*, t.name, t.description, t.auto_approve_joins
+      SELECT tm.team_id as id, tm.user_id, tm.role, tm.status, tm.created_at, t.name, t.description, t.auto_approve_joins
       FROM team_members tm
       JOIN teams t ON tm.team_id = t.id
       WHERE tm.user_id = $1

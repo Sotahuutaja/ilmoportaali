@@ -255,6 +255,7 @@ az containerapp update --name ilmoportaali-frontend ...
 
 ### Planned Features
 
+- Add an option to add images to products to be displayed for the users
 - Custom domain (boffaus.fi)
 - Payment handling for products (MobilePay, Paytrail)
 - Bulk event registration via Excel file import
