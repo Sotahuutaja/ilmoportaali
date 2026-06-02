@@ -15,6 +15,19 @@ app.use(securityHeaders);
 app.use(cors);
 app.use(express.json());
 
+// Parse cookies from Cookie header
+app.use((req, res, next) => {
+  const cookieHeader = req.headers.cookie;
+  req.cookies = {};
+  if (cookieHeader) {
+    cookieHeader.split(';').forEach(cookie => {
+      const [name, value] = cookie.trim().split('=');
+      req.cookies[name] = decodeURIComponent(value);
+    });
+  }
+  next();
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/events/:eventId/products', require('./routes/products'));

@@ -32,8 +32,8 @@ export default function Profile() {
       if (form.gender) payload.gender = form.gender;
 
       const res = await api.put('/auth/profile', payload);
-      const token = localStorage.getItem('token');
-      login(token, res.data.user);
+      // Token is in httpOnly cookie, just update user data
+      login(res.data.user);
       setMessage('Profile updated!');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to update profile');

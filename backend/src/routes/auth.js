@@ -82,14 +82,37 @@ router.post('/login', loginLimit, async (req, res) => {
       return res.status(403).json({ error: 'Please verify your email before logging in', unverified: true });
     }
 
-    const token = jwt.sign(
+    // Create access token (short-lived)
+    const accessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '15m' }
     );
 
+    // Create refresh token (longer-lived)
+    const refreshToken = jwt.sign(
+      { id: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: '30m' }
+    );
+
+    // Set httpOnly cookies (inaccessible to JavaScript)
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000 // 15 minutes
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 60 * 1000 // 30 minutes
+    });
+
+    // Return only user data, not tokens
     res.json({
-      token,
       user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, role: user.role }
     });
   } catch (err) {
@@ -275,6 +298,14 @@ router.post('/reset-password', async (req, res) => {
     console.error('Reset password failed:', err.message);
     res.status(500).json({ error: 'Failed to reset password' });
   }
+});
+
+// Logout
+router.post('/logout', requireAuth, (req, res) => {
+  // Clear both cookies
+  res.clearCookie('accessToken');
+  res.clearCookie('refreshToken');
+  res.json({ message: 'Logged out successfully' });
 });
 
 module.exports = router;

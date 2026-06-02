@@ -18,7 +18,8 @@ export default function Login() {
     setError(''); setUnverified(false);
     try {
       const res = await api.post('/auth/login', { email, password });
-      login(res.data.token, res.data.user);
+      // Token is now in httpOnly cookie, response only contains user data
+      login(res.data.user);
       navigate('/');
     } catch (err) {
       if (err.response?.data?.unverified) {

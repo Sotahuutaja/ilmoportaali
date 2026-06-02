@@ -8,24 +8,27 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      api.get('/auth/me')
-        .then(res => setUser(res.data.user))
-        .catch(() => localStorage.removeItem('token'))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    // Check if user is logged in by calling /auth/me
+    // Token is in httpOnly cookie, automatically sent by axios with withCredentials
+    api.get('/auth/me')
+      .then(res => setUser(res.data.user))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
-  const login = (token, userData) => {
-    localStorage.setItem('token', token);
+  const login = (userData) => {
+    // Token is now in httpOnly cookie set by login endpoint
+    // No need to manually store it
     setUser(userData);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const logout = async () => {
+    // Call logout endpoint to clear cookies on server
+    try {
+      await api.post('/auth/logout');
+    } catch (err) {
+      console.error('Logout error:', err.message);
+    }
     setUser(null);
   };
 
