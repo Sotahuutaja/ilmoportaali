@@ -77,7 +77,7 @@ function EditUserModal({ user, onClose, onSave }) {
 }
 
 function EditTeamModal({ team, users, onClose, onSave }) {
-  const [form, setForm] = useState({ name: team.name, description: team.description || '', captain_id: '' });
+  const [form, setForm] = useState({ name: team.name, description: team.description || '', captain_id: '', auto_approve_joins: team.auto_approve_joins || false });
   const [members, setMembers] = useState([]);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -96,6 +96,17 @@ function EditTeamModal({ team, users, onClose, onSave }) {
       setMessage('Saved!');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save');
+    }
+  };
+
+  const handleSaveAutoApprove = async () => {
+    setError(''); setMessage('');
+    try {
+      const res = await api.put(`/teams/${team.id}/auto-approve`, { auto_approve_joins: form.auto_approve_joins });
+      onSave(res.data.team);
+      setMessage(form.auto_approve_joins ? 'Auto-approve enabled!' : 'Auto-approve disabled!');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update');
     }
   };
 
@@ -129,6 +140,24 @@ function EditTeamModal({ team, users, onClose, onSave }) {
 
         <button className="btn btn-primary" onClick={handleSave} style={{ width: '100%', marginBottom: '1.5rem' }}>
           Save changes
+        </button>
+
+        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
+        <h4 style={{ marginBottom: '1rem' }}>Team settings</h4>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: 0 }}>
+          <input
+            type="checkbox"
+            checked={form.auto_approve_joins}
+            onChange={e => setForm({ ...form, auto_approve_joins: e.target.checked })}
+            style={{ width: 'auto', margin: 0 }}
+          />
+          Auto-approve join requests
+        </label>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: '1rem' }}>
+          {form.auto_approve_joins ? 'New requests are automatically approved' : 'Requests require captain approval'}
+        </p>
+        <button className="btn btn-primary" onClick={handleSaveAutoApprove} style={{ width: '100%', marginBottom: '1.5rem' }}>
+          Save setting
         </button>
 
         <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
@@ -183,7 +212,7 @@ export default function Admin() {
   const [editingTeam, setEditingTeam] = useState(null);
   const [error, setError] = useState('');
   const [filters, setFilters] = useState({ first_name: '', last_name: '', email: '', role: '', year_of_birth: '', gender: '' });
-  const [teamForm, setTeamForm] = useState({ name: '', description: '', captain_id: '' });
+  const [teamForm, setTeamForm] = useState({ name: '', description: '', captain_id: '', auto_approve_joins: false });
   const [teamMessage, setTeamMessage] = useState('');
   const [teamError, setTeamError] = useState('');
   const [showUsers, setShowUsers] = useState(true);
@@ -229,7 +258,7 @@ export default function Admin() {
       });
       setTeams([...teams, res.data.team]);
       setTeamMessage('Team created!');
-      setTeamForm({ name: '', description: '', captain_id: '' });
+      setTeamForm({ name: '', description: '', captain_id: '', auto_approve_joins: false });
     } catch (err) {
       setTeamError(err.response?.data?.error || 'Failed to create team');
     }
@@ -532,6 +561,15 @@ export default function Admin() {
                   return <option key={u.id} value={u.id}>{name} ({u.email})</option>;
                 })}
               </select>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={teamForm.auto_approve_joins}
+                  onChange={e => setTeamForm({ ...teamForm, auto_approve_joins: e.target.checked })}
+                  style={{ width: 'auto', margin: 0 }}
+                />
+                Auto-approve join requests
+              </label>
               <button type="submit" className="btn btn-primary">Create team</button>
             </form>
           </div>

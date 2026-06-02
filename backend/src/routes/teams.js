@@ -62,7 +62,7 @@ router.get('/:id', async (req, res) => {
 
 // Create team (admin only)
 router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
-  const { name, description, captain_id } = req.body;
+  const { name, description, captain_id, auto_approve_joins } = req.body;
   if (!name) return res.status(400).json({ error: 'Team name is required' });
   if (!captain_id) return res.status(400).json({ error: 'A captain must be assigned' });
 
@@ -71,8 +71,8 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
     await client.query('BEGIN');
 
     const team = await client.query(
-      'INSERT INTO teams (name, description, created_by) VALUES ($1, $2, $3) RETURNING *',
-      [name, description, req.user.id]
+      'INSERT INTO teams (name, description, created_by, auto_approve_joins) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, description, req.user.id, auto_approve_joins || false]
     );
 
     await client.query(
