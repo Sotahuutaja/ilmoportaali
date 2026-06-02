@@ -107,6 +107,7 @@ async function migrate() {
     ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_starts_at TIMESTAMPTZ;
     ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_ends_at TIMESTAMPTZ;
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS comments TEXT;
+    ALTER TABLE teams ADD COLUMN IF NOT EXISTS auto_approve_joins BOOLEAN NOT NULL DEFAULT FALSE;
   `);
 
   console.log('Migration complete');

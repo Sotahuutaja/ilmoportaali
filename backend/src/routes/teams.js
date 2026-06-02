@@ -87,18 +87,61 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
   }
 });
 
+// Update team auto-approve setting (admin or captain)
+router.put('/:id/auto-approve', requireAuth, async (req, res) => {
+  const { auto_approve_joins } = req.body;
+  if (auto_approve_joins === undefined) return res.status(400).json({ error: 'auto_approve_joins is required' });
+
+  try {
+    // Check if user is admin or a captain of this team
+    if (req.user.role !== 'admin') {
+      const membership = await pool.query(
+        'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+        [req.params.id, req.user.id, 'captain', 'approved']
+      );
+      if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can change team settings' });
+    }
+
+    const result = await pool.query(
+      'UPDATE teams SET auto_approve_joins = $1 WHERE id = $2 RETURNING *',
+      [auto_approve_joins, req.params.id]
+    );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Team not found' });
+    res.json({ team: result.rows[0] });
+  } catch (err) {
+    console.error('Failed to update team:', err.message);
+    res.status(500).json({ error: 'Failed to update team' });
+  }
+});
+
 // Request to join a team
 router.post('/:id/request', requireAuth, async (req, res) => {
+  const client = await pool.connect();
   try {
-    await pool.query(
+    await client.query('BEGIN');
+
+    // Get team auto_approve setting
+    const teamResult = await client.query('SELECT auto_approve_joins FROM teams WHERE id = $1', [req.params.id]);
+    if (!teamResult.rows[0]) return res.status(404).json({ error: 'Team not found' });
+
+    const status = teamResult.rows[0].auto_approve_joins ? 'approved' : 'pending';
+
+    await client.query(
       'INSERT INTO team_members (team_id, user_id, role, status) VALUES ($1, $2, $3, $4)',
-      [req.params.id, req.user.id, 'member', 'pending']
+      [req.params.id, req.user.id, 'member', status]
     );
-    res.status(201).json({ message: 'Join request sent' });
+
+    await client.query('COMMIT');
+    const message = status === 'approved' ? 'Successfully joined team!' : 'Join request sent';
+    res.status(201).json({ message });
   } catch (err) {
+    await client.query('ROLLBACK');
     if (err.code === '23505') return res.status(409).json({ error: 'Already a member or request pending' });
     console.error('Failed to request join:', err.message);
     res.status(500).json({ error: 'Failed to send join request' });
+  } finally {
+    client.release();
   }
 });
 
@@ -117,81 +160,82 @@ router.post('/:id/invite', requireAuth, async (req, res) => {
     }
 
     await pool.query(
-      'INSERT INTO team_members (team_id, user_id, role, status, invited_by) VALUES ($1, $2, $3, $4, $5)',
-      [req.params.id, user_id, 'member', 'pending', req.user.id]
+      'INSERT INTO team_members (team_id, user_id, role, status) VALUES ($1, $2, $3, $4)',
+      [req.params.id, user_id, 'member', 'approved']
     );
-    res.status(201).json({ message: 'Invitation sent' });
+    res.status(201).json({ message: 'User invited' });
   } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ error: 'User already invited or a member' });
+    if (err.code === '23505') return res.status(409).json({ error: 'User already a member' });
     console.error('Failed to invite user:', err.message);
     res.status(500).json({ error: 'Failed to invite user' });
   }
 });
 
-// Approve or reject a membership (captain or admin)
-router.put('/:id/members/:userId', requireAuth, async (req, res) => {
-  const { status, role } = req.body;
-  const validStatuses = ['approved', 'rejected'];
-  const validRoles = ['member', 'captain'];
-
-  if (status && !validStatuses.includes(status)) {
-    return res.status(400).json({ error: 'Status must be approved or rejected' });
-  }
-  if (role && !validRoles.includes(role)) {
-    return res.status(400).json({ error: 'Role must be member or captain' });
-  }
-
+// Approve join request (captain or admin)
+router.put('/:id/approve/:userId', requireAuth, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       const membership = await pool.query(
         'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
         [req.params.id, req.user.id, 'captain', 'approved']
       );
-      if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can manage members' });
+      if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can approve requests' });
     }
 
-    const updates = [];
-    const values = [];
-    let i = 1;
-
-    if (status) { updates.push(`status = $${i++}`); values.push(status); }
-    if (role) { updates.push(`role = $${i++}`); values.push(role); }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'Nothing to update' });
-    }
-
-    values.push(req.params.id, req.params.userId);
     const result = await pool.query(
-      `UPDATE team_members SET ${updates.join(', ')} WHERE team_id = $${i++} AND user_id = $${i} RETURNING *`,
-      values
+      'UPDATE team_members SET status = $1 WHERE team_id = $2 AND user_id = $3 RETURNING *',
+      ['approved', req.params.id, req.params.userId]
     );
 
-    if (!result.rows[0]) return res.status(404).json({ error: 'Membership not found' });
-    res.json({ member: result.rows[0] });
+    if (!result.rows[0]) return res.status(404).json({ error: 'Join request not found' });
+    res.json({ message: 'Request approved', membership: result.rows[0] });
   } catch (err) {
-    console.error('Failed to update membership:', err.message);
-    res.status(500).json({ error: 'Failed to update membership' });
+    console.error('Failed to approve request:', err.message);
+    res.status(500).json({ error: 'Failed to approve request' });
   }
 });
 
-// Remove a member (captain, admin, or self)
-router.delete('/:id/members/:userId', requireAuth, async (req, res) => {
+// Reject join request (captain or admin)
+router.delete('/:id/reject/:userId', requireAuth, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.id !== parseInt(req.params.userId)) {
+    if (req.user.role !== 'admin') {
       const membership = await pool.query(
         'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
         [req.params.id, req.user.id, 'captain', 'approved']
       );
-      if (!membership.rows[0]) {
-        return res.status(403).json({ error: 'Not authorised' });
-      }
+      if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can reject requests' });
     }
 
-    await pool.query(
-      'DELETE FROM team_members WHERE team_id = $1 AND user_id = $2',
+    const result = await pool.query(
+      'DELETE FROM team_members WHERE team_id = $1 AND user_id = $2 AND status = $3 RETURNING id',
+      [req.params.id, req.params.userId, 'pending']
+    );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Join request not found' });
+    res.json({ message: 'Request rejected' });
+  } catch (err) {
+    console.error('Failed to reject request:', err.message);
+    res.status(500).json({ error: 'Failed to reject request' });
+  }
+});
+
+// Remove a member (captain or admin)
+router.delete('/:id/members/:userId', requireAuth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      const membership = await pool.query(
+        'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+        [req.params.id, req.user.id, 'captain', 'approved']
+      );
+      if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can remove members' });
+    }
+
+    const result = await pool.query(
+      'DELETE FROM team_members WHERE team_id = $1 AND user_id = $2 RETURNING id',
       [req.params.id, req.params.userId]
     );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Member not found' });
     res.json({ message: 'Member removed' });
   } catch (err) {
     console.error('Failed to remove member:', err.message);
@@ -203,7 +247,7 @@ router.delete('/:id/members/:userId', requireAuth, async (req, res) => {
 router.get('/my/memberships', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT t.*, tm.role, tm.status
+      SELECT tm.*, t.name, t.description, t.auto_approve_joins
       FROM team_members tm
       JOIN teams t ON tm.team_id = t.id
       WHERE tm.user_id = $1
@@ -254,7 +298,7 @@ router.put('/:id/captain', requireAuth, async (req, res) => {
     );
 
     await client.query('COMMIT');
-    res.json({ message: 'Captaincy transferred successfully' });
+    res.json({ message: 'Captaincy transferred' });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Failed to transfer captain:', err.message);

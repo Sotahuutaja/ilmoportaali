@@ -11,6 +11,7 @@ export default function Teams() {
   const [members, setMembers] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [autoApprove, setAutoApprove] = useState(false);
 
   useEffect(() => {
     api.get('/teams').then(res => setTeams(res.data.teams));
@@ -22,6 +23,7 @@ export default function Teams() {
   const selectTeam = async (team) => {
     setSelected(team);
     setMessage(''); setError('');
+    setAutoApprove(team.auto_approve_joins || false);
     const isMember = myTeams.some(t => t.id === team.id && t.status === 'approved');
     const isAdmin = user?.role === 'admin';
     if (isMember || isAdmin) {
@@ -115,6 +117,18 @@ export default function Teams() {
     }
   };
 
+  const handleToggleAutoApprove = async (teamId) => {
+    try {
+      const newValue = !autoApprove;
+      const res = await api.put(`/teams/${teamId}/auto-approve`, { auto_approve_joins: newValue });
+      setAutoApprove(newValue);
+      setSelected(res.data.team);
+      setMessage(newValue ? 'Auto-approve enabled!' : 'Auto-approve disabled!');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update setting');
+    }
+  };
+
   const isCaptain = (teamId) =>
     myTeams.some(t => t.id === teamId && t.role === 'captain' && t.status === 'approved');
 
@@ -191,6 +205,25 @@ export default function Teams() {
             <h3>{selected.name}</h3>
             <button className="btn btn-secondary" onClick={() => { setSelected(null); setMembers(null); }}>Close</button>
           </div>
+
+          {(isCaptain(selected.id) || user?.role === 'admin') && (
+            <div className="card" style={{ marginBottom: '1rem' }}>
+              <h3 style={{ marginBottom: '1rem' }}>Team Settings</h3>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={autoApprove}
+                  onChange={() => handleToggleAutoApprove(selected.id)}
+                  style={{ width: 'auto', margin: 0 }}
+                />
+                Auto-approve join requests
+              </label>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                {autoApprove ? 'New requests are automatically approved' : 'Requests require your approval'}
+              </p>
+            </div>
+          )}
+
           <div className="card">
             <h3 style={{ marginBottom: '1rem' }}>Members</h3>
             {members === null ? (

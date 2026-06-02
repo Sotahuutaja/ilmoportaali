@@ -1,3 +1,32 @@
+Completed so far (31.5.2026):
+
+**Event Registration & Comments (31.5.2026)**
+
+* Added comments field to event registration — users can provide additional information for event organizers
+* Comments are optional and displayed in both self-registration and guest registration forms
+* Comments are included in CSV exports so organizers can review all notes
+* Database migration adds `comments TEXT` column to registrations table
+
+**Product Options (31.5.2026)**
+
+* Product options are now visible in event management dashboard showing field labels and types
+* Fixed GROUP BY clause in products GET endpoint to properly return all columns including `fields`
+* Product field options display correctly in both event creation and registration views
+
+**Dashboard UI (31.5.2026)**
+
+* Removed redundant "Products" button from event management dashboard
+* Product management is now only accessible via the "Edit" button (includes all product editing)
+* Improved team name color visibility in team registrations view (now uses accent color)
+
+**Bug Fixes (31.5.2026)**
+
+* Fixed incomplete registrations.js file that was truncated mid-statement
+* Restored all missing endpoints for PUT registration updates including field_values and comments handling
+* Fixed duplicate field entries in registrations GET response query
+
+---
+
 Completed so far (30.5.2026):
 
 **Events (30.5.2026)**

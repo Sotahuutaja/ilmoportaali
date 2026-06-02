@@ -161,6 +161,7 @@ APP_URL=http://localhost
 - Event fields: title, description, location, start/end dates, capacity, and registration period
 - **Registration period** — each event requires a registration open and close datetime; users can only sign up within that window. Outside it, the event page shows "Registration opens on [date]" or "Registration is closed"
 - **Products** — each event can have multiple purchasable products with name, description, price, and optional quantity limits
+- **Product options** — creators can add custom fields to products (text input or dropdown select); users choose options during registration
 - Products support drag-and-drop reordering on the edit page and inline editing
 - At least one product must be selected when registering for an event
 - **Co-managers** — event creators can grant other creators full management access over their events
@@ -180,8 +181,10 @@ APP_URL=http://localhost
 - Registered users select products when signing up for an event
 - Registration is only possible within the event's registration period
 - Optional team linking during registration
-- **Guest registration** — captains can register guests by providing first name, last name, email, team, and product selections
+- **Comments** — users can add optional comments/notes for the event organizers
+- **Guest registration** — captains can register guests by providing first name, last name, email, team, product selections, and optional comments
 - Capacity checking with sold-out handling
+- **CSV export** — event organizers can export all registrations including comments
 
 ### Admin Panel
 
@@ -247,12 +250,15 @@ az containerapp update --name ilmoportaali-frontend ...
 
 ## Known Issues & Backlog
 
+- Admins cant delete events if there are registered participants
+
 ### Planned Features
 
+- Team captains should be able to decide whether a team join request needs approval or if all requests are automatically approved
 - Custom domain (boffaus.fi)
 - Payment handling for products (MobilePay, Paytrail)
 - Captain invite flow UI (backend exists, frontend UI incomplete)
 - Bulk event registration via Excel file import
 - Pin Azure CLI version in GitHub Actions (currently using `latest` due to credential mounting limitations with `azure/cli@v2`)
 - Enable users to register vehicles or other machines they might bring to an event
-- "Comments" -field for users when they register to an event
+- New team creation as an option for users in the Teams page
