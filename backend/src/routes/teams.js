@@ -241,8 +241,8 @@ router.put('/:id/members/:userId', requireAuth, requireRole('admin'), async (req
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    params.push(req.params.id);
-    params.push(req.params.userId);
+    params.push(parseInt(req.params.id));
+    params.push(parseInt(req.params.userId));
 
     const result = await pool.query(
       `UPDATE team_members SET ${updateFields.join(', ')} WHERE team_id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`,
@@ -260,20 +260,23 @@ router.put('/:id/members/:userId', requireAuth, requireRole('admin'), async (req
 // Remove a member (captain or admin, or remove yourself)
 router.delete('/:id/members/:userId', requireAuth, async (req, res) => {
   try {
+    const teamId = parseInt(req.params.id);
+    const userId = parseInt(req.params.userId);
+
     // Allow users to remove themselves, or allow captains/admins to remove others
-    const isRemovingSelf = parseInt(req.params.userId) === req.user.id;
+    const isRemovingSelf = userId === req.user.id;
 
     if (!isRemovingSelf && req.user.role !== 'admin') {
       const membership = await pool.query(
         'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
-        [req.params.id, req.user.id, 'captain', 'approved']
+        [teamId, req.user.id, 'captain', 'approved']
       );
       if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can remove members' });
     }
 
     const result = await pool.query(
       'DELETE FROM team_members WHERE team_id = $1 AND user_id = $2 RETURNING id',
-      [req.params.id, req.params.userId]
+      [teamId, userId]
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Member not found' });
