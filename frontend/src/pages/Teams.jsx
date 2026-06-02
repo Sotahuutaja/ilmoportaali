@@ -163,9 +163,10 @@ export default function Teams() {
           </div>
         )}
 
-        <h3 style={{ marginBottom: '0.5rem' }}>All teams</h3>
-        {teams.map(team => {
+        <h3 style={{ marginBottom: '0.5rem' }}>Other teams</h3>
+        {teams.filter(team => !myStatusInTeam(team.id)).map(team => {
           const myStatus = myStatusInTeam(team.id);
+          const joinButtonText = team.auto_approve_joins ? 'Join' : 'Request to join';
           return (
             <div className="card" key={team.id}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -178,7 +179,7 @@ export default function Teams() {
                   <button className="btn btn-secondary" onClick={() => selectTeam(team)}>View</button>
                   {user && !myStatus && (
                     <button className="btn btn-primary" onClick={() => requestJoin(team.id)}>
-                      Request to join
+                      {joinButtonText}
                     </button>
                   )}
                   {myStatus && (
@@ -196,7 +197,7 @@ export default function Teams() {
           );
         })}
 
-        {teams.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No teams yet.</p>}
+        {teams.filter(team => !myStatusInTeam(team.id)).length === 0 && <p style={{ color: 'var(--text-muted)' }}>No other teams available.</p>}
       </div>
 
       {selected && (
