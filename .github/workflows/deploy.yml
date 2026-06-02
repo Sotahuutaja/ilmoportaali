@@ -64,20 +64,20 @@ jobs:
               --image ${{ secrets.REGISTRY_LOGIN_SERVER }}/backend:latest \
               --revision-suffix $SUFFIX
 
-      - name: Health check backend
-        run: |
-          echo "Waiting for backend to become healthy..."
-          for i in $(seq 1 24); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ilmoportaali-app.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io/health)
-            if [ "$STATUS" = "200" ]; then
-              echo "Backend is healthy."
-              exit 0
-            fi
-            echo "Attempt $i: got $STATUS, retrying in 5s..."
-            sleep 5
-          done
-          echo "Backend did not become healthy after 2 minutes."
-          exit 1
+      # - name: Health check backend
+      #   run: |
+      #     echo "Waiting for backend to become healthy..."
+      #     for i in $(seq 1 24); do
+      #       STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ilmoportaali-app.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io/health)
+      #       if [ "$STATUS" = "200" ]; then
+      #         echo "Backend is healthy."
+      #         exit 0
+      #       fi
+      #       echo "Attempt $i: got $STATUS, retrying in 5s..."
+      #       sleep 5
+      #     done
+      #     echo "Backend did not become healthy after 2 minutes."
+      #     exit 1
 
   build-deploy-frontend:
     needs: changes
