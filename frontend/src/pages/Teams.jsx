@@ -178,7 +178,20 @@ export default function Teams() {
                 <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                   <button className="btn btn-secondary" onClick={() => selectTeam(team)}>View</button>
                   {user && !myStatus && (
-                    <button className="btn btn-primary" onClick={() => requestJoin(team.id)}>
+                    <button
+                      className="btn"
+                      onClick={() => requestJoin(team.id)}
+                      style={{
+                        background: team.auto_approve_joins ? '#27ae60' : '#f39c12',
+                        color: 'white',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        fontWeight: '500'
+                      }}
+                    >
                       {joinButtonText}
                     </button>
                   )}

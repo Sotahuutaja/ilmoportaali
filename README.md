@@ -263,8 +263,7 @@ az containerapp update --name ilmoportaali-frontend ...
 
 ## Known Issues & Backlog
 
-- Admins cant delete events if there are registered participants
-- Users cannot cancel applications to teams or leave teams
+- Nothing!
 
 ### Planned Features
 
