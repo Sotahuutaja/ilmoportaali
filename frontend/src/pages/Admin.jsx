@@ -527,9 +527,10 @@ export default function Admin() {
                 required
               >
                 <option value="">Select a captain...</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                ))}
+                {users.map(u => {
+                  const name = u.first_name || u.last_name ? `${u.last_name || ''}, ${u.first_name || ''}`.trim() : u.name || u.email;
+                  return <option key={u.id} value={u.id}>{name} ({u.email})</option>;
+                })}
               </select>
               <button type="submit" className="btn btn-primary">Create team</button>
             </form>

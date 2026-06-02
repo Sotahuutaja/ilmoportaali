@@ -55,7 +55,7 @@ export default function Teams() {
 
   const handleApprove = async (teamId, userId) => {
     try {
-      await api.put(`/teams/${teamId}/members/${userId}`, { status: 'approved' });
+      await api.put(`/teams/${teamId}/approve/${userId}`);
       const res = await api.get(`/teams/${teamId}`);
       setMembers(res.data.members);
       refreshTeamCount(teamId);
@@ -67,7 +67,7 @@ export default function Teams() {
 
   const handleReject = async (teamId, userId) => {
     try {
-      await api.put(`/teams/${teamId}/members/${userId}`, { status: 'rejected' });
+      await api.delete(`/teams/${teamId}/reject/${userId}`);
       const res = await api.get(`/teams/${teamId}`);
       setMembers(res.data.members);
       refreshTeamCount(teamId);

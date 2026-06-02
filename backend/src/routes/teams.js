@@ -3,6 +3,23 @@ const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
+// Get my team memberships (must be before /:id to avoid route conflict)
+router.get('/my/memberships', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT tm.*, t.name, t.description, t.auto_approve_joins
+      FROM team_members tm
+      JOIN teams t ON tm.team_id = t.id
+      WHERE tm.user_id = $1
+      ORDER BY t.name ASC
+    `, [req.user.id]);
+    res.json({ teams: result.rows });
+  } catch (err) {
+    console.error('Failed to fetch memberships:', err.message);
+    res.status(500).json({ error: 'Failed to fetch memberships' });
+  }
+});
+
 // List all teams (public)
 router.get('/', async (req, res) => {
   try {
@@ -284,23 +301,6 @@ router.delete('/:id/members/:userId', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Failed to remove member:', err.message);
     res.status(500).json({ error: 'Failed to remove member' });
-  }
-});
-
-// Get my team memberships
-router.get('/my/memberships', requireAuth, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT tm.*, t.name, t.description, t.auto_approve_joins
-      FROM team_members tm
-      JOIN teams t ON tm.team_id = t.id
-      WHERE tm.user_id = $1
-      ORDER BY t.name ASC
-    `, [req.user.id]);
-    res.json({ teams: result.rows });
-  } catch (err) {
-    console.error('Failed to fetch memberships:', err.message);
-    res.status(500).json({ error: 'Failed to fetch memberships' });
   }
 });
 
