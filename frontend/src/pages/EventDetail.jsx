@@ -101,9 +101,9 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                           const optPrice = typeof opt === 'string' ? null : opt.price;
                           const optQuantity = typeof opt === 'string' ? null : opt.quantity;
                           let optionLabel = optValue;
-                          if (optPrice !== null && optPrice !== undefined) {
-                            optionLabel += ` — €${parseFloat(optPrice).toFixed(2)}`;
-                          }
+                          // Show option-specific price or default product price
+                          const displayPrice = optPrice !== null && optPrice !== undefined ? optPrice : p.price;
+                          optionLabel += ` — €${parseFloat(displayPrice).toFixed(2)}`;
                           if (optQuantity !== null && optQuantity !== undefined) {
                             optionLabel += ` (${optQuantity} available)`;
                           }
