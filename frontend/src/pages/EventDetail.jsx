@@ -99,8 +99,15 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                         {field.options.map((opt, idx) => {
                           const optValue = typeof opt === 'string' ? opt : opt.value;
                           const optPrice = typeof opt === 'string' ? null : opt.price;
-                          const priceDisplay = optPrice !== null && optPrice !== undefined ? ` (+€${parseFloat(optPrice).toFixed(2)})` : '';
-                          return <option key={idx} value={optValue}>{optValue}{priceDisplay}</option>;
+                          const optQuantity = typeof opt === 'string' ? null : opt.quantity;
+                          let optionLabel = optValue;
+                          if (optPrice !== null && optPrice !== undefined) {
+                            optionLabel += ` — €${parseFloat(optPrice).toFixed(2)}`;
+                          }
+                          if (optQuantity !== null && optQuantity !== undefined) {
+                            optionLabel += ` (${optQuantity} available)`;
+                          }
+                          return <option key={idx} value={optValue}>{optionLabel}</option>;
                         })}
                       </select>
                     ) : (
