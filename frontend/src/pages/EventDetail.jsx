@@ -5,6 +5,27 @@ import api from '../api';
 import { formatDateTime } from '../utils/datetime';
 
 function ProductSelector({ products, selected, setSelected, onToggle, fieldValues, setFieldValues }) {
+  // Calculate effective price based on selected dropdown options
+  const getEffectivePrice = (product) => {
+    let price = parseFloat(product.price);
+    const productFields = product.fields || [];
+
+    for (const field of productFields) {
+      if (field.type === 'select') {
+        const selectedValue = fieldValues?.[product.id]?.[field.id];
+        if (selectedValue) {
+          const option = field.options.find(opt =>
+            (typeof opt === 'string' ? opt : opt.value) === selectedValue
+          );
+          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+            price = parseFloat(option.price);
+          }
+        }
+      }
+    }
+    return price;
+  };
+
   return (
     <div style={{ margin: '1rem 0' }}>
       <label>Products</label>
@@ -13,6 +34,7 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
         const isSelected = !!selected[p.id];
         const outOfStock = p.quantity !== null && p.remaining <= 0;
         const fields = p.fields || [];
+        const effectivePrice = getEffectivePrice(p);
         return (
           <div key={p.id} style={{ marginBottom: '0.4rem' }}>
             <div style={{
@@ -35,7 +57,7 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <strong>€{parseFloat(p.price).toFixed(2)}</strong>
+                <strong>€{effectivePrice.toFixed(2)}</strong>
                 {isSelected && (
                   <input
                     type="number" min="1"
@@ -74,7 +96,12 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                         style={{ marginBottom: 0 }}
                       >
                         <option value="">Select...</option>
-                        {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        {field.options.map((opt, idx) => {
+                          const optValue = typeof opt === 'string' ? opt : opt.value;
+                          const optPrice = typeof opt === 'string' ? null : opt.price;
+                          const priceDisplay = optPrice !== null && optPrice !== undefined ? ` (+€${parseFloat(optPrice).toFixed(2)})` : '';
+                          return <option key={idx} value={optValue}>{optValue}{priceDisplay}</option>;
+                        })}
                       </select>
                     ) : (
                       <input

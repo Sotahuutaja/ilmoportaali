@@ -15,6 +15,10 @@ function newField() {
   };
 }
 
+function newOption() {
+  return { value: '', price: null, quantity: null };
+}
+
 export default function ProductFieldEditor({ fields = [], onChange }) {
   const update = (index, patch) => {
     const updated = fields.map((f, i) => i === index ? { ...f, ...patch } : f);
@@ -26,12 +30,14 @@ export default function ProductFieldEditor({ fields = [], onChange }) {
   const removeField = (index) => onChange(fields.filter((_, i) => i !== index));
 
   const addOption = (index) => {
-    const updated = [...fields[index].options, ''];
+    const updated = [...fields[index].options, newOption()];
     update(index, { options: updated });
   };
 
-  const updateOption = (fieldIndex, optionIndex, value) => {
-    const options = fields[fieldIndex].options.map((o, i) => i === optionIndex ? value : o);
+  const updateOption = (fieldIndex, optionIndex, patch) => {
+    const options = fields[fieldIndex].options.map((o, i) =>
+      i === optionIndex ? { ...o, ...patch } : o
+    );
     update(fieldIndex, { options });
   };
 
@@ -100,21 +106,47 @@ export default function ProductFieldEditor({ fields = [], onChange }) {
             <div style={{ marginTop: '0.4rem' }}>
               <label style={{ fontSize: '0.72rem' }}>Options</label>
               {field.options.map((opt, j) => (
-                <div key={j} style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.3rem' }}>
-                  <input
-                    value={opt}
-                    onChange={e => updateOption(i, j, e.target.value)}
-                    placeholder={`Option ${j + 1}`}
-                    style={{ marginBottom: 0, flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={() => removeOption(i, j)}
-                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
-                  >
-                    ✕
-                  </button>
+                <div key={j} style={{ background: 'var(--surface-2)', padding: '0.5rem', borderRadius: '3px', marginBottom: '0.3rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '0.3rem', alignItems: 'flex-start' }}>
+                    <div>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Option name</label>
+                      <input
+                        value={typeof opt === 'string' ? opt : opt.value || ''}
+                        onChange={e => updateOption(i, j, { value: e.target.value })}
+                        placeholder={`Option ${j + 1}`}
+                        style={{ marginBottom: 0 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Price (€)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={typeof opt === 'string' ? '' : (opt.price ?? '')}
+                        onChange={e => updateOption(i, j, { price: e.target.value ? parseFloat(e.target.value) : null })}
+                        placeholder="Default"
+                        style={{ marginBottom: 0 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Qty limit</label>
+                      <input
+                        type="number"
+                        value={typeof opt === 'string' ? '' : (opt.quantity ?? '')}
+                        onChange={e => updateOption(i, j, { quantity: e.target.value ? parseInt(e.target.value) : null })}
+                        placeholder="Unlimited"
+                        style={{ marginBottom: 0 }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={() => removeOption(i, j)}
+                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', marginTop: '1.35rem' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               ))}
               <button
