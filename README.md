@@ -151,6 +151,8 @@ The application implements defense-in-depth security practices:
 
 - **CORS Protection** — Whitelist-based CORS restricts API access to whitelisted origins only; rejects requests from unauthorized origins
 - **JWT Security** — JWT tokens use secure signing with HS256 algorithm and configurable expiration; role claims are verified against the database on each request
+  - **httpOnly Cookies** — Authentication tokens stored in secure, httpOnly cookies that are inaccessible to JavaScript, preventing XSS attacks
+  - **Token Expiration** — Short-lived access tokens (15 minutes) with refresh tokens for extended sessions (30 minutes)
 - **Database Security** — Parameterized queries prevent SQL injection; transactions ensure data consistency; foreign key constraints maintain referential integrity
 - **Password Security** — bcrypt hashing with salt for all passwords
 - **Security Headers** — X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy prevent common attacks
@@ -165,7 +167,8 @@ The application implements defense-in-depth security practices:
 ### Authentication & Users
 
 - **Registration** with email verification via SendGrid
-- **JWT-based login** with role-based access control
+- **JWT-based login** with role-based access control using secure httpOnly cookies
+- **Logout** — securely clears authentication cookies and redirects to login page
 - **Password change** from the profile page
 - **Profile page** showing account settings, team memberships, and event registrations
 - User profile collects: first name, last name, year of birth, and gender
@@ -177,6 +180,8 @@ The application implements defense-in-depth security practices:
 - **Registration period** — each event requires a registration open and close datetime; users can only sign up within that window. Outside it, the event page shows "Registration opens on [date]" or "Registration is closed"
 - **Products** — each event can have multiple purchasable products with name, description, price, and optional quantity limits
 - **Product options** — creators can add custom fields to products (text input or dropdown select); users choose options during registration
+  - **Per-option pricing** — dropdown options can have custom prices that override the product's default price
+  - **Per-option quantity limits** — dropdown options can have individual quantity limits (e.g., "Size Small: 5 available")
 - Products support drag-and-drop reordering on the edit page and inline editing
 - At least one product must be selected when registering for an event
 - **Co-managers** — event creators can grant other creators full management access over their events
@@ -218,6 +223,7 @@ Accessible by event creators and co-managers:
 
 - View all events you own or co-manage (co-managed events show a badge)
 - Manage products and co-managers per event
+  - **Managers view** — shows event creator and all co-managers with clear badges distinguishing roles
 - **Participant view** — summary stats (total participants, guests, revenue), search by name/email/team, edit or cancel any registration, CSV export
 - Guest registrations are shown with a guest badge
 

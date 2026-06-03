@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('./db');
 const { securityHeaders, cors } = require('./middleware/security');
+const { initDb } = require('./initDb');
 
 // Fail fast if critical environment variables are missing
 if (!process.env.JWT_SECRET) {
@@ -61,6 +62,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'An unexpected error occurred' });
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
+
+  // Initialize database indexes in background
+  try {
+    await initDb();
+  } catch (err) {
+    console.error('Database initialization failed (non-blocking):', err.message);
+    // Don't crash the server, just log the error
+  }
 });
