@@ -12,8 +12,37 @@ export default function RegistrationReview({
   onConfirm,
   onCancel,
   captainName,
-  guests
+  guests,
+  allProducts
 }) {
+  const getFieldLabel = (productId, fieldId) => {
+    const product = allProducts?.find(p => p.id === productId);
+    const field = product?.fields?.find(f => f.id === fieldId);
+    return field?.label || fieldId;
+  };
+
+  const getProductPrice = (product) => {
+    const eventProduct = allProducts?.find(p => p.id === product.product_id);
+    let price = parseFloat(eventProduct?.price || product.price || 0);
+
+    // Check if any field option has a custom price
+    if (product.field_values && eventProduct?.fields) {
+      for (const field of eventProduct.fields) {
+        if (field.type === 'select' && product.field_values[field.id]) {
+          const selectedValue = product.field_values[field.id];
+          const option = field.options.find(opt => {
+            const optVal = typeof opt === 'string' ? opt : opt.value;
+            return optVal === selectedValue;
+          });
+          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+            price = parseFloat(option.price);
+            break;
+          }
+        }
+      }
+    }
+    return price;
+  };
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <div className="card">
@@ -65,9 +94,14 @@ export default function RegistrationReview({
                     </div>
                     {p.field_values && Object.keys(p.field_values).length > 0 && (
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                        {Object.entries(p.field_values).map(([key, value]) => (
-                          <div key={key}>{key}: <strong>{value}</strong></div>
+                        {Object.entries(p.field_values).map(([fieldId, value]) => (
+                          <div key={fieldId}>{getFieldLabel(p.product_id, fieldId)}: <strong>{value}</strong></div>
                         ))}
+                      </div>
+                    )}
+                    {p.product_id && (
+                      <div style={{ marginTop: '0.2rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        Subtotal: €{(getProductPrice(p) * p.quantity).toFixed(2)}
                       </div>
                     )}
                   </div>
@@ -111,9 +145,14 @@ export default function RegistrationReview({
                           </div>
                           {p.field_values && Object.keys(p.field_values).length > 0 && (
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                              {Object.entries(p.field_values).map(([key, value]) => (
-                                <div key={key}>{key}: <strong>{value}</strong></div>
+                              {Object.entries(p.field_values).map(([fieldId, value]) => (
+                                <div key={fieldId}>{getFieldLabel(p.product_id, fieldId)}: <strong>{value}</strong></div>
                               ))}
+                            </div>
+                          )}
+                          {p.product_id && (
+                            <div style={{ marginTop: '0.2rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              Subtotal: €{(getProductPrice(p) * p.quantity).toFixed(2)}
                             </div>
                           )}
                         </div>

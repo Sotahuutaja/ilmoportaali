@@ -125,11 +125,23 @@ export default function Checkout() {
       field_values: p.field_values || {}
     }));
 
-  // Calculate total amount
-  const totalAmount = paymentProducts.reduce((sum, p) => {
+  // Calculate total amount from all registrations (captain + guests)
+  let totalAmount = 0;
+
+  // Add captain's products
+  totalAmount += paymentProducts.reduce((sum, p) => {
     const product = products.find(prod => prod.id === p.product_id);
     return sum + (parseFloat(product?.price || 0) * p.quantity);
   }, 0);
+
+  // Add guests' products
+  if (registrationData?.guests) {
+    totalAmount += registrationData.guests.reduce((sum, guest) => {
+      return sum + (guest.products?.reduce((guestSum, p) => {
+        return guestSum + (p.price * p.quantity);
+      }, 0) || 0);
+    }, 0);
+  }
 
   return (
     <div style={{ maxWidth: 640, margin: '2rem auto' }}>

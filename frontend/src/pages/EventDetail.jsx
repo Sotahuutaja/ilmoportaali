@@ -601,6 +601,7 @@ export default function EventDetail() {
                 onCancel={handleReviewCancel}
                 captainName={user ? `${user.first_name} ${user.last_name}`.trim() : 'You'}
                 guests={pendingRegistration.guests}
+                allProducts={products}
               />
             </div>
           ) : (
