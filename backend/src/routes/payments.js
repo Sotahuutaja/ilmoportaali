@@ -71,18 +71,7 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
     // Create payment intent (mock or real)
     const paymentIntent = await createPaymentIntent(null, totalCents, req.user.email);
 
-    // Store pending registration in session (temporary, until payment confirmed)
-    if (!req.session) req.session = {};
-    req.session.pendingRegistration = {
-      eventId,
-      userId: req.user.id,
-      teamId,
-      products,
-      comments,
-      paymentIntentId: paymentIntent.id,
-      totalCents,
-      createdAt: Date.now()
-    };
+    // Don't store in session - pass back to frontend instead
 
     console.log(`[PAYMENT] Created intent ${paymentIntent.id} for €${(totalCents / 100).toFixed(2)}`);
 
@@ -105,10 +94,14 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
  * Called AFTER user completes payment in the UI
  */
 router.post('/confirm-payment', requireAuth, async (req, res) => {
-  const { paymentIntentId } = req.body;
+  const { paymentIntentId, eventId, products, teamId, comments } = req.body;
 
   if (!paymentIntentId) {
     return res.status(400).json({ error: 'paymentIntentId is required' });
+  }
+
+  if (!eventId || !products || !Array.isArray(products)) {
+    return res.status(400).json({ error: 'eventId and products are required' });
   }
 
   const client = await pool.connect();
@@ -124,23 +117,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       });
     }
 
-    // Step 2: Retrieve pending registration data from session
-    const pendingReg = req.session?.pendingRegistration;
-
-    if (!pendingReg) {
-      return res.status(400).json({ error: 'No pending registration found. Please start over.' });
-    }
-
-    if (pendingReg.paymentIntentId !== paymentIntentId) {
-      return res.status(400).json({ error: 'Payment intent mismatch' });
-    }
-
-    // Check if session expired (older than 30 minutes)
-    if (Date.now() - pendingReg.createdAt > 30 * 60 * 1000) {
-      return res.status(400).json({ error: 'Session expired. Please start registration again.' });
-    }
-
-    // Step 3: Begin transaction to create registration and record payment
+    // Step 2: Begin transaction to create registration and record payment
     await client.query('BEGIN');
 
     // Create registration
@@ -149,16 +126,27 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
        VALUES ($1, $2, $3, $4) RETURNING id`,
       [
         req.user.id,
-        pendingReg.eventId,
-        pendingReg.teamId || null,
-        pendingReg.comments || null
+        eventId,
+        teamId || null,
+        comments || null
       ]
     );
 
     const registrationId = regResult.rows[0].id;
 
-    // Insert products for this registration
-    for (const { product_id, quantity, field_values } of pendingReg.products) {
+    // Calculate total amount (for invoice)
+    let totalCents = 0;
+    for (const { product_id, quantity, field_values } of products) {
+      const product = await client.query(
+        'SELECT price FROM event_products WHERE id = $1',
+        [product_id]
+      );
+
+      if (product.rows[0]) {
+        totalCents += Math.round(parseFloat(product.rows[0].price) * quantity * 100);
+      }
+
+      // Insert product for this registration
       await client.query(
         `INSERT INTO registration_products (registration_id, product_id, quantity, field_values)
          VALUES ($1, $2, $3, $4)`,
@@ -170,23 +158,18 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     await client.query(
       `INSERT INTO payment_intents (stripe_payment_intent_id, registration_id, amount_cents, status)
        VALUES ($1, $2, $3, $4)`,
-      [paymentIntentId, registrationId, pendingReg.totalCents, paymentIntent.status]
+      [paymentIntentId, registrationId, totalCents, paymentIntent.status]
     );
 
     // Create invoice
     const invoiceNumber = `INV-${registrationId}-${Date.now()}`;
-    const invoiceResult = await client.query(
+    await client.query(
       `INSERT INTO invoices (registration_id, amount_cents, invoice_number, paid_at)
-       VALUES ($1, $2, $3, NOW()) RETURNING id`,
-      [registrationId, pendingReg.totalCents, invoiceNumber]
+       VALUES ($1, $2, $3, NOW())`,
+      [registrationId, totalCents, invoiceNumber]
     );
 
     await client.query('COMMIT');
-
-    // Clear session
-    if (req.session) {
-      delete req.session.pendingRegistration;
-    }
 
     console.log(`[PAYMENT] Confirmed payment ${paymentIntentId}, created registration ${registrationId}`);
 
@@ -195,8 +178,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       message: 'Registration completed successfully',
       registrationId,
       invoiceNumber,
-      amount: pendingReg.totalCents,
-      amountFormatted: `€${(pendingReg.totalCents / 100).toFixed(2)}`
+      amount: totalCents,
+      amountFormatted: `€${(totalCents / 100).toFixed(2)}`
     });
   } catch (err) {
     await client.query('ROLLBACK');

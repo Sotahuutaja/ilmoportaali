@@ -106,7 +106,13 @@ export default function PaymentForm({
       const response = await fetch('/api/payments/confirm-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentIntentId })
+        body: JSON.stringify({
+          paymentIntentId,
+          eventId,
+          products: selectedProducts,
+          teamId: teamId || null,
+          comments: comments || null
+        })
       });
 
       if (!response.ok) {
