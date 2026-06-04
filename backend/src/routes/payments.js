@@ -338,22 +338,31 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
           return price;
         };
 
-        // Fetch product details for the captain with field definitions
-        const captainProductsResult = await pool.query(
-          `SELECT ep.id, ep.name, ep.price, ep.fields, rp.quantity, rp.field_values
-           FROM registration_products rp
-           JOIN event_products ep ON rp.product_id = ep.id
-           WHERE rp.registration_id = $1
-           ORDER BY ep.name`,
-          [captainRegId]
-        );
-
-        const captainProducts = captainProductsResult.rows.map(p => ({
-          name: p.name,
-          price: getProductPriceWithOptions(p.price, p.field_values, p.fields),
-          quantity: p.quantity,
-          field_values: transformFieldValues(p.field_values, p.fields)
-        }));
+        // Get captain products from the request (not from database)
+        // This ensures we only show products paid for in THIS transaction
+        const captainProducts = [];
+        if (captain.products && captain.products.length > 0) {
+          // Fetch product details for the captain products
+          const captainProductDetails = await Promise.all(
+            captain.products.map(async (p) => {
+              const productResult = await pool.query(
+                'SELECT name, price, fields FROM event_products WHERE id = $1',
+                [p.product_id]
+              );
+              if (productResult.rows[0]) {
+                const product = productResult.rows[0];
+                return {
+                  name: product.name,
+                  price: getProductPriceWithOptions(product.price, p.field_values, product.fields),
+                  quantity: p.quantity,
+                  field_values: transformFieldValues(p.field_values, product.fields)
+                };
+              }
+              return null;
+            })
+          );
+          captainProducts.push(...captainProductDetails.filter(p => p !== null));
+        }
 
         // Fetch product field definitions for all guest products
         const guestProductIds = guests.flatMap(g => g.products.map(p => p.product_id)).filter(Boolean);
