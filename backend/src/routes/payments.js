@@ -259,6 +259,33 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
           return transformed;
         };
 
+        // Helper to get product price with field option overrides
+        const getProductPriceWithOptions = (basePrice, fieldValues, fields) => {
+          let price = parseFloat(basePrice);
+          const fieldList = fields || [];
+
+          if (fieldValues && fieldList.length > 0) {
+            for (const field of fieldList) {
+              if (field.type === 'select') {
+                const selectedValue = fieldValues[field.id];
+                if (selectedValue && field.options) {
+                  const option = field.options.find(opt => {
+                    const optVal = typeof opt === 'string' ? opt : opt.value;
+                    return optVal === selectedValue;
+                  });
+
+                  if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+                    price = parseFloat(option.price);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          return price;
+        };
+
         // Fetch product details for the captain with field definitions
         const captainProductsResult = await pool.query(
           `SELECT ep.id, ep.name, ep.price, ep.fields, rp.quantity, rp.field_values
@@ -271,7 +298,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
         const captainProducts = captainProductsResult.rows.map(p => ({
           name: p.name,
-          price: parseFloat(p.price),
+          price: getProductPriceWithOptions(p.price, p.field_values, p.fields),
           quantity: p.quantity,
           field_values: transformFieldValues(p.field_values, p.fields)
         }));
@@ -286,17 +313,46 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
           : { rows: [] };
 
         const productFieldsMap = {};
+        const productPriceMap = {};
         guestProductsFieldsResult.rows.forEach(p => {
           productFieldsMap[p.id] = p.fields || [];
+          productPriceMap[p.id] = p.price;
         });
 
-        // Transform guest products field_values
+        // Helper to get product price with field option overrides
+        const getGuestProductPrice = (productId, fieldValues) => {
+          let price = parseFloat(productPriceMap[productId] || 0);
+          const fields = productFieldsMap[productId] || [];
+
+          if (fieldValues && fields.length > 0) {
+            for (const field of fields) {
+              if (field.type === 'select') {
+                const selectedValue = fieldValues[field.id];
+                if (selectedValue && field.options) {
+                  const option = field.options.find(opt => {
+                    const optVal = typeof opt === 'string' ? opt : opt.value;
+                    return optVal === selectedValue;
+                  });
+
+                  if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+                    price = parseFloat(option.price);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          return price;
+        };
+
+        // Transform guest products field_values and apply price overrides
         const transformedGuests = guests.map(guest => ({
           ...guest,
           products: guest.products.map(p => ({
             ...p,
             name: guestProductsFieldsResult.rows.find(prod => prod.id === p.product_id)?.name || p.name,
-            price: guestProductsFieldsResult.rows.find(prod => prod.id === p.product_id)?.price || p.price,
+            price: getGuestProductPrice(p.product_id, p.field_values),
             field_values: transformFieldValues(p.field_values, productFieldsMap[p.product_id])
           }))
         }));
