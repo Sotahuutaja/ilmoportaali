@@ -328,6 +328,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
            VALUES ($1, $2, $3, $4)`,
           [regId, product_id, quantity, JSON.stringify(field_values || {})]
         );
+        console.log(`[PAYMENT] Inserted registration_product: reg=${regId}, product=${product_id}, qty=${quantity}`);
       }
 
       return regId;

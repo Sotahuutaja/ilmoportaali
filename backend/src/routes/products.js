@@ -19,6 +19,13 @@ router.get('/', async (req, res) => {
       WHERE p.event_id = $1
       ORDER BY p.sort_order ASC, p.name ASC
     `, [req.params.eventId]);
+
+    // Debug logging
+    console.log(`[PRODUCTS] Event ${req.params.eventId} has ${result.rows.length} products`);
+    result.rows.forEach(p => {
+      console.log(`[PRODUCTS] Product: ${p.name} (id=${p.id}), limit=${p.quantity}, remaining=${p.remaining}`);
+    });
+
     res.json({ products: result.rows });
   } catch (err) {
     console.error('Failed to fetch products:', err.message);
