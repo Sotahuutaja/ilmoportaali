@@ -100,15 +100,20 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                         {field.options.map((opt, idx) => {
                           const optValue = typeof opt === 'string' ? opt : opt.value;
                           const optPrice = typeof opt === 'string' ? null : opt.price;
-                          const optQuantity = typeof opt === 'string' ? null : opt.quantity;
+                          const optRemaining = typeof opt === 'string' ? null : (opt.remaining !== undefined ? opt.remaining : opt.quantity);
+                          const isOutOfStock = optRemaining !== null && optRemaining !== undefined && optRemaining <= 0;
                           let optionLabel = optValue;
                           // Show option-specific price or default product price
                           const displayPrice = optPrice !== null && optPrice !== undefined ? optPrice : p.price;
                           optionLabel += ` — €${parseFloat(displayPrice).toFixed(2)}`;
-                          if (optQuantity !== null && optQuantity !== undefined) {
-                            optionLabel += ` (${optQuantity} available)`;
+                          if (optRemaining !== null && optRemaining !== undefined) {
+                            if (isOutOfStock) {
+                              optionLabel += ` (out of stock)`;
+                            } else {
+                              optionLabel += ` (${optRemaining} available)`;
+                            }
                           }
-                          return <option key={idx} value={optValue}>{optionLabel}</option>;
+                          return <option key={idx} value={optValue} disabled={isOutOfStock}>{optionLabel}</option>;
                         })}
                       </select>
                     ) : (
