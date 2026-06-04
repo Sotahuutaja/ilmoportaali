@@ -241,7 +241,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       if (event) {
         // Fetch product details for the captain
         const captainProductsResult = await pool.query(
-          `SELECT ep.name, ep.price, rp.quantity
+          `SELECT ep.name, ep.price, rp.quantity, rp.field_values
            FROM registration_products rp
            JOIN event_products ep ON rp.product_id = ep.id
            WHERE rp.registration_id = $1
@@ -252,7 +252,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
         const captainProducts = captainProductsResult.rows.map(p => ({
           name: p.name,
           price: parseFloat(p.price),
-          quantity: p.quantity
+          quantity: p.quantity,
+          field_values: p.field_values || {}
         }));
 
         // Send email to captain with all registrations summary
@@ -271,7 +272,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
             minute: '2-digit'
           }),
           guestCount: guests.length
-        }, captainProducts).catch(err => console.error('Email send error:', err));
+        }, captainProducts, guests, captain.comments || '').catch(err => console.error('Email send error:', err));
       }
     } catch (err) {
       console.error('[PAYMENT] Failed to send confirmation email:', err.message);

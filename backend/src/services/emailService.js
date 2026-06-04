@@ -16,7 +16,7 @@ if (apiKey) {
  * @param {object} registrationData - Registration details
  * @param {array} products - Array of products with {name, price, quantity}
  */
-async function sendRegistrationConfirmation(userEmail, registrationData, products = []) {
+async function sendRegistrationConfirmation(userEmail, registrationData, products = [], guests = [], captainComments = '') {
   // Don't send if no API key configured
   if (!apiKey) {
     console.log('[EMAIL] SendGrid not configured, skipping email');
@@ -42,7 +42,10 @@ async function sendRegistrationConfirmation(userEmail, registrationData, product
           <tbody>
             ${products.map(p => `
               <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 0.5rem; color: #333;">${p.name}</td>
+                <td style="padding: 0.5rem; color: #333;">
+                  ${p.name}
+                  ${p.field_values && Object.keys(p.field_values).length > 0 ? `<br/><span style="font-size: 0.85rem; color: #999;">${Object.entries(p.field_values).map(([key, val]) => `${key}: ${val}`).join(', ')}</span>` : ''}
+                </td>
                 <td style="padding: 0.5rem; text-align: center; color: #666;">${p.quantity}</td>
                 <td style="padding: 0.5rem; text-align: right; color: #333;">€${(p.price * p.quantity).toFixed(2)}</td>
               </tr>
@@ -75,6 +78,44 @@ async function sendRegistrationConfirmation(userEmail, registrationData, product
 
           ${productsHtml}
 
+          ${captainComments ? `
+            <div style="background: #f9f9f9; padding: 1rem; border-radius: 6px; margin: 1.5rem 0;">
+              <h3 style="margin-top: 0; margin-bottom: 0.5rem; color: #333;">Additional Comments</h3>
+              <p style="margin: 0; color: #555; white-space: pre-wrap;">${captainComments}</p>
+            </div>
+          ` : ''}
+
+          ${guests && guests.length > 0 ? `
+            <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #333;">Guest Registrations</h3>
+            ${guests.map(guest => `
+              <div style="background: #f9f9f9; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                <p style="margin: 0.5rem 0; font-weight: 600;"><strong>${guest.guest_first_name} ${guest.guest_last_name}</strong></p>
+                ${guest.comments ? `<p style="margin: 0.5rem 0; font-size: 0.9rem; color: #666;"><em>Comments: ${guest.comments}</em></p>` : ''}
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background: #f5f5f5; border-bottom: 1px solid #ddd;">
+                      <th style="padding: 0.5rem; text-align: left; color: #333; font-size: 0.9rem;">Product</th>
+                      <th style="padding: 0.5rem; text-align: center; color: #333; font-size: 0.9rem;">Qty</th>
+                      <th style="padding: 0.5rem; text-align: right; color: #333; font-size: 0.9rem;">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${guest.products.map(p => `
+                      <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 0.5rem; color: #333; font-size: 0.9rem;">
+                          ${p.name}
+                          ${p.field_values && Object.keys(p.field_values).length > 0 ? `<br/><span style="font-size: 0.8rem; color: #999;">${Object.entries(p.field_values).map(([key, val]) => `${key}: ${val}`).join(', ')}</span>` : ''}
+                        </td>
+                        <td style="padding: 0.5rem; text-align: center; color: #666; font-size: 0.9rem;">${p.quantity}</td>
+                        <td style="padding: 0.5rem; text-align: right; color: #333; font-size: 0.9rem;">€${(p.price * p.quantity).toFixed(2)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `).join('')}
+          ` : ''}
+
           <p>If you have any questions about your registration, please contact the event organizers.</p>
 
           <p>Best regards,<br/>Ilmoportaali Team</p>
@@ -98,10 +139,19 @@ Invoice Number: ${invoiceNumber}
 Amount Paid: ${amountFormatted}
 
 ${products && products.length > 0 ? `Selected Products:
-${products.map(p => `  - ${p.name} × ${p.quantity} = €${(p.price * p.quantity).toFixed(2)}`).join('\n')}
+${products.map(p => `  - ${p.name}${p.field_values && Object.keys(p.field_values).length > 0 ? ` (${Object.entries(p.field_values).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''} × ${p.quantity} = €${(p.price * p.quantity).toFixed(2)}`).join('\n')}
 
-` : ''}
-If you have any questions about your registration, please contact the event organizers.
+` : ''}${captainComments ? `Additional Comments:
+${captainComments}
+
+` : ''}${guests && guests.length > 0 ? `Guest Registrations:
+${guests.map(guest => `
+${guest.guest_first_name} ${guest.guest_last_name}:${guest.comments ? `
+Comments: ${guest.comments}` : ''}
+${guest.products.map(p => `  - ${p.name}${p.field_values && Object.keys(p.field_values).length > 0 ? ` (${Object.entries(p.field_values).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''} × ${p.quantity} = €${(p.price * p.quantity).toFixed(2)}`).join('\n')}
+`).join('')}
+
+` : ''}If you have any questions about your registration, please contact the event organizers.
 
 Best regards,
 Ilmoportaali Team
@@ -150,7 +200,10 @@ async function sendRegistrationCancellation(userEmail, cancellationData, product
           <tbody>
             ${products.map(p => `
               <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 0.5rem; color: #333;">${p.name}</td>
+                <td style="padding: 0.5rem; color: #333;">
+                  ${p.name}
+                  ${p.field_values && Object.keys(p.field_values).length > 0 ? `<br/><span style="font-size: 0.85rem; color: #999;">${Object.entries(p.field_values).map(([key, val]) => `${key}: ${val}`).join(', ')}</span>` : ''}
+                </td>
                 <td style="padding: 0.5rem; text-align: center; color: #666;">${p.quantity}</td>
                 <td style="padding: 0.5rem; text-align: right; color: #333;">€${(p.price * p.quantity).toFixed(2)}</td>
               </tr>
