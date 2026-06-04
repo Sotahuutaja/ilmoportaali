@@ -3,7 +3,6 @@ const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 const { canManageEvent } = require('../utils/eventAccess');
-const { sendRegistrationCancellation } = require('../services/emailService');
 
 // Helper: validate and reserve products
 async function insertProducts(client, registrationId, products, eventId) {
@@ -237,20 +236,18 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
       [req.user.id, req.params.eventId]
     );
 
-    // Send cancellation email (async, don't wait)
-    sendRegistrationCancellation(req.user.email, {
-      userName: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
-      eventName: eventTitle,
-      registrationId,
-      refundDate: new Date().toLocaleDateString('fi-FI', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }, products).catch(err => console.error('Cancellation email error:', err));
+    // Queue cancellation email for sending
+    try {
+      await pool.query(
+        `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
+         VALUES ($1, $2, $3, $4)`,
+        [registrationId, 'registration_cancellation', req.user.email, 'pending']
+      );
+      console.log('[REGISTRATIONS] Queued cancellation email for registration', registrationId);
+    } catch (err) {
+      console.error('[REGISTRATIONS] Failed to queue cancellation email:', err.message);
+      // Don't block the response - email will be retried
+    }
 
     res.json({ message: 'Registration cancelled' });
   } catch (err) {
@@ -370,20 +367,18 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
       [req.params.registrationId, req.params.eventId]
     );
 
-    // Send cancellation email (async, don't wait)
-    sendRegistrationCancellation(userEmail, {
-      userName,
-      eventName: eventTitle,
-      registrationId,
-      refundDate: new Date().toLocaleDateString('fi-FI', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }, products).catch(err => console.error('Cancellation email error:', err));
+    // Queue cancellation email for sending
+    try {
+      await pool.query(
+        `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
+         VALUES ($1, $2, $3, $4)`,
+        [registrationId, 'registration_cancellation', userEmail, 'pending']
+      );
+      console.log('[REGISTRATIONS] Queued cancellation email for registration', registrationId);
+    } catch (err) {
+      console.error('[REGISTRATIONS] Failed to queue cancellation email:', err.message);
+      // Don't block the response - email will be retried
+    }
 
     res.json({ message: 'Registration cancelled' });
   } catch (err) {

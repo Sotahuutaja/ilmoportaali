@@ -41,12 +41,28 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
       }
 
       const product = await pool.query(
-        'SELECT price, fields FROM event_products WHERE id = $1 AND event_id = $2',
+        'SELECT price, fields, quantity FROM event_products WHERE id = $1 AND event_id = $2',
         [product_id, eventId]
       );
 
       if (!product.rows[0]) {
         return res.status(400).json({ error: `Product ${product_id} not found` });
+      }
+
+      // Validate available quantity for products with stock limits
+      if (product.rows[0].quantity !== null) {
+        const used = await pool.query(
+          'SELECT COALESCE(SUM(quantity), 0) as used FROM registration_products WHERE product_id = $1',
+          [product_id]
+        );
+        const remaining = product.rows[0].quantity - parseInt(used.rows[0].used);
+        if (remaining < quantity) {
+          return res.status(409).json({
+            error: `Product has insufficient stock`,
+            requested: quantity,
+            remaining: remaining
+          });
+        }
       }
 
       let productPrice = parseFloat(product.rows[0].price);
@@ -259,9 +275,25 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
         }
 
         const product = await client.query(
-          'SELECT price, fields FROM event_products WHERE id = $1',
+          'SELECT price, fields, quantity FROM event_products WHERE id = $1',
           [product_id]
         );
+
+        if (!product.rows[0]) {
+          throw new Error(`Product ${product_id} not found`);
+        }
+
+        // Validate available quantity for products with stock limits
+        if (product.rows[0].quantity !== null) {
+          const used = await client.query(
+            'SELECT COALESCE(SUM(quantity), 0) as used FROM registration_products WHERE product_id = $1',
+            [product_id]
+          );
+          const remaining = product.rows[0].quantity - parseInt(used.rows[0].used);
+          if (remaining < quantity) {
+            throw new Error(`Product has insufficient stock (${remaining} remaining, ${quantity} requested)`);
+          }
+        }
 
         if (product.rows[0]) {
           // Calculate price with field option overrides

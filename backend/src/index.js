@@ -3,6 +3,7 @@ const pool = require('./db');
 const { securityHeaders, cors } = require('./middleware/security');
 const { initDb } = require('./initDb');
 const { initPaymentSchema } = require('./initPaymentSchema');
+const { processPendingEmails } = require('./services/emailWorker');
 
 
 // Fail fast if critical environment variables are missing
@@ -82,6 +83,28 @@ app.listen(port, async () => {
     await initPaymentSchema();
   } catch (err) {
     console.error('Payment schema initialization failed (non-blocking):', err.message);
+    // Don't crash the server, just log the error
+  }
+
+  // Start email worker to process queued emails
+  try {
+    console.log('[EMAIL] Starting email worker...');
+    // Process pending emails immediately on startup
+    await processPendingEmails(10);
+
+    // Then process emails every 30 seconds
+    setInterval(async () => {
+      try {
+        await processPendingEmails(10);
+      } catch (err) {
+        console.error('[EMAIL WORKER] Periodic processing error:', err.message);
+        // Don't crash the server, just log the error
+      }
+    }, 30000);
+
+    console.log('[EMAIL] Email worker started (processes every 30 seconds)');
+  } catch (err) {
+    console.error('Email worker initialization failed (non-blocking):', err.message);
     // Don't crash the server, just log the error
   }
 });
