@@ -407,6 +407,7 @@ router.get('/my/list', requireAuth, async (req, res) => {
     `, [req.user.id]);
     res.json({ registrations: result.rows });
   } catch (err) {
+    console.error('[REGISTRATIONS] Failed to fetch my registrations:', err.message);
     res.status(500).json({ error: 'Failed to fetch registrations' });
   }
 });

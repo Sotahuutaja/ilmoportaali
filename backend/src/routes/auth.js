@@ -86,14 +86,14 @@ router.post('/login', loginLimit, async (req, res) => {
     const accessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '15m' }
+      { expiresIn: '1h' }
     );
 
     // Create refresh token (longer-lived)
     const refreshToken = jwt.sign(
       { id: user.id },
       process.env.JWT_SECRET,
-      { expiresIn: '30m' }
+      { expiresIn: '7d' }
     );
 
     // Set httpOnly cookies (inaccessible to JavaScript)

@@ -16,6 +16,23 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    // Set up interceptor to handle 401 (Unauthorized) responses
+    // When token expires, automatically log the user out
+    const interceptor = api.interceptors.response.use(
+      response => response,
+      error => {
+        if (error.response?.status === 401) {
+          setUser(null);
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    // Cleanup interceptor on unmount
+    return () => api.interceptors.response.eject(interceptor);
+  }, []);
+
   const login = (userData) => {
     // Token is now in httpOnly cookie set by login endpoint
     // No need to manually store it
