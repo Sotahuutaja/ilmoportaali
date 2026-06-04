@@ -96,6 +96,11 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
  */
 router.post('/confirm-payment', requireAuth, async (req, res) => {
   const { paymentIntentId, eventId, registrations } = req.body;
+  
+  console.log('[PAYMENT] Received confirm-payment request');
+  console.log('[PAYMENT] paymentIntentId:', paymentIntentId);
+  console.log('[PAYMENT] eventId:', eventId);
+  console.log('[PAYMENT] registrations structure:', JSON.stringify(registrations, null, 2));
 
   if (!paymentIntentId) {
     return res.status(400).json({ error: 'paymentIntentId is required' });
@@ -116,7 +121,9 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
   try {
     // Step 1: Verify payment intent status with Stripe
+    console.log('[PAYMENT] Verifying payment intent:', paymentIntentId);
     const paymentIntent = await getPaymentIntent(paymentIntentId);
+    console.log('[PAYMENT] Payment intent status:', paymentIntent.status);
 
     if (paymentIntent.status !== 'succeeded') {
       return res.status(400).json({
@@ -192,12 +199,18 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     };
 
     // Create captain registration
+    console.log('[PAYMENT] Creating captain registration');
     const captainRegId = await createRegistration(false);
+    console.log('[PAYMENT] Captain registration created:', captainRegId);
     registrationIds.push(captainRegId);
 
     // Create guest registrations
-    for (const guest of guests) {
+    console.log('[PAYMENT] Creating guest registrations, count:', guests.length);
+    for (let i = 0; i < guests.length; i++) {
+      const guest = guests[i];
+      console.log('[PAYMENT] Creating guest', i + 1, ':', guest.guest_first_name);
       const guestRegId = await createRegistration(true, guest);
+      console.log('[PAYMENT] Guest registration created:', guestRegId);
       registrationIds.push(guestRegId);
     }
 
@@ -277,7 +290,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('[PAYMENT ERROR] Failed to confirm payment:', err.message);
-    res.status(500).json({ error: 'Failed to complete registration' });
+    console.error('[PAYMENT ERROR] Full error:', err);
+    res.status(500).json({ error: 'Failed to complete registration', detail: err.message });
   } finally {
     client.release();
   }
