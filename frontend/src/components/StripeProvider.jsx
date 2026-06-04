@@ -4,7 +4,7 @@
  */
 
 import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/js';
+import { loadStripe } from '@stripe/stripe-js';
 
 // Load Stripe or use mock if not configured
 let stripePromise = null;
@@ -21,8 +21,10 @@ if (publishableKey && publishableKey !== 'pk_test_mock_key') {
 }
 
 export default function StripeProvider({ children }) {
+  // In mock mode, stripe is null, so Elements won't render
+  // This is safe - CardElement will still work with mock payment flow
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={stripePromise} options={{}}>
       {children}
     </Elements>
   );
