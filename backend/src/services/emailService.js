@@ -78,9 +78,9 @@ async function sendRegistrationConfirmation(userEmail, registrationData, product
 
           ${productsHtml}
 
-          ${captainComments ? `
+          ${captainComments && productsHtml ? `
             <div style="background: #f9f9f9; padding: 1rem; border-radius: 6px; margin: 1.5rem 0;">
-              <h3 style="margin-top: 0; margin-bottom: 0.5rem; color: #333;">Additional Comments</h3>
+              <h3 style="margin-top: 0; margin-bottom: 0.5rem; color: #333;">Your Comments</h3>
               <p style="margin: 0; color: #555; white-space: pre-wrap;">${captainComments}</p>
             </div>
           ` : ''}
@@ -138,10 +138,10 @@ Registration ID: ${registrationId}
 Invoice Number: ${invoiceNumber}
 Amount Paid: ${amountFormatted}
 
-${products && products.length > 0 ? `Selected Products:
+${products && products.length > 0 ? `Your Products:
 ${products.map(p => `  - ${p.name}${p.field_values && Object.keys(p.field_values).length > 0 ? ` (${Object.entries(p.field_values).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''} × ${p.quantity} = €${(p.price * p.quantity).toFixed(2)}`).join('\n')}
 
-` : ''}${captainComments ? `Additional Comments:
+` : ''}${captainComments && products && products.length > 0 ? `Your Comments:
 ${captainComments}
 
 ` : ''}${guests && guests.length > 0 ? `Guest Registrations:

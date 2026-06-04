@@ -209,12 +209,35 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       // Add products to registration
       for (const { product_id, quantity, field_values } of productsToAdd) {
         const product = await client.query(
-          'SELECT price FROM event_products WHERE id = $1',
+          'SELECT price, fields FROM event_products WHERE id = $1',
           [product_id]
         );
 
         if (product.rows[0]) {
-          totalCents += Math.round(parseFloat(product.rows[0].price) * quantity * 100);
+          // Calculate price with field option overrides
+          let productPrice = parseFloat(product.rows[0].price);
+          const fields = product.rows[0].fields || [];
+
+          if (field_values && fields.length > 0) {
+            for (const field of fields) {
+              if (field.type === 'select') {
+                const selectedValue = field_values[field.id];
+                if (selectedValue && field.options) {
+                  const option = field.options.find(opt => {
+                    const optVal = typeof opt === 'string' ? opt : opt.value;
+                    return optVal === selectedValue;
+                  });
+
+                  if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+                    productPrice = parseFloat(option.price);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          totalCents += Math.round(productPrice * quantity * 100);
         }
 
         // Insert product for this registration
