@@ -12,6 +12,7 @@ export default function PaymentForm({
   selectedProducts,
   teamId,
   comments,
+  totalAmount,
   onSuccess,
   onError
 }) {
@@ -19,9 +20,12 @@ export default function PaymentForm({
   const elements = useElements();
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [amount, setAmount] = useState(null);
   const [mockMode, setMockMode] = useState(false);
   const [error, setError] = useState(null);
+
+  // Format the total amount for display
+  const displayAmount = totalAmount ? `€${totalAmount.toFixed(2)}` : null;
+  const amountInCents = totalAmount ? Math.round(totalAmount * 100) : 0;
 
   // Step 1: Create payment intent
   const handleCreatePaymentIntent = async () => {
@@ -47,7 +51,6 @@ export default function PaymentForm({
 
       const data = await response.json();
 
-      setAmount(data.amountFormatted);
       setMockMode(data.mockMode);
 
       // In mock mode, auto-confirm without card
@@ -143,7 +146,7 @@ export default function PaymentForm({
       )}
 
       <div className="payment-info">
-        <p><strong>Total Amount:</strong> {amount || 'Calculating...'}</p>
+        <p><strong>Total Amount:</strong> {displayAmount || 'Loading...'}</p>
         {mockMode && (
           <div className="mock-badge">
             🧪 Mock Mode: No real payment required for testing
@@ -171,10 +174,10 @@ export default function PaymentForm({
 
       <button
         onClick={handleCreatePaymentIntent}
-        disabled={isProcessing}
+        disabled={isProcessing || !displayAmount}
         className="payment-button"
       >
-        {isProcessing ? 'Processing...' : `Pay ${amount || ''}`}
+        {isProcessing ? 'Processing...' : `Pay ${displayAmount || ''}`}
       </button>
 
       <p className="payment-note">

@@ -110,7 +110,7 @@ export default function Checkout() {
     );
   }
 
-  // Build the products array for PaymentForm
+  // Build the products array for PaymentForm and calculate total
   const paymentProducts = selectedProducts
     .filter(p => p.quantity > 0)
     .map(p => ({
@@ -118,6 +118,12 @@ export default function Checkout() {
       quantity: p.quantity,
       field_values: p.field_values || {}
     }));
+
+  // Calculate total amount
+  const totalAmount = paymentProducts.reduce((sum, p) => {
+    const product = products.find(prod => prod.id === p.product_id);
+    return sum + (parseFloat(product?.price || 0) * p.quantity);
+  }, 0);
 
   return (
     <div style={{ maxWidth: 640, margin: '2rem auto' }}>
@@ -163,6 +169,7 @@ export default function Checkout() {
               selectedProducts={paymentProducts}
               teamId={teamId}
               comments={comments}
+              totalAmount={totalAmount}
               onSuccess={handlePaymentSuccess}
               onError={handlePaymentError}
             />
