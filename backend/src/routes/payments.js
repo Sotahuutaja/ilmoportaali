@@ -7,6 +7,7 @@ const express = require('express');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentIntent, getPaymentIntent, isConfigured } = require('../services/stripeService');
+const { sendRegistrationConfirmation } = require('../services/emailService');
 
 const router = express.Router();
 
@@ -172,6 +173,33 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     await client.query('COMMIT');
 
     console.log(`[PAYMENT] Confirmed payment ${paymentIntentId}, created registration ${registrationId}`);
+
+    // Send confirmation email (async, don't wait for it)
+    try {
+      const eventResult = await pool.query('SELECT title, starts_at FROM events WHERE id = $1', [eventId]);
+      const event = eventResult.rows[0];
+
+      if (event) {
+        sendRegistrationConfirmation(req.user.email, {
+          userName: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+          eventName: event.title,
+          registrationId,
+          invoiceNumber,
+          amountFormatted: `€${(totalCents / 100).toFixed(2)}`,
+          eventDate: new Date(event.starts_at).toLocaleDateString('fi-FI', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        }).catch(err => console.error('Email send error:', err));
+      }
+    } catch (err) {
+      console.error('[PAYMENT] Failed to send confirmation email:', err.message);
+      // Don't block the response - email is not critical
+    }
 
     res.json({
       success: true,
