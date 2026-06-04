@@ -118,13 +118,21 @@ async function initPaymentSchema() {
       }
     }
 
-    // Fix email_queue constraint if it exists with wrong cascade behavior
+    // Fix email_queue column and constraint if it exists with wrong cascade behavior
     try {
+      // Drop the NOT NULL constraint on registration_id (allows NULL after registration deletion)
+      await pool.query(`
+        ALTER TABLE email_queue
+        ALTER COLUMN registration_id DROP NOT NULL;
+      `);
+
+      // Drop old constraint
       await pool.query(`
         ALTER TABLE email_queue
         DROP CONSTRAINT IF EXISTS email_queue_registration_id_fkey;
       `);
 
+      // Add new constraint with SET NULL on delete
       await pool.query(`
         ALTER TABLE email_queue
         ADD CONSTRAINT email_queue_registration_id_fkey
@@ -132,7 +140,7 @@ async function initPaymentSchema() {
       `);
     } catch (err) {
       // Constraint might already be correct or table might not exist yet
-      if (!err.message.includes('does not exist')) {
+      if (!err.message.includes('does not exist') && !err.message.includes('already')) {
         console.warn('[INIT] Warning fixing email_queue constraint:', err.message);
       }
     }

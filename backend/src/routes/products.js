@@ -88,7 +88,18 @@ router.put('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), as
     `, [name, description, price, quantity || null, JSON.stringify(fields), req.params.productId, req.params.eventId]);
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Product not found' });
-    res.json({ product: result.rows[0] });
+
+    // Fetch the product with remaining quantity calculated
+    const withRemaining = await pool.query(`
+      SELECT p.*,
+        COALESCE(p.quantity - SUM(rp.quantity) FILTER (WHERE rp.id IS NOT NULL), p.quantity) as remaining
+      FROM event_products p
+      LEFT JOIN registration_products rp ON p.id = rp.product_id
+      WHERE p.id = $1
+      GROUP BY p.id, p.event_id, p.name, p.description, p.price, p.quantity, p.created_at, p.sort_order, p.fields
+    `, [req.params.productId]);
+
+    res.json({ product: withRemaining.rows[0] });
   } catch (err) {
     console.error('Failed to update product:', err.message);
     res.status(500).json({ error: 'Failed to update product' });

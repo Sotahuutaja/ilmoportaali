@@ -252,7 +252,8 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
     res.json({ message: 'Registration cancelled' });
   } catch (err) {
     console.error('Failed to cancel registration:', err.message);
-    res.status(500).json({ error: 'Failed to cancel registration' });
+    console.error('Full error:', err);
+    res.status(500).json({ error: 'Failed to cancel registration', detail: err.message });
   }
 });
 
@@ -383,7 +384,8 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
     res.json({ message: 'Registration cancelled' });
   } catch (err) {
     console.error('Failed to cancel registration:', err.message);
-    res.status(500).json({ error: 'Failed to cancel registration' });
+    console.error('Full error:', err);
+    res.status(500).json({ error: 'Failed to cancel registration', detail: err.message });
   }
 });
 
