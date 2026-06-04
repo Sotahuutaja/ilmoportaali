@@ -39,7 +39,7 @@ async function createPaymentIntent(registrationId, amountCents, email) {
       amount: amountCents,
       currency: 'eur',
       metadata: {
-        registrationId: registrationId.toString(),
+        registrationId: registrationId ? registrationId.toString() : 'pending',
         email: email
       },
       automatic_payment_methods: { enabled: true },
