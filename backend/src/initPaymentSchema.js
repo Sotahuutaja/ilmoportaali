@@ -88,7 +88,7 @@ async function initPaymentSchema() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS email_queue (
         id SERIAL PRIMARY KEY,
-        registration_id INTEGER NOT NULL,
+        registration_id INTEGER,
         email_type VARCHAR(50) NOT NULL,
         recipient_email VARCHAR(255) NOT NULL,
         subject VARCHAR(255),
@@ -99,7 +99,7 @@ async function initPaymentSchema() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         sent_at TIMESTAMP,
-        FOREIGN KEY (registration_id) REFERENCES registrations(id) ON DELETE CASCADE
+        FOREIGN KEY (registration_id) REFERENCES registrations(id) ON DELETE SET NULL
       );
     `);
 
@@ -115,6 +115,25 @@ async function initPaymentSchema() {
       // Constraint might already exist
       if (!err.message.includes('already exists') && !err.message.includes('duplicate key')) {
         console.warn('[INIT] Warning adding check constraint:', err.message);
+      }
+    }
+
+    // Fix email_queue constraint if it exists with wrong cascade behavior
+    try {
+      await pool.query(`
+        ALTER TABLE email_queue
+        DROP CONSTRAINT IF EXISTS email_queue_registration_id_fkey;
+      `);
+
+      await pool.query(`
+        ALTER TABLE email_queue
+        ADD CONSTRAINT email_queue_registration_id_fkey
+        FOREIGN KEY (registration_id) REFERENCES registrations(id) ON DELETE SET NULL;
+      `);
+    } catch (err) {
+      // Constraint might already be correct or table might not exist yet
+      if (!err.message.includes('does not exist')) {
+        console.warn('[INIT] Warning fixing email_queue constraint:', err.message);
       }
     }
 
