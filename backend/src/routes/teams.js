@@ -39,21 +39,32 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get single team with members
-router.get('/:id', async (req, res) => {
+// Get single team with members (members only visible to team members or admin)
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const team = await pool.query('SELECT * FROM teams WHERE id = $1', [req.params.id]);
     if (!team.rows[0]) return res.status(404).json({ error: 'Team not found' });
 
-    const members = await pool.query(`
-      SELECT tm.*, u.first_name, u.last_name, u.email
-      FROM team_members tm
-      JOIN users u ON tm.user_id = u.id
-      WHERE tm.team_id = $1
-      ORDER BY tm.role DESC, u.last_name ASC, u.first_name ASC
-    `, [req.params.id]);
+    // Check if user is a member of this team or is an admin
+    const membership = await pool.query(
+      'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2',
+      [req.params.id, req.user.id]
+    );
 
-    res.json({ team: team.rows[0], members: members.rows });
+    let members = null;
+    // Only return members if user is a team member or admin
+    if (membership.rows[0] || req.user.role === 'admin') {
+      const membersResult = await pool.query(`
+        SELECT tm.*, u.first_name, u.last_name, u.email
+        FROM team_members tm
+        JOIN users u ON tm.user_id = u.id
+        WHERE tm.team_id = $1
+        ORDER BY tm.role DESC, u.last_name ASC, u.first_name ASC
+      `, [req.params.id]);
+      members = membersResult.rows;
+    }
+
+    res.json({ team: team.rows[0], members });
   } catch (err) {
     console.error('Failed to fetch team:', err.message);
     res.status(500).json({ error: 'Failed to fetch team' });
