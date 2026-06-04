@@ -33,17 +33,39 @@ router.get('/', async (req, res) => {
                   // If option has a quantity limit, calculate remaining
                   if (optionCopy && typeof optionCopy === 'object' && optionCopy.quantity !== null && optionCopy.quantity !== undefined) {
                     // Count how many registrations selected this option
+                    // First, let's get all field_values to debug
+                    const allRegistrations = await pool.query(`
+                      SELECT rp.field_values
+                      FROM registration_products rp
+                      JOIN registrations r ON rp.registration_id = r.id
+                      WHERE rp.product_id = $1 AND r.event_id = $2
+                    `, [product.id, req.params.eventId]);
+
+                    console.log(`[PRODUCTS-DEBUG] All registrations for product ${product.id}: ${JSON.stringify(allRegistrations.rows)}`);
+
+                    // Try multiple LIKE patterns
+                    const likePatterns = [
+                      `%"${field.id}":"${optionCopy.value}"%`,
+                      `%"${field.id}" : "${optionCopy.value}"%`,
+                      `%"${field.id}": "${optionCopy.value}"%`
+                    ];
+
                     const countResult = await pool.query(`
                       SELECT COUNT(*) as count
                       FROM registration_products rp
                       JOIN registrations r ON rp.registration_id = r.id
                       WHERE rp.product_id = $1
                         AND r.event_id = $2
-                        AND rp.field_values::text LIKE $3
-                    `, [product.id, req.params.eventId, `%"${field.id}":"${optionCopy.value}"%`]);
+                        AND (
+                          rp.field_values::text LIKE $3
+                          OR rp.field_values::text LIKE $4
+                          OR rp.field_values::text LIKE $5
+                        )
+                    `, [product.id, req.params.eventId, ...likePatterns]);
 
                     const used = parseInt(countResult.rows[0]?.count || 0);
                     optionCopy.remaining = optionCopy.quantity - used;
+                    console.log(`[PRODUCTS-DEBUG] Option "${optionCopy.value}" (field "${field.id}"): limit=${optionCopy.quantity}, used=${used}, remaining=${optionCopy.remaining}`);
                   }
 
                   return optionCopy;
