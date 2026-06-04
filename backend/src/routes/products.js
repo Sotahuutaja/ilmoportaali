@@ -8,25 +8,76 @@ const { canManageEvent } = require('../utils/eventAccess');
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.*,
-        COALESCE(p.quantity - (
-          SELECT COALESCE(SUM(rp.quantity), 0)
-          FROM registration_products rp
-          JOIN registrations r ON rp.registration_id = r.id
-          WHERE rp.product_id = p.id AND r.event_id = p.event_id
-        ), p.quantity) as remaining
+      SELECT p.*
       FROM event_products p
       WHERE p.event_id = $1
       ORDER BY p.sort_order ASC, p.name ASC
     `, [req.params.eventId]);
 
+    // Process products to calculate per-option remaining quantities
+    const productsWithRemaining = await Promise.all(result.rows.map(async (product) => {
+      const productCopy = { ...product };
+
+      // If product has fields with options that have quantity limits
+      if (productCopy.fields && Array.isArray(productCopy.fields)) {
+        const fieldsWithRemaining = await Promise.all(
+          productCopy.fields.map(async (field) => {
+            const fieldCopy = { ...field };
+
+            // If this is a select field with options that have quantity limits
+            if (field.type === 'select' && field.options && Array.isArray(field.options)) {
+              fieldCopy.options = await Promise.all(
+                field.options.map(async (option) => {
+                  const optionCopy = typeof option === 'string' ? option : { ...option };
+
+                  // If option has a quantity limit, calculate remaining
+                  if (optionCopy && typeof optionCopy === 'object' && optionCopy.quantity !== null && optionCopy.quantity !== undefined) {
+                    // Count how many registrations selected this option
+                    const countResult = await pool.query(`
+                      SELECT COUNT(*) as count
+                      FROM registration_products rp
+                      JOIN registrations r ON rp.registration_id = r.id
+                      WHERE rp.product_id = $1
+                        AND r.event_id = $2
+                        AND rp.field_values::text LIKE $3
+                    `, [product.id, req.params.eventId, `%"${field.id}":"${optionCopy.value}"%`]);
+
+                    const used = parseInt(countResult.rows[0]?.count || 0);
+                    optionCopy.remaining = optionCopy.quantity - used;
+                  }
+
+                  return optionCopy;
+                })
+              );
+            }
+
+            return fieldCopy;
+          })
+        );
+        productCopy.fields = fieldsWithRemaining;
+      }
+
+      return productCopy;
+    }));
+
     // Debug logging
-    console.log(`[PRODUCTS] Event ${req.params.eventId} has ${result.rows.length} products`);
-    result.rows.forEach(p => {
-      console.log(`[PRODUCTS] Product: ${p.name} (id=${p.id}), limit=${p.quantity}, remaining=${p.remaining}`);
+    console.log(`[PRODUCTS] Event ${req.params.eventId} has ${productsWithRemaining.length} products`);
+    productsWithRemaining.forEach(p => {
+      console.log(`[PRODUCTS] Product: ${p.name} (id=${p.id})`);
+      if (p.fields) {
+        p.fields.forEach(f => {
+          if (f.type === 'select' && f.options) {
+            f.options.forEach(opt => {
+              if (typeof opt === 'object' && opt.remaining !== undefined) {
+                console.log(`[PRODUCTS]   Option: ${opt.value}, remaining=${opt.remaining}`);
+              }
+            });
+          }
+        });
+      }
     });
 
-    res.json({ products: result.rows });
+    res.json({ products: productsWithRemaining });
   } catch (err) {
     console.error('Failed to fetch products:', err.message);
     res.status(500).json({ error: 'Failed to fetch products' });
