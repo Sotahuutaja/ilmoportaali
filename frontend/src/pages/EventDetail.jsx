@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import { formatDateTime } from '../utils/datetime';
+import RegistrationReview from '../components/RegistrationReview';
 
 function ProductSelector({ products, selected, setSelected, onToggle, fieldValues, setFieldValues }) {
   // Calculate effective price based on selected dropdown options
@@ -283,6 +284,8 @@ export default function EventDetail() {
   const [teamRegistrations, setTeamRegistrations] = useState([]);
   const [isRegistered, setIsRegistered] = useState(false);
   const [allowedTeams, setAllowedTeams] = useState([]);
+  const [showReview, setShowReview] = useState(false);
+  const [pendingRegistration, setPendingRegistration] = useState(null);
 
   // Guest registration state
   const [showGuestForm, setShowGuestForm] = useState(false);
@@ -357,19 +360,54 @@ export default function EventDetail() {
     setError(''); setMessage('');
     const fieldError = validateFields(selectedProducts, fieldValues);
     if (fieldError) return setError(fieldError);
-    const products = buildProducts(selectedProducts, fieldValues);
-    if (products.length === 0) {
+    const productsToRegister = buildProducts(selectedProducts, fieldValues);
+    if (productsToRegister.length === 0) {
       return setError('Please select at least one product to register.');
     }
 
-    // Redirect to checkout page with registration details in URL params
+    // Build product details with names and prices from the event products list
+    const productDetails = productsToRegister.map(p => {
+      const eventProduct = products.find(ep => ep.id === p.product_id);
+      return {
+        product_id: p.product_id,
+        quantity: p.quantity,
+        field_values: p.field_values,
+        name: eventProduct?.name || 'Unknown',
+        price: parseFloat(eventProduct?.price || 0)
+      };
+    });
+
+    // Calculate total
+    const totalAmount = productDetails.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+
+    // Get team name
+    const teamName = selectedTeam ? myTeams.find(t => t.id === parseInt(selectedTeam))?.name : null;
+
+    // Store and show review
+    setPendingRegistration({
+      products: productDetails,
+      teamId: selectedTeam ? parseInt(selectedTeam) : null,
+      teamName,
+      comments,
+      totalAmount
+    });
+    setShowReview(true);
+  };
+
+  const handleReviewConfirm = () => {
+    // Redirect to checkout with the registration details
     const checkoutParams = new URLSearchParams({
-      products: JSON.stringify(products),
-      team: selectedTeam || '',
-      comments
+      products: JSON.stringify(pendingRegistration.products),
+      team: pendingRegistration.teamId || '',
+      comments: pendingRegistration.comments
     });
 
     navigate(`/events/${id}/checkout?${checkoutParams.toString()}`);
+  };
+
+  const handleReviewCancel = () => {
+    setShowReview(false);
+    setPendingRegistration(null);
   };
 
   const cancel = async () => {
@@ -507,12 +545,26 @@ export default function EventDetail() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn btn-primary" onClick={register}>Continue to payment</button>
-          {isRegistered && (
-            <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
+          {showReview && pendingRegistration ? (
+            <div style={{ marginTop: '2rem' }}>
+              <RegistrationReview
+                products={pendingRegistration.products}
+                eventTitle={event.title}
+                teamName={pendingRegistration.teamName}
+                comments={pendingRegistration.comments}
+                totalAmount={pendingRegistration.totalAmount}
+                onConfirm={handleReviewConfirm}
+                onCancel={handleReviewCancel}
+              />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-primary" onClick={register}>Continue to payment</button>
+            {isRegistered && (
+              <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
+            )}
+            </div>
           )}
-          </div>
         </>
         );
       })()}
