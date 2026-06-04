@@ -23,6 +23,7 @@ export default function Checkout() {
   const [comments, setComments] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [paymentSuccess, setPaymentSuccess] = useState(null);
 
   useEffect(() => {
     // Redirect if not logged in
@@ -68,8 +69,12 @@ export default function Checkout() {
   }, [id, user, navigate, searchParams]);
 
   const handlePaymentSuccess = (paymentData) => {
-    // Redirect to success page or back to event
-    navigate(`/events/${id}?registered=true`);
+    // Show success message on this page
+    setPaymentSuccess({
+      registrationId: paymentData.registrationId,
+      invoiceNumber: paymentData.invoiceNumber,
+      amount: paymentData.amountFormatted
+    });
   };
 
   const handlePaymentError = (errorMessage) => {
@@ -161,26 +166,73 @@ export default function Checkout() {
           )}
         </div>
 
-        {/* Payment Form */}
-        {paymentProducts.length > 0 && (
-          <>
-            <PaymentForm
-              eventId={parseInt(id)}
-              selectedProducts={paymentProducts}
-              teamId={teamId}
-              comments={comments}
-              totalAmount={totalAmount}
-              onSuccess={handlePaymentSuccess}
-              onError={handlePaymentError}
-            />
+        {/* Success Message */}
+        {paymentSuccess ? (
+          <div style={{ marginTop: '1.5rem' }}>
+            <div style={{
+              background: '#d4edda',
+              border: '1px solid #c3e6cb',
+              color: '#155724',
+              padding: '1rem',
+              borderRadius: '6px',
+              marginBottom: '1.5rem'
+            }}>
+              <h3 style={{ marginTop: 0, marginBottom: '0.5rem' }}>✓ Payment Successful!</h3>
+              <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
+                Your registration for <strong>{event.title}</strong> has been confirmed.
+              </p>
+              <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
+                Registration ID: <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{paymentSuccess.registrationId}</code>
+              </p>
+              <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
+                Invoice: <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{paymentSuccess.invoiceNumber}</code>
+              </p>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#0c5460', fontWeight: 500 }}>
+                A confirmation email has been sent to your email address.
+              </p>
+            </div>
 
-            <button
-              onClick={handleCancel}
-              className="btn btn-secondary"
-              style={{ width: '100%', marginTop: '1rem' }}
-            >
-              Cancel and go back
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => navigate(`/events/${id}`)}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                Back to event
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+              >
+                Back to events
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Payment Form */}
+            {paymentProducts.length > 0 && (
+              <>
+                <PaymentForm
+                  eventId={parseInt(id)}
+                  selectedProducts={paymentProducts}
+                  teamId={teamId}
+                  comments={comments}
+                  totalAmount={totalAmount}
+                  onSuccess={handlePaymentSuccess}
+                  onError={handlePaymentError}
+                />
+
+                <button
+                  onClick={handleCancel}
+                  className="btn btn-secondary"
+                  style={{ width: '100%', marginTop: '1rem' }}
+                >
+                  Cancel and go back
+                </button>
+              </>
+            )}
           </>
         )}
       </div>
