@@ -155,9 +155,12 @@ export default function Teams() {
           color: 'white'
           }}>{t.role} · {t.status}</span>
         </div>
-        <button className="btn btn-danger" onClick={() => handleLeave(t.id, t.name)}>
-          Leave
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn btn-secondary" onClick={() => selectTeam(t)}>View</button>
+          <button className="btn btn-danger" onClick={() => handleLeave(t.id, t.name)}>
+            Leave
+          </button>
+        </div>
         </div>
       ))}
           </div>

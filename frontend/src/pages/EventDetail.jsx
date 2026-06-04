@@ -301,6 +301,7 @@ export default function EventDetail() {
   const [guestFieldValues, setGuestFieldValues] = useState({});
   const [guestComments, setGuestComments] = useState('');
   const [captainTeams, setCaptainTeams] = useState([]);
+  const [pendingGuests, setPendingGuests] = useState([]);
 
   useEffect(() => {
     api.get(`/events/${id}`).then(res => setEvent(res.data.event));
@@ -384,29 +385,42 @@ export default function EventDetail() {
       };
     });
 
-    // Calculate total
-    const totalAmount = productDetails.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+    // Calculate total for captain
+    const captainTotal = productDetails.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+
+    // Calculate total for all guests
+    const guestsTotal = pendingGuests.reduce((sum, guest) => {
+      const guestTotal = guest.products.reduce((s, p) => s + (p.price * p.quantity), 0);
+      return sum + guestTotal;
+    }, 0);
+
+    // Grand total
+    const totalAmount = captainTotal + guestsTotal;
 
     // Get team name
     const teamName = selectedTeam ? myTeams.find(t => t.id === parseInt(selectedTeam))?.name : null;
 
     // Store and show review
     setPendingRegistration({
-      products: productDetails,
-      teamId: selectedTeam ? parseInt(selectedTeam) : null,
-      teamName,
-      comments,
+      captain: {
+        products: productDetails,
+        teamId: selectedTeam ? parseInt(selectedTeam) : null,
+        teamName,
+        comments
+      },
+      guests: pendingGuests,
       totalAmount
     });
     setShowReview(true);
   };
 
   const handleReviewConfirm = () => {
-    // Redirect to checkout with the registration details
+    // Redirect to checkout with captain + guests data
     const checkoutParams = new URLSearchParams({
-      products: JSON.stringify(pendingRegistration.products),
-      team: pendingRegistration.teamId || '',
-      comments: pendingRegistration.comments
+      registrations: JSON.stringify({
+        captain: pendingRegistration.captain,
+        guests: pendingRegistration.guests
+      })
     });
 
     navigate(`/events/${id}/checkout?${checkoutParams.toString()}`);
@@ -431,7 +445,7 @@ export default function EventDetail() {
     }
   };
 
-  const registerGuest = async (e) => {
+  const registerGuest = (e) => {
     e.preventDefault();
     setError(''); setMessage('');
     const fieldError = validateFields(guestProducts, guestFieldValues);
@@ -440,16 +454,36 @@ export default function EventDetail() {
     if (guestProductList.length === 0) {
       return setError('Please select at least one product for the guest.');
     }
-    try {
-      await api.post(`/registrations/${id}/guest`, {
-        ...guestForm,
-        team_id: parseInt(guestForm.team_id),
-        products: guestProductList,
-        comments: guestComments
-      });
-      setMessage(`Guest ${guestForm.guest_first_name} registered successfully!`);
-      setShowGuestForm(false);
-      setGuestForm({
+
+    // Build guest product details
+    const guestProductDetails = guestProductList.map(p => {
+      const eventProduct = products.find(ep => ep.id === p.product_id);
+      return {
+        product_id: p.product_id,
+        quantity: p.quantity,
+        field_values: p.field_values,
+        name: eventProduct?.name || 'Unknown',
+        price: parseFloat(eventProduct?.price || 0)
+      };
+    });
+
+    // Add guest to pending guests (not to backend yet)
+    const newGuest = {
+      id: Date.now(), // Temporary ID for managing UI
+      guest_first_name: guestForm.guest_first_name,
+      guest_last_name: guestForm.guest_last_name,
+      guest_email: guestForm.guest_email,
+      year_of_birth: parseInt(guestForm.year_of_birth),
+      gender: guestForm.gender,
+      team_id: parseInt(guestForm.team_id),
+      products: guestProductDetails,
+      comments: guestComments
+    };
+
+    setPendingGuests([...pendingGuests, newGuest]);
+    setMessage(`Guest ${guestForm.guest_first_name} added!`);
+    setShowGuestForm(false);
+    setGuestForm({
       guest_first_name: '',
       guest_last_name: '',
       guest_email: '',
@@ -457,18 +491,16 @@ export default function EventDetail() {
       gender: '',
       team_id: ''
     });
-      setGuestProducts({});
-      setGuestFieldValues({});
-      setGuestComments('');
-      setEvent(e => ({ ...e, registration_count: e.registration_count + 1 }));
-      const regs = await api.get(`/registrations/${id}`).catch(() => null);
-      if (regs) setTeamRegistrations(regs.data.registrations);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Guest registration failed');
-    }
+    setGuestProducts({});
+    setGuestFieldValues({});
+    setGuestComments('');
   };
   
-  const handleDeleteTeamReg = async (registrationId, name) => {
+  const removeGuestFromList = (guestId) => {
+    setPendingGuests(pendingGuests.filter(g => g.id !== guestId));
+  };
+
+    const handleDeleteTeamReg = async (registrationId, name) => {
     if (!window.confirm(`Delete registration for ${name}?`)) return;
     try {
       await api.delete(`/registrations/${id}/registrations/${registrationId}`);
@@ -562,13 +594,15 @@ export default function EventDetail() {
           {showReview && pendingRegistration ? (
             <div style={{ marginTop: '2rem' }}>
               <RegistrationReview
-                products={pendingRegistration.products}
+                products={pendingRegistration.captain.products}
                 eventTitle={event.title}
-                teamName={pendingRegistration.teamName}
-                comments={pendingRegistration.comments}
+                teamName={pendingRegistration.captain.teamName}
+                comments={pendingRegistration.captain.comments}
                 totalAmount={pendingRegistration.totalAmount}
                 onConfirm={handleReviewConfirm}
                 onCancel={handleReviewCancel}
+                captainName={user ? `${user.first_name} ${user.last_name}`.trim() : 'You'}
+                guests={pendingRegistration.guests}
               />
             </div>
           ) : (
@@ -661,6 +695,42 @@ export default function EventDetail() {
 
                     <button type="submit" className="btn btn-primary">Register guest</button>
                   </form>
+                )}
+
+                {/* Show pending guests */}
+                {pendingGuests.length > 0 && (
+                  <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: '6px' }}>
+                    <h4 style={{ marginTop: 0, marginBottom: '1rem' }}>Guests to register ({pendingGuests.length})</h4>
+                    {pendingGuests.map((guest) => (
+                      <div key={guest.id} style={{
+                        padding: '0.8rem',
+                        background: 'var(--surface-3)',
+                        borderRadius: '4px',
+                        marginBottom: '0.5rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <div>
+                          <strong>{guest.guest_first_name} {guest.guest_last_name}</strong>
+                          <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            {guest.guest_email}
+                          </p>
+                          <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {guest.products.length} product{guest.products.length !== 1 ? 's' : ''} •
+                            €{guest.products.reduce((s, p) => s + (p.price * p.quantity), 0).toFixed(2)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => removeGuestFromList(guest.id)}
+                          className="btn btn-secondary"
+                          style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
