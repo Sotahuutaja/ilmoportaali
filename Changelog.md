@@ -2,6 +2,43 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## [Latest] — 2026-06-04
+
+### Security Fixes
+
+- **Payment Intent Ownership Verification** — Added email validation to ensure authenticated user owns the payment intent being confirmed, preventing account compromise from token hijacking
+- **Quantity Validation** — Added positive integer validation on product quantities in payment endpoints, preventing price manipulation via negative quantities
+- **Duplicate Registration Prevention** — Implemented SELECT...FOR UPDATE row locking during payment confirmation to prevent race conditions from concurrent payments
+- **Payment Amount Reconciliation** — Frontend now sends expected amount to backend for validation against Stripe payment amount, catching price calculation discrepancies
+
+### Data Integrity
+
+- **Payment Status Tracking** — Added automatic update of `payment_status = 'paid'` for all registrations (captain and guests) after successful payment
+- **Guest Registration Constraints** — Added CHECK constraint ensuring guest registrations have either user_id or registered_by set, preventing orphaned records
+- **Per-Option Inventory Tracking** — Fixed quantity limit tracking to work correctly per product option/variant (e.g., Size S: 5, M: 4, L: 3 are now independently tracked)
+- **Product Quantity Filtering** — Fixed product remaining quantity calculation to filter by current event only (was counting registrations across all events)
+
+### Email Delivery System
+
+- **Email Queue with Retry Logic** — Implemented email_queue table with automatic retry mechanism (up to 3 attempts) for reliable email delivery
+- **Email Worker Service** — Added background email worker that processes 10 queued emails every 30 seconds with automatic retries on failure
+- **Cancellation Email Reliability** — Fixed cancellation emails by storing full email content in queue before registration deletion (prevents loss via CASCADE delete)
+- **Email Label Transformation** — Fixed confirmation emails to display readable field labels instead of IDs (e.g., "Size: Large" instead of "ke2r7ef: L")
+
+### Features & Improvements
+
+- **Guest Data Persistence** — Guest registration data now persists to localStorage during checkout, recovering from page refresh
+- **Idempotency Protection** — Added check to prevent duplicate registrations from concurrent payment confirmation attempts
+- **Out-of-Stock Options** — Product options are now disabled and show "out of stock" when inventory reaches 0, preventing overselling
+- **Stock Recount on Cancellation** — When a registration is cancelled, the product option's stock automatically increases (dynamic calculation)
+
+### Bug Fixes
+
+- **Frontend Quantity Display** — Fixed EventDetail component to display calculated remaining quantities instead of static limits
+- **Field Value Type Validation** — Added validation to ensure field_values is an object, catching malformed input early
+
+---
+
 ## [Latest] — 2026-06-03
 
 ### Security Fixes
