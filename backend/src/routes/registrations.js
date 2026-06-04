@@ -317,12 +317,14 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
     }
 
     // Fetch registration details and user info before deleting
+    // Handle both regular (with user_id) and guest registrations (without user_id)
     const regResult = await pool.query(
-      `SELECT r.id, r.user_id, u.email, u.first_name, u.last_name,
+      `SELECT r.id, r.user_id, r.is_guest, r.guest_first_name, r.guest_last_name, r.guest_email,
+              u.email, u.first_name, u.last_name,
               e.title, e.starts_at,
               rp.product_id, ep.name, ep.price, rp.quantity
        FROM registrations r
-       JOIN users u ON r.user_id = u.id
+       LEFT JOIN users u ON r.user_id = u.id
        JOIN events e ON r.event_id = e.id
        LEFT JOIN registration_products rp ON r.id = rp.registration_id
        LEFT JOIN event_products ep ON rp.product_id = ep.id
@@ -334,8 +336,12 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
       return res.status(404).json({ error: 'Registration not found' });
     }
 
-    const userEmail = regResult.rows[0].email;
-    const userName = `${regResult.rows[0].first_name || ''} ${regResult.rows[0].last_name || ''}`.trim() || userEmail;
+    // Get email and name from either user or guest fields
+    const isGuest = regResult.rows[0].is_guest;
+    const userEmail = isGuest ? regResult.rows[0].guest_email : regResult.rows[0].email;
+    const userName = isGuest
+      ? `${regResult.rows[0].guest_first_name || ''} ${regResult.rows[0].guest_last_name || ''}`.trim()
+      : `${regResult.rows[0].first_name || ''} ${regResult.rows[0].last_name || ''}`.trim() || regResult.rows[0].email;
     const eventTitle = regResult.rows[0].title;
     const registrationId = regResult.rows[0].id;
 
