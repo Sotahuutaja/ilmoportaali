@@ -166,9 +166,9 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
     }
 
     const reg = await client.query(`
-      INSERT INTO registrations (event_id, team_id, is_guest, guest_first_name, guest_last_name, guest_email, comments)
-      VALUES ($1, $2, TRUE, $3, $4, $5, $6) RETURNING *
-    `, [req.params.eventId, team_id, guest_first_name, guest_last_name, guest_email, comments || null]);
+      INSERT INTO registrations (event_id, team_id, is_guest, guest_first_name, guest_last_name, guest_email, comments, registered_by)
+      VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7) RETURNING *
+    `, [req.params.eventId, team_id, guest_first_name, guest_last_name, guest_email, comments || null, req.user.id]);
 
     if (products.length > 0) {
       await insertProducts(client, reg.rows[0].id, products, req.params.eventId);
@@ -281,6 +281,7 @@ router.get('/:eventId', requireAuth, async (req, res) => {
         r.*,
         u.first_name, u.last_name, u.email as user_email,
         t.name as team_name,
+        COALESCE(u.email, reg_by.email) as email_for_export,
         json_agg(json_build_object(
           'product_id', rp.product_id,
           'name', ep.name,
@@ -292,10 +293,11 @@ router.get('/:eventId', requireAuth, async (req, res) => {
       FROM registrations r
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN teams t ON r.team_id = t.id
+      LEFT JOIN users reg_by ON r.registered_by = reg_by.id
       LEFT JOIN registration_products rp ON r.id = rp.registration_id
       LEFT JOIN event_products ep ON rp.product_id = ep.id
       WHERE r.event_id = $1
-      GROUP BY r.id, u.first_name, u.last_name, u.email, t.name
+      GROUP BY r.id, u.first_name, u.last_name, u.email, t.name, reg_by.email
       ORDER BY r.created_at ASC
     `, [req.params.eventId]);
 

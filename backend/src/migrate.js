@@ -110,6 +110,7 @@ async function migrate() {
     ALTER TABLE teams ADD COLUMN IF NOT EXISTS auto_approve_joins BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS year_of_birth INTEGER;
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS gender TEXT;
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS registered_by INTEGER REFERENCES users(id);
   `);
 
   console.log('Migration complete');

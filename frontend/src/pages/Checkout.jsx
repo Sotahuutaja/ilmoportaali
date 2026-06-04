@@ -86,6 +86,25 @@ export default function Checkout() {
     navigate(`/events/${id}`);
   };
 
+  // Helper to get readable field label from product fields
+  const getFieldLabel = (fieldId) => {
+    for (const product of products) {
+      if (product.fields) {
+        const field = product.fields.find(f => f.id === fieldId);
+        if (field) return field.label || field.name || fieldId;
+      }
+    }
+    return fieldId;
+  };
+
+  // Helper to format field_values for display
+  const formatFieldValues = (fieldValues, productId) => {
+    if (!fieldValues || Object.keys(fieldValues).length === 0) return '';
+    return Object.entries(fieldValues)
+      .map(([fieldId, value]) => `${getFieldLabel(fieldId)}: ${value}`)
+      .join(', ');
+  };
+
   if (!user) {
     return (
       <div style={{ maxWidth: 640, margin: '2rem auto' }}>
@@ -164,10 +183,18 @@ export default function Checkout() {
               <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 600 }}>You (Captain)</p>
               {paymentProducts.map((p, idx) => {
                 const product = products.find(prod => prod.id === p.product_id);
+                const fieldValuesText = formatFieldValues(p.field_values, p.product_id);
                 return (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', fontSize: '0.95rem' }}>
-                    <span>{product?.name || 'Unknown'} ×{p.quantity}</span>
-                    <span>€{(parseFloat(product?.price || 0) * p.quantity).toFixed(2)}</span>
+                  <div key={idx}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', fontSize: '0.95rem' }}>
+                      <span>{product?.name || 'Unknown'} ×{p.quantity}</span>
+                      <span>€{(parseFloat(product?.price || 0) * p.quantity).toFixed(2)}</span>
+                    </div>
+                    {fieldValuesText && (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', paddingLeft: '0.5rem', marginBottom: '0.3rem' }}>
+                        {fieldValuesText}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -184,12 +211,22 @@ export default function Checkout() {
             registrationData.guests.map((guest, gIdx) => (
               <div key={gIdx} style={{ marginBottom: gIdx < registrationData.guests.length - 1 ? '1rem' : '0', paddingBottom: gIdx < registrationData.guests.length - 1 ? '1rem' : '0', borderBottom: gIdx < registrationData.guests.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 600 }}>Guest: {guest.guest_first_name} {guest.guest_last_name}</p>
-                {guest.products.map((p, idx) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', fontSize: '0.95rem' }}>
-                    <span>{p.name} ×{p.quantity}</span>
-                    <span>€{(p.price * p.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
+                {guest.products.map((p, idx) => {
+                  const fieldValuesText = formatFieldValues(p.field_values, p.product_id);
+                  return (
+                    <div key={idx}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', fontSize: '0.95rem' }}>
+                        <span>{p.name} ×{p.quantity}</span>
+                        <span>€{(p.price * p.quantity).toFixed(2)}</span>
+                      </div>
+                      {fieldValuesText && (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', paddingLeft: '0.5rem', marginBottom: '0.3rem' }}>
+                          {fieldValuesText}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ))
           )}

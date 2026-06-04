@@ -177,7 +177,7 @@ export default function EventRegistrants() {
   const rows = registrations.map(r => {
     const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
     const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
-    const email = r.is_guest ? r.guest_email : r.user_email;
+    const email = r.email_for_export || (r.is_guest ? r.guest_email : r.user_email);
     const team = r.team_name || '';
     const products = r.products
       ? r.products.map(p => {
@@ -215,13 +215,13 @@ export default function EventRegistrants() {
 
   const filtered = registrations.filter(r => {
     const name = r.is_guest
-      ? `${r.guest_first_name || ''} ${r.guest_last_name || ''}`.trim() || r.guest_email
+      ? `${r.guest_first_name || ''} ${r.guest_last_name || ''}`.trim()
       : `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.user_email;
+    const email = r.email_for_export || (r.is_guest ? r.guest_email : r.user_email);
     const term = search.toLowerCase();
     return (
       name?.toLowerCase().includes(term) ||
-      r.user_email?.toLowerCase().includes(term) ||
-      r.guest_email?.toLowerCase().includes(term) ||
+      email?.toLowerCase().includes(term) ||
       r.team_name?.toLowerCase().includes(term)
     );
   });
@@ -301,9 +301,9 @@ export default function EventRegistrants() {
           <tbody>
             {filtered.map(r => {
               const name = r.is_guest
-                ? `${r.guest_first_name || ''} ${r.guest_last_name || ''}`.trim() || r.guest_email
+                ? `${r.guest_first_name || ''} ${r.guest_last_name || ''}`.trim()
                 : `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.user_email;
-              const email = r.is_guest ? r.guest_email : r.user_email;
+              const email = r.email_for_export || (r.is_guest ? r.guest_email : r.user_email);
               return (
                 <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '0.8rem 1rem' }}>

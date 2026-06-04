@@ -145,8 +145,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       if (isGuest) {
         // Create guest registration
         regResult = await client.query(
-          `INSERT INTO registrations (user_id, event_id, team_id, comments, is_guest, guest_first_name, guest_last_name, year_of_birth, gender)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+          `INSERT INTO registrations (user_id, event_id, team_id, comments, is_guest, guest_first_name, guest_last_name, year_of_birth, gender, registered_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
           [
             null,
             eventId,
@@ -156,7 +156,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
             guestData.guest_first_name,
             guestData.guest_last_name,
             guestData.year_of_birth || null,
-            guestData.gender || null
+            guestData.gender || null,
+            req.user.id
           ]
         );
       } else {
@@ -239,9 +240,28 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       const event = eventResult.rows[0];
 
       if (event) {
-        // Fetch product details for the captain
+        // Helper to transform field_values from IDs to human-readable labels
+        const transformFieldValues = (fieldValues, productFields) => {
+          if (!fieldValues || Object.keys(fieldValues).length === 0) return {};
+
+          const fields = productFields || [];
+          const transformed = {};
+
+          for (const [fieldId, fieldValue] of Object.entries(fieldValues)) {
+            const field = fields.find(f => f.id === fieldId);
+            if (field) {
+              transformed[field.label || field.name || fieldId] = fieldValue;
+            } else {
+              transformed[fieldId] = fieldValue;
+            }
+          }
+
+          return transformed;
+        };
+
+        // Fetch product details for the captain with field definitions
         const captainProductsResult = await pool.query(
-          `SELECT ep.name, ep.price, rp.quantity, rp.field_values
+          `SELECT ep.id, ep.name, ep.price, ep.fields, rp.quantity, rp.field_values
            FROM registration_products rp
            JOIN event_products ep ON rp.product_id = ep.id
            WHERE rp.registration_id = $1
@@ -253,7 +273,32 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
           name: p.name,
           price: parseFloat(p.price),
           quantity: p.quantity,
-          field_values: p.field_values || {}
+          field_values: transformFieldValues(p.field_values, p.fields)
+        }));
+
+        // Fetch product field definitions for all guest products
+        const guestProductIds = guests.flatMap(g => g.products.map(p => p.product_id)).filter(Boolean);
+        const guestProductsFieldsResult = guestProductIds.length > 0
+          ? await pool.query(
+              `SELECT id, name, price, fields FROM event_products WHERE id = ANY($1)`,
+              [guestProductIds]
+            )
+          : { rows: [] };
+
+        const productFieldsMap = {};
+        guestProductsFieldsResult.rows.forEach(p => {
+          productFieldsMap[p.id] = p.fields || [];
+        });
+
+        // Transform guest products field_values
+        const transformedGuests = guests.map(guest => ({
+          ...guest,
+          products: guest.products.map(p => ({
+            ...p,
+            name: guestProductsFieldsResult.rows.find(prod => prod.id === p.product_id)?.name || p.name,
+            price: guestProductsFieldsResult.rows.find(prod => prod.id === p.product_id)?.price || p.price,
+            field_values: transformFieldValues(p.field_values, productFieldsMap[p.product_id])
+          }))
         }));
 
         // Send email to captain with all registrations summary
@@ -272,7 +317,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
             minute: '2-digit'
           }),
           guestCount: guests.length
-        }, captainProducts, guests, captain.comments || '').catch(err => console.error('Email send error:', err));
+        }, captainProducts, transformedGuests, captain.comments || '').catch(err => console.error('Email send error:', err));
       }
     } catch (err) {
       console.error('[PAYMENT] Failed to send confirmation email:', err.message);
