@@ -368,8 +368,8 @@ export default function EventDetail() {
     const fieldError = validateFields(selectedProducts, fieldValues);
     if (fieldError) return setError(fieldError);
     const productsToRegister = buildProducts(selectedProducts, fieldValues);
-    if (productsToRegister.length === 0) {
-      return setError('Please select at least one product to register.');
+    if (productsToRegister.length === 0 && pendingGuests.length === 0) {
+      return setError('Please select at least one product or add guests.');
     }
 
     // Build product details with names and prices from the event products list
