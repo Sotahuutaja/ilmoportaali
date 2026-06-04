@@ -39,7 +39,7 @@ All notable changes to Ilmoportaali are documented in this file.
 
 ---
 
-## [Latest] — 2026-06-03
+## 2026-06-03
 
 ### Security Fixes
 
@@ -66,6 +66,92 @@ All notable changes to Ilmoportaali are documented in this file.
 
 ---
 
-## Previous Versions
+## 2026-06-02
 
-For security audit findings and remediation details, see `SECURITY_AUDIT_REPORT.md`.
+### Security Fixes
+
+- **CRITICAL: Fixed CORS Wildcard Misconfiguration** — Replaced insecure `|| '*'` fallback with whitelist-based CORS
+  - API now only accepts requests from whitelisted origins (APP_URL + localhost for development)
+  - Prevents CSRF attacks and cross-origin data theft
+  - Rejects requests from unauthorized origins
+  - Logs privilege escalation attempts
+- **CRITICAL: Fixed JWT Role Verification** — No longer trusts JWT role claims without database verification
+  - `requireRole()` middleware now re-verifies role against database on each request
+  - Prevents privilege escalation if JWT_SECRET is compromised
+  - Detects and logs unauthorized role claims
+  - Updated all route files to pass pool parameter to requireRole middleware
+
+### Features
+
+- **Event Deletion** — Admins can now delete events with registered participants
+  - Registrations are automatically deleted with the event
+  - Database schema updated to use ON DELETE CASCADE for event registrations
+  - Backend uses transactions to ensure atomic deletion (event + all registrations)
+
+### Improvements
+
+- **Team Management** — Multiple improvements to team functionality
+  - Admins can now set auto-approval for teams during team creation
+  - Admins can change the auto-approval setting when editing teams
+  - Users can now leave teams (previously only captains could remove members)
+  - Type conversion fixes in team member endpoints (DELETE and PUT)
+  - Improved Teams page UX: "All teams" renamed to "Other teams" and filters out teams user is already a member of
+  - Dynamic button text on Teams page: shows "Join" for auto-approved teams, "Request to join" for teams requiring approval
+
+### Bug Fixes
+
+- **Fixed team membership not being recognized** — GET /my/memberships now returns team_id instead of membership id
+- **Fixed users unable to leave teams** — Added proper endpoint support
+- **Fixed admin panel endpoint** — Added missing PUT /teams/:id/members/:userId endpoint for demoting captains
+- **Fixed Teams.jsx approve/reject functions** — Now uses correct backend endpoints
+- **Fixed captain name display** — Team creation form now properly displays names with first/last name fallback
+
+---
+
+## 2026-05-31
+
+### Features
+
+- **Event Comments** — Added comments field to event registration
+  - Users can provide additional information for event organizers
+  - Comments are optional and displayed in both self-registration and guest registration forms
+  - Comments are included in CSV exports so organizers can review all notes
+  - Database migration adds `comments TEXT` column to registrations table
+- **Product Options Visibility** — Product options now visible in event management dashboard
+  - Shows field labels and types
+  - Fixed GROUP BY clause in products GET endpoint to properly return all columns
+
+### Improvements
+
+- **Dashboard UI** — Removed redundant "Products" button from event management dashboard
+  - Product management is now only accessible via the "Edit" button (includes all product editing)
+  - Improved team name color visibility in team registrations view (now uses accent color)
+
+### Bug Fixes
+
+- **Fixed incomplete registrations.js file** — File was truncated mid-statement
+- **Restored missing endpoints** — PUT registration updates including field_values and comments handling
+- **Fixed duplicate field entries** — Registrations GET response query now returns unique fields
+
+---
+
+## 2026-05-30
+
+### Features
+
+- **Event Registration Periods** — Events now require a registration open and close datetime
+  - Users can only register within the period
+  - Outside the period, event page shows "Registration opens on [date]" or "Registration is closed"
+  - Registration period enforced on both self-registration and guest registration endpoints
+  - Past events moved to a separate collapsed section on the events listing page
+
+### Code Quality
+
+- **Code Normalization** — Normalized all source files to consistent 2-space indentation and LF line endings
+- **Dev Scripts Cleanup** — Removed three one-off dev scripts from the codebase (check-db.js, fix-name-column.js, verify-existing-users.js)
+- **Import Cleanup** — Removed dead `pool` import from utils/eventAccess.js
+- **Code Organization** — Removed duplicate `canManageEvent` function from routes/events.js (now imported from utils/eventAccess.js)
+- **Scope Fixes** — Moved `handleSave` and `handlePasswordReset` in Profile.jsx to correct top-level scope
+- **Component Fixes** — Moved `ProductSelector` component in EventDetail.jsx outside the render function to prevent unnecessary remounts
+- **Formatting Fixes** — Fixed second `useEffect` in EventDetail.jsx missing indentation
+- **Logic Fixes** — Fixed `buildProducts` being called twice in EventDetail.jsx register function
