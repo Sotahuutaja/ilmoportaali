@@ -1,6 +1,6 @@
 # Ilmoportaali — Project Documentation
 
-> An event registration and team management portal built for the Boffering event community.
+> An event registration and team management portal built for the Boffering event community. 
 
 ---
 
