@@ -142,7 +142,7 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
   const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
   const displayName = lastName && firstName
     ? `${firstName} ${lastName}`
-    : firstName || lastName || r.guest_email || r.user_email;
+    : firstName || lastName || r.user_email;
 
   const startEditing = () => {
     setSelectedProducts(
@@ -471,7 +471,6 @@ export default function EventDetail() {
       id: Date.now(), // Temporary ID for managing UI
       guest_first_name: guestForm.guest_first_name,
       guest_last_name: guestForm.guest_last_name,
-      guest_email: guestForm.guest_email,
       year_of_birth: parseInt(guestForm.year_of_birth),
       gender: guestForm.gender,
       team_id: parseInt(guestForm.team_id),
@@ -704,9 +703,6 @@ export default function EventDetail() {
                       }}>
                         <div>
                           <strong>{guest.guest_first_name} {guest.guest_last_name}</strong>
-                          <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                            {guest.guest_email}
-                          </p>
                           <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                             {guest.products.length} product{guest.products.length !== 1 ? 's' : ''} •
                             €{guest.products.reduce((s, p) => s + (p.price * p.quantity), 0).toFixed(2)}

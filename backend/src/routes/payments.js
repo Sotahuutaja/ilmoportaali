@@ -138,8 +138,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       if (isGuest) {
         // Create guest registration
         regResult = await client.query(
-          `INSERT INTO registrations (user_id, event_id, team_id, comments, is_guest, guest_first_name, guest_last_name, guest_email, year_of_birth, gender)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+          `INSERT INTO registrations (user_id, event_id, team_id, comments, is_guest, guest_first_name, guest_last_name, year_of_birth, gender)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
           [
             null,
             eventId,
@@ -148,7 +148,6 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
             true,
             guestData.guest_first_name,
             guestData.guest_last_name,
-            guestData.guest_email,
             guestData.year_of_birth || null,
             guestData.gender || null
           ]
