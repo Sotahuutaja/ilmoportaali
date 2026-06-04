@@ -62,17 +62,33 @@ async function processPendingEmails(limit = 10) {
  * Send a single queued email
  */
 async function sendQueuedEmail(emailRecord) {
-  const { id, registration_id, email_type, recipient_email, attempt_count } = emailRecord;
+  const { id, registration_id, email_type, recipient_email, body, attempt_count } = emailRecord;
 
   try {
     console.log(`[EMAIL WORKER] Sending ${email_type} email (attempt ${attempt_count + 1}/${MAX_RETRIES}) to ${recipient_email}`);
 
-    if (email_type === 'registration_confirmation') {
-      await sendConfirmationEmailFromQueue(registration_id, recipient_email);
-    } else if (email_type === 'registration_cancellation') {
-      await sendCancellationEmailFromQueue(registration_id, recipient_email);
+    // If body is pre-stored (for cancellations), parse and send directly
+    if (body) {
+      const emailData = JSON.parse(body);
+      if (email_type === 'registration_cancellation') {
+        await sendRegistrationCancellation(recipient_email, {
+          userName: emailData.userName,
+          eventName: emailData.eventName,
+          registrationId: emailData.registrationId,
+          refundDate: emailData.refundDate
+        }, emailData.products);
+      } else {
+        throw new Error(`Unknown email type with body: ${email_type}`);
+      }
     } else {
-      throw new Error(`Unknown email type: ${email_type}`);
+      // Reconstruction mode for confirmations (registration still exists)
+      if (email_type === 'registration_confirmation') {
+        await sendConfirmationEmailFromQueue(registration_id, recipient_email);
+      } else if (email_type === 'registration_cancellation') {
+        await sendCancellationEmailFromQueue(registration_id, recipient_email);
+      } else {
+        throw new Error(`Unknown email type: ${email_type}`);
+      }
     }
 
     // Mark as sent

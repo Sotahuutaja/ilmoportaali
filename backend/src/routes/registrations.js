@@ -232,10 +232,32 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
 
     // Queue cancellation email BEFORE deleting registration (so FK constraint is satisfied)
     try {
+      const refundDate = new Date().toLocaleDateString('fi-FI', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
       await pool.query(
-        `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
-         VALUES ($1, $2, $3, $4)`,
-        [registrationId, 'registration_cancellation', req.user.email, 'pending']
+        `INSERT INTO email_queue (registration_id, email_type, recipient_email, subject, body, status)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          registrationId,
+          'registration_cancellation',
+          req.user.email,
+          `Registration Cancelled - ${eventTitle}`,
+          JSON.stringify({
+            userName: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+            eventName: eventTitle,
+            registrationId,
+            refundDate,
+            products
+          }),
+          'pending'
+        ]
       );
       console.log('[REGISTRATIONS] Queued cancellation email for registration', registrationId);
     } catch (err) {
@@ -364,10 +386,32 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
 
     // Queue cancellation email BEFORE deleting registration (so FK constraint is satisfied)
     try {
+      const refundDate = new Date().toLocaleDateString('fi-FI', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
       await pool.query(
-        `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
-         VALUES ($1, $2, $3, $4)`,
-        [registrationId, 'registration_cancellation', userEmail, 'pending']
+        `INSERT INTO email_queue (registration_id, email_type, recipient_email, subject, body, status)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          registrationId,
+          'registration_cancellation',
+          userEmail,
+          `Registration Cancelled - ${eventTitle}`,
+          JSON.stringify({
+            userName,
+            eventName: eventTitle,
+            registrationId,
+            refundDate,
+            products
+          }),
+          'pending'
+        ]
       );
       console.log('[REGISTRATIONS] Queued cancellation email for registration', registrationId);
     } catch (err) {
