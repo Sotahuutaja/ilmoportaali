@@ -20,11 +20,43 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
       : {}
   );
   const [error, setError] = useState('');
+  const [costChangeConfirmed, setCostChangeConfirmed] = useState(false);
+  const [costChange, setCostChange] = useState(null);
+
+  // Calculate total cost for products
+  const calculateTotal = (products) => {
+    return Object.entries(products).reduce((sum, [productId, qty]) => {
+      if (qty > 0) {
+        const product = eventProducts.find(p => p.id === parseInt(productId));
+        if (product) {
+          sum += parseFloat(product.price) * qty;
+        }
+      }
+      return sum;
+    }, 0);
+  };
 
   const handleSave = () => {
     const products = Object.entries(selectedProducts)
       .filter(([, qty]) => qty > 0)
       .map(([product_id, quantity]) => ({ product_id: parseInt(product_id), quantity }));
+
+    // Calculate old and new totals
+    const originalProductMap = Object.fromEntries(
+      (reg.products || []).map(p => [p.product_id.toString(), p.quantity])
+    );
+    const oldTotal = calculateTotal(originalProductMap);
+    const newTotal = calculateTotal(selectedProducts);
+
+    // If costs differ, require confirmation
+    if (Math.abs(oldTotal - newTotal) > 0.01 && !costChangeConfirmed) {
+      setCostChange({
+        oldTotal,
+        newTotal,
+        difference: newTotal - oldTotal
+      });
+      return;
+    }
 
     const payload = {
       team_id: form.team_id ? parseInt(form.team_id) : null,
@@ -111,10 +143,70 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
           </div>
         ))}
 
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-          <button className="btn btn-primary" onClick={handleSave} style={{ flex: 1 }}>Save changes</button>
-          <button className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-        </div>
+        {costChange && (
+          <div style={{ background: '#fff3cd', padding: '1rem', borderRadius: '6px', marginTop: '1rem', borderLeft: '4px solid #ffc107' }}>
+            <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#856404' }}>
+              ⚠️ Cost change detected
+            </p>
+            <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: '#856404' }}>
+              Old total: <strong>€{costChange.oldTotal.toFixed(2)}</strong>
+            </p>
+            <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: '#856404' }}>
+              New total: <strong>€{costChange.newTotal.toFixed(2)}</strong>
+            </p>
+            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#856404' }}>
+              Difference: <strong>{costChange.difference > 0 ? '+' : ''}€{costChange.difference.toFixed(2)}</strong>
+            </p>
+            <p style={{ margin: '0.8rem 0 0 0', fontSize: '0.85rem', color: '#856404' }}>
+              ⚠️ No refund or additional charge will be applied. Confirm to proceed.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setCostChangeConfirmed(true);
+                  // Trigger save in next render
+                  setTimeout(() => {
+                    const products = Object.entries(selectedProducts)
+                      .filter(([, qty]) => qty > 0)
+                      .map(([product_id, quantity]) => ({ product_id: parseInt(product_id), quantity }));
+                    const payload = {
+                      team_id: form.team_id ? parseInt(form.team_id) : null,
+                      products
+                    };
+                    if (reg.is_guest) {
+                      payload.guest_first_name = form.guest_first_name;
+                      payload.guest_last_name = form.guest_last_name;
+                      payload.guest_email = form.email;
+                    } else {
+                      payload.first_name = form.first_name;
+                      payload.last_name = form.last_name;
+                      payload.email = form.email;
+                    }
+                    onSave(reg.id, payload);
+                  }, 0);
+                }}
+                style={{ flex: 1 }}
+              >
+                Confirm & Save
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setCostChange(null)}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!costChange && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+            <button className="btn btn-primary" onClick={handleSave} style={{ flex: 1 }}>Save changes</button>
+            <button className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+          </div>
+        )}
       </div>
     </div>
   );
