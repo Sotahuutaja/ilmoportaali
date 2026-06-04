@@ -50,11 +50,30 @@ export default function Checkout() {
             const regData = JSON.parse(decodeURIComponent(registrationsParam));
             // Store full registration data for payment processing
             setRegistrationData(regData);
+            // Persist to localStorage for recovery after page refresh
+            localStorage.setItem(`checkout_${id}`, JSON.stringify(regData));
 
             if (regData.captain) {
               setSelectedProducts(regData.captain.products);
               setTeamId(regData.captain.teamId);
               setComments(regData.captain.comments);
+            }
+          } else {
+            // Try to restore from localStorage if available
+            const saved = localStorage.getItem(`checkout_${id}`);
+            if (saved) {
+              try {
+                const regData = JSON.parse(saved);
+                setRegistrationData(regData);
+
+                if (regData.captain) {
+                  setSelectedProducts(regData.captain.products);
+                  setTeamId(regData.captain.teamId);
+                  setComments(regData.captain.comments);
+                }
+              } catch (err) {
+                console.error('Failed to restore checkout data from localStorage');
+              }
             }
           }
         } catch (err) {
@@ -70,6 +89,9 @@ export default function Checkout() {
   }, [id, user, navigate, searchParams]);
 
   const handlePaymentSuccess = (paymentData) => {
+    // Clear checkout data from localStorage after successful payment
+    localStorage.removeItem(`checkout_${id}`);
+
     // Show success message on this page
     setPaymentSuccess({
       registrationId: paymentData.registrationId,

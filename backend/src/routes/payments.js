@@ -35,6 +35,11 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'Quantity must be a positive integer' });
       }
 
+      // Validate field_values is an object if provided
+      if (field_values && typeof field_values !== 'object') {
+        return res.status(400).json({ error: 'field_values must be an object' });
+      }
+
       const product = await pool.query(
         'SELECT price, fields FROM event_products WHERE id = $1 AND event_id = $2',
         [product_id, eventId]
@@ -162,7 +167,19 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       });
     }
 
-    // Step 2: Begin transaction to create registrations and record payment
+    // Step 2: Check if this payment has already been processed (idempotency)
+    const existingPayment = await client.query(
+      'SELECT id FROM payment_intents WHERE stripe_payment_intent_id = $1',
+      [paymentIntentId]
+    );
+    if (existingPayment.rows[0]) {
+      return res.status(409).json({
+        error: 'This payment has already been processed',
+        registrationId: existingPayment.rows[0].id
+      });
+    }
+
+    // Step 3: Begin transaction to create registrations and record payment
     await client.query('BEGIN');
 
     const registrationIds = [];
@@ -234,6 +251,11 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
         // Validate quantity is a positive integer
         if (!Number.isInteger(quantity) || quantity < 1) {
           throw new Error('Quantity must be a positive integer');
+        }
+
+        // Validate field_values is an object if provided
+        if (field_values && typeof field_values !== 'object') {
+          throw new Error('field_values must be an object');
         }
 
         const product = await client.query(
@@ -310,163 +332,28 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       [captainRegId, totalCents, invoiceNumber]
     );
 
+    // Update payment status to 'paid' for captain and all guest registrations
+    await client.query(
+      'UPDATE registrations SET payment_status = $1 WHERE id = ANY($2)',
+      ['paid', registrationIds]
+    );
+
     await client.query('COMMIT');
 
     console.log(`[PAYMENT] Confirmed payment ${paymentIntentId}, created ${registrationIds.length} registration(s): ${registrationIds.join(', ')}`);
 
-    // Send confirmation emails (async, don't wait for it)
+    // Queue confirmation email for sending (async retry pattern)
+    // Insert into email_queue so it can be retried if sending fails
     try {
-      const eventResult = await pool.query('SELECT title, starts_at FROM events WHERE id = $1', [eventId]);
-      const event = eventResult.rows[0];
-
-      if (event) {
-        // Helper to transform field_values from IDs to human-readable labels
-        const transformFieldValues = (fieldValues, productFields) => {
-          if (!fieldValues || Object.keys(fieldValues).length === 0) return {};
-
-          const fields = productFields || [];
-          const transformed = {};
-
-          for (const [fieldId, fieldValue] of Object.entries(fieldValues)) {
-            const field = fields.find(f => f.id === fieldId);
-            if (field) {
-              transformed[field.label || field.name || fieldId] = fieldValue;
-            } else {
-              transformed[fieldId] = fieldValue;
-            }
-          }
-
-          return transformed;
-        };
-
-        // Helper to get product price with field option overrides
-        const getProductPriceWithOptions = (basePrice, fieldValues, fields) => {
-          let price = parseFloat(basePrice);
-          const fieldList = fields || [];
-
-          if (fieldValues && fieldList.length > 0) {
-            for (const field of fieldList) {
-              if (field.type === 'select') {
-                const selectedValue = fieldValues[field.id];
-                if (selectedValue && field.options) {
-                  const option = field.options.find(opt => {
-                    const optVal = typeof opt === 'string' ? opt : opt.value;
-                    return optVal === selectedValue;
-                  });
-
-                  if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-                    price = parseFloat(option.price);
-                    break;
-                  }
-                }
-              }
-            }
-          }
-
-          return price;
-        };
-
-        // Get captain products from the request (not from database)
-        // This ensures we only show products paid for in THIS transaction
-        const captainProducts = [];
-        if (captain.products && captain.products.length > 0) {
-          // Fetch product details for the captain products
-          const captainProductDetails = await Promise.all(
-            captain.products.map(async (p) => {
-              const productResult = await pool.query(
-                'SELECT name, price, fields FROM event_products WHERE id = $1',
-                [p.product_id]
-              );
-              if (productResult.rows[0]) {
-                const product = productResult.rows[0];
-                return {
-                  name: product.name,
-                  price: getProductPriceWithOptions(product.price, p.field_values, product.fields),
-                  quantity: p.quantity,
-                  field_values: transformFieldValues(p.field_values, product.fields)
-                };
-              }
-              return null;
-            })
-          );
-          captainProducts.push(...captainProductDetails.filter(p => p !== null));
-        }
-
-        // Fetch product field definitions for all guest products
-        const guestProductIds = guests.flatMap(g => g.products.map(p => p.product_id)).filter(Boolean);
-        const guestProductsFieldsResult = guestProductIds.length > 0
-          ? await pool.query(
-              `SELECT id, name, price, fields FROM event_products WHERE id = ANY($1)`,
-              [guestProductIds]
-            )
-          : { rows: [] };
-
-        const productFieldsMap = {};
-        const productPriceMap = {};
-        guestProductsFieldsResult.rows.forEach(p => {
-          productFieldsMap[p.id] = p.fields || [];
-          productPriceMap[p.id] = p.price;
-        });
-
-        // Helper to get product price with field option overrides
-        const getGuestProductPrice = (productId, fieldValues) => {
-          let price = parseFloat(productPriceMap[productId] || 0);
-          const fields = productFieldsMap[productId] || [];
-
-          if (fieldValues && fields.length > 0) {
-            for (const field of fields) {
-              if (field.type === 'select') {
-                const selectedValue = fieldValues[field.id];
-                if (selectedValue && field.options) {
-                  const option = field.options.find(opt => {
-                    const optVal = typeof opt === 'string' ? opt : opt.value;
-                    return optVal === selectedValue;
-                  });
-
-                  if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-                    price = parseFloat(option.price);
-                    break;
-                  }
-                }
-              }
-            }
-          }
-
-          return price;
-        };
-
-        // Transform guest products field_values and apply price overrides
-        const transformedGuests = guests.map(guest => ({
-          ...guest,
-          products: guest.products.map(p => ({
-            ...p,
-            name: guestProductsFieldsResult.rows.find(prod => prod.id === p.product_id)?.name || p.name,
-            price: getGuestProductPrice(p.product_id, p.field_values),
-            field_values: transformFieldValues(p.field_values, productFieldsMap[p.product_id])
-          }))
-        }));
-
-        // Send email to captain with all registrations summary
-        sendRegistrationConfirmation(req.user.email, {
-          userName: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
-          eventName: event.title,
-          registrationId: captainRegId,
-          invoiceNumber,
-          amountFormatted: `€${(totalCents / 100).toFixed(2)}`,
-          eventDate: new Date(event.starts_at).toLocaleDateString('fi-FI', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
-          guestCount: guests.length
-        }, captainProducts, transformedGuests, captain.comments || '').catch(err => console.error('Email send error:', err));
-      }
+      await pool.query(
+        `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
+         VALUES ($1, $2, $3, $4)`,
+        [captainRegId, 'registration_confirmation', req.user.email, 'pending']
+      );
+      console.log('[PAYMENT] Queued confirmation email for registration', captainRegId);
     } catch (err) {
-      console.error('[PAYMENT] Failed to send confirmation email:', err.message);
-      // Don't block the response - email is not critical
+      console.error('[PAYMENT] Failed to queue confirmation email:', err.message);
+      // Don't block the response - email will be retried
     }
 
     res.json({

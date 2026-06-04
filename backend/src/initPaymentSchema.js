@@ -97,6 +97,62 @@ async function initPaymentSchema() {
       ON registrations(payment_status);
     `);
 
+    // Create email_queue table for transactional email retries
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS email_queue (
+        id SERIAL PRIMARY KEY,
+        registration_id INTEGER NOT NULL,
+        email_type VARCHAR(50) NOT NULL,
+        recipient_email VARCHAR(255) NOT NULL,
+        subject VARCHAR(255),
+        body TEXT,
+        status VARCHAR(50) DEFAULT 'pending',
+        attempt_count INTEGER DEFAULT 0,
+        last_error TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        sent_at TIMESTAMP,
+        FOREIGN KEY (registration_id) REFERENCES registrations(id) ON DELETE CASCADE
+      );
+    `);
+
+    // Add check constraint to ensure guest registrations have either user_id or registered_by
+    // This prevents orphaned guest registrations
+    try {
+      await pool.query(`
+        ALTER TABLE registrations
+        ADD CONSTRAINT check_registration_user_or_registered_by
+        CHECK (user_id IS NOT NULL OR registered_by IS NOT NULL);
+      `);
+    } catch (err) {
+      // Constraint might already exist
+      if (!err.message.includes('already exists') && !err.message.includes('duplicate key')) {
+        console.warn('[INIT] Warning adding check constraint:', err.message);
+      }
+    }
+
+    // Create indexes for email_queue
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_email_queue_status
+      ON email_queue(status);
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_email_queue_registration
+      ON email_queue(registration_id);
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_email_queue_created
+      ON email_queue(created_at);
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_email_queue_pending_retry
+      ON email_queue(status, attempt_count, updated_at)
+      WHERE status IN ('pending', 'failed');
+    `);
+
     console.log('[INIT] ✓ Payment schema initialized successfully');
 
   } catch (error) {
