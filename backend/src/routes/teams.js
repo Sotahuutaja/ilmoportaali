@@ -132,6 +132,34 @@ router.put('/:id/auto-approve', requireAuth, async (req, res) => {
   }
 });
 
+// Update team description (admin or captain)
+router.put('/:id/description', requireAuth, async (req, res) => {
+  const { description } = req.body;
+  if (description === undefined) return res.status(400).json({ error: 'description is required' });
+
+  try {
+    // Check if user is admin or a captain of this team
+    if (req.user.role !== 'admin') {
+      const membership = await pool.query(
+        'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+        [req.params.id, req.user.id, 'captain', 'approved']
+      );
+      if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can edit team description' });
+    }
+
+    const result = await pool.query(
+      'UPDATE teams SET description = $1 WHERE id = $2 RETURNING *',
+      [description || null, req.params.id]
+    );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Team not found' });
+    res.json({ team: result.rows[0] });
+  } catch (err) {
+    console.error('Failed to update team description:', err.message);
+    res.status(500).json({ error: 'Failed to update team description' });
+  }
+});
+
 // Request to join a team
 router.post('/:id/request', requireAuth, async (req, res) => {
   const client = await pool.connect();

@@ -372,15 +372,42 @@ export default function EventDetail() {
       return setError('Please select at least one product or add guests.');
     }
 
+    // Helper to calculate price with field option overrides
+    const getProductPriceWithOptions = (productId, fieldVals) => {
+      const eventProduct = products.find(ep => ep.id === productId);
+      let price = parseFloat(eventProduct?.price || 0);
+      const productFields = eventProduct?.fields || [];
+
+      if (fieldVals && productFields.length > 0) {
+        for (const field of productFields) {
+          if (field.type === 'select') {
+            const selectedValue = fieldVals[field.id];
+            if (selectedValue) {
+              const option = field.options.find(opt =>
+                (typeof opt === 'string' ? opt : opt.value) === selectedValue
+              );
+              if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+                price = parseFloat(option.price);
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      return price;
+    };
+
     // Build product details with names and prices from the event products list
     const productDetails = productsToRegister.map(p => {
       const eventProduct = products.find(ep => ep.id === p.product_id);
+      const price = getProductPriceWithOptions(p.product_id, p.field_values);
       return {
         product_id: p.product_id,
         quantity: p.quantity,
         field_values: p.field_values,
         name: eventProduct?.name || 'Unknown',
-        price: parseFloat(eventProduct?.price || 0)
+        price: price
       };
     });
 
@@ -454,15 +481,42 @@ export default function EventDetail() {
       return setError('Please select at least one product for the guest.');
     }
 
-    // Build guest product details
+    // Helper to calculate price with field option overrides
+    const getGuestProductPrice = (productId, fieldVals) => {
+      const eventProduct = products.find(ep => ep.id === productId);
+      let price = parseFloat(eventProduct?.price || 0);
+      const productFields = eventProduct?.fields || [];
+
+      if (fieldVals && productFields.length > 0) {
+        for (const field of productFields) {
+          if (field.type === 'select') {
+            const selectedValue = fieldVals[field.id];
+            if (selectedValue) {
+              const option = field.options.find(opt =>
+                (typeof opt === 'string' ? opt : opt.value) === selectedValue
+              );
+              if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+                price = parseFloat(option.price);
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      return price;
+    };
+
+    // Build guest product details with option price overrides
     const guestProductDetails = guestProductList.map(p => {
       const eventProduct = products.find(ep => ep.id === p.product_id);
+      const price = getGuestProductPrice(p.product_id, p.field_values);
       return {
         product_id: p.product_id,
         quantity: p.quantity,
         field_values: p.field_values,
         name: eventProduct?.name || 'Unknown',
-        price: parseFloat(eventProduct?.price || 0)
+        price: price
       };
     });
 

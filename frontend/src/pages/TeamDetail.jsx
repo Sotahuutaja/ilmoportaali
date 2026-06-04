@@ -15,6 +15,8 @@ export default function TeamDetail() {
   const [autoApprove, setAutoApprove] = useState(false);
   const [myTeams, setMyTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionText, setDescriptionText] = useState('');
 
   useEffect(() => {
     const loadTeam = async () => {
@@ -23,6 +25,7 @@ export default function TeamDetail() {
         setTeam(teamRes.data.team);
         setMembers(teamRes.data.members);
         setAutoApprove(teamRes.data.team.auto_approve_joins || false);
+        setDescriptionText(teamRes.data.team.description || '');
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to load team');
       } finally {
@@ -99,6 +102,22 @@ export default function TeamDetail() {
     }
   };
 
+  const handleSaveDescription = async () => {
+    try {
+      const res = await api.put(`/teams/${id}/description`, { description: descriptionText });
+      setTeam(res.data.team);
+      setEditingDescription(false);
+      setMessage('Description updated!');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update description');
+    }
+  };
+
+  const handleCancelEditDescription = () => {
+    setDescriptionText(team.description || '');
+    setEditingDescription(false);
+  };
+
   if (loading) {
     return (
       <div style={{ maxWidth: 640, margin: '2rem auto' }}>
@@ -134,9 +153,41 @@ export default function TeamDetail() {
       {error && <p className="error">{error}</p>}
       {message && <p className="success">{message}</p>}
 
-      {team.description && (
+      {(editingDescription || team.description) && (
         <div className="card" style={{ marginBottom: '1.5rem' }}>
-          <p style={{ margin: 0, color: 'var(--text-muted)' }}>{team.description}</p>
+          {editingDescription ? (
+            <div>
+              <label>Team Description</label>
+              <textarea
+                value={descriptionText}
+                onChange={e => setDescriptionText(e.target.value)}
+                placeholder="Enter team description..."
+                rows={3}
+                style={{ marginBottom: '0.5rem' }}
+              />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="btn btn-primary" onClick={handleSaveDescription} style={{ flex: 1 }}>
+                  Save
+                </button>
+                <button className="btn btn-secondary" onClick={handleCancelEditDescription} style={{ flex: 1 }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <p style={{ margin: 0, color: 'var(--text-muted)', flex: 1 }}>{team.description || 'No description'}</p>
+              {(isCaptain || user?.role === 'admin') && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setEditingDescription(true)}
+                  style={{ marginLeft: '0.5rem', flexShrink: 0 }}
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
