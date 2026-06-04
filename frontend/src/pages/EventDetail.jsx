@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
@@ -301,6 +301,16 @@ export default function EventDetail() {
   const [guestComments, setGuestComments] = useState('');
   const [captainTeams, setCaptainTeams] = useState([]);
   const [pendingGuests, setPendingGuests] = useState([]);
+  const reviewRef = useRef(null);
+
+  // Auto-scroll to review section when it appears
+  useEffect(() => {
+    if (showReview && reviewRef.current) {
+      setTimeout(() => {
+        reviewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
+    }
+  }, [showReview]);
 
   useEffect(() => {
     api.get(`/events/${id}`).then(res => setEvent(res.data.event));
@@ -643,7 +653,7 @@ export default function EventDetail() {
           </div>
 
           {showReview && pendingRegistration ? (
-            <div style={{ marginTop: '2rem' }}>
+            <div ref={reviewRef} style={{ marginTop: '2rem' }}>
               <RegistrationReview
                 products={pendingRegistration.captain.products}
                 eventTitle={event.title}
