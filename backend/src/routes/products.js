@@ -9,12 +9,14 @@ router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT p.*,
-        COALESCE(p.quantity - SUM(rp.quantity) FILTER (WHERE rp.id IS NOT NULL), p.quantity) as remaining
+        COALESCE(p.quantity - (
+          SELECT COALESCE(SUM(rp.quantity), 0)
+          FROM registration_products rp
+          JOIN registrations r ON rp.registration_id = r.id
+          WHERE rp.product_id = p.id AND r.event_id = p.event_id
+        ), p.quantity) as remaining
       FROM event_products p
-      LEFT JOIN registration_products rp ON p.id = rp.product_id
-      LEFT JOIN registrations r ON rp.registration_id = r.id AND r.event_id = p.event_id
       WHERE p.event_id = $1
-      GROUP BY p.id, p.event_id, p.name, p.description, p.price, p.quantity, p.created_at, p.sort_order, p.fields
       ORDER BY p.sort_order ASC, p.name ASC
     `, [req.params.eventId]);
     res.json({ products: result.rows });
@@ -93,12 +95,14 @@ router.put('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), as
     // Fetch the product with remaining quantity calculated
     const withRemaining = await pool.query(`
       SELECT p.*,
-        COALESCE(p.quantity - SUM(rp.quantity) FILTER (WHERE rp.id IS NOT NULL), p.quantity) as remaining
+        COALESCE(p.quantity - (
+          SELECT COALESCE(SUM(rp.quantity), 0)
+          FROM registration_products rp
+          JOIN registrations r ON rp.registration_id = r.id
+          WHERE rp.product_id = p.id AND r.event_id = p.event_id
+        ), p.quantity) as remaining
       FROM event_products p
-      LEFT JOIN registration_products rp ON p.id = rp.product_id
-      LEFT JOIN registrations r ON rp.registration_id = r.id AND r.event_id = p.event_id
       WHERE p.id = $1 AND p.event_id = $2
-      GROUP BY p.id, p.event_id, p.name, p.description, p.price, p.quantity, p.created_at, p.sort_order, p.fields
     `, [req.params.productId, req.params.eventId]);
 
     res.json({ product: withRemaining.rows[0] });
