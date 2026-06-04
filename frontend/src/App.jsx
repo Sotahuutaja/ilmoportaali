@@ -14,6 +14,7 @@ import EditEvent from './pages/EditEvent';
 import ResetPassword from './pages/ResetPassword';
 import StripeProvider from './components/StripeProvider';
 
+
 function Nav() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
