@@ -12,19 +12,6 @@ const pool = require('./db');
  */
 async function initPaymentSchema() {
   try {
-    // Check if payment_intents table already exists
-    const result = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_name = 'payment_intents'
-      );
-    `);
-
-    if (result.rows[0].exists) {
-      console.log('[INIT] Payment schema already initialized');
-      return;
-    }
-
     console.log('[INIT] Initializing payment schema...');
 
     // Create payment_intents table
