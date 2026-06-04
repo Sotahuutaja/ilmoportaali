@@ -12,6 +12,56 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000; // 5 seconds between retries
 
 /**
+ * Helper function to transform field_values from IDs to human-readable labels
+ */
+function transformFieldValues(fieldValues, productFields) {
+  if (!fieldValues || Object.keys(fieldValues).length === 0) return {};
+
+  const fields = productFields || [];
+  const transformed = {};
+
+  for (const [fieldId, fieldValue] of Object.entries(fieldValues)) {
+    const field = fields.find(f => f.id === fieldId);
+    if (field) {
+      transformed[field.label || field.name || fieldId] = fieldValue;
+    } else {
+      transformed[fieldId] = fieldValue;
+    }
+  }
+
+  return transformed;
+}
+
+/**
+ * Helper function to get product price with field option overrides
+ */
+function getProductPriceWithOptions(basePrice, fieldValues, fields) {
+  let price = parseFloat(basePrice);
+  const fieldList = fields || [];
+
+  if (fieldValues && fieldList.length > 0) {
+    for (const field of fieldList) {
+      if (field.type === 'select') {
+        const selectedValue = fieldValues[field.id];
+        if (selectedValue && field.options) {
+          const option = field.options.find(opt => {
+            const optVal = typeof opt === 'string' ? opt : opt.value;
+            return optVal === selectedValue;
+          });
+
+          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+            price = parseFloat(option.price);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return price;
+}
+
+/**
  * Process all pending emails in the queue
  * @param {number} limit - Maximum number of emails to process in one run
  */
@@ -155,12 +205,12 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
 
   const invoice = invoiceResult.rows[0];
 
-  // Build products array with prices
+  // Build products array with prices and transformed field labels
   const products = productsResult.rows.map(p => ({
     name: p.name,
     price: parseFloat(p.price),
     quantity: p.quantity,
-    field_values: p.field_values || {}
+    field_values: transformFieldValues(p.field_values || {}, p.fields || [])
   }));
 
   // Fetch related guest registrations
@@ -175,6 +225,20 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
     [eventId, registration.user_id]
   );
 
+  // For guests, we need to fetch fields for transforming field_values
+  const guestProductIds = guestsResult.rows.flatMap(g => (g.products || []).map(p => p.product_id)).filter(Boolean);
+  const guestProductFieldsResult = guestProductIds.length > 0
+    ? await pool.query(
+        `SELECT id, fields FROM event_products WHERE id = ANY($1)`,
+        [guestProductIds]
+      )
+    : { rows: [] };
+
+  const productFieldsMap = {};
+  guestProductFieldsResult.rows.forEach(p => {
+    productFieldsMap[p.id] = p.fields || [];
+  });
+
   const guests = guestsResult.rows.map(g => ({
     guest_first_name: g.guest_first_name,
     guest_last_name: g.guest_last_name,
@@ -183,7 +247,7 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
       name: p.name,
       price: parseFloat(p.price),
       quantity: p.quantity,
-      field_values: p.field_values || {}
+      field_values: transformFieldValues(p.field_values || {}, productFieldsMap[p.product_id] || [])
     }))
   }));
 
