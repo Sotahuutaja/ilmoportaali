@@ -3,6 +3,7 @@ const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 const { canManageEvent } = require('../utils/eventAccess');
+const { sendRegistrationCancellation } = require('../services/emailService');
 
 // Helper: validate and reserve products
 async function insertProducts(client, registrationId, products, eventId) {
@@ -186,13 +187,74 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
 // Cancel own registration
 router.delete('/:eventId', requireAuth, async (req, res) => {
   try {
+    // First, fetch registration details and products before deleting
+    const regResult = await pool.query(
+      `SELECT r.id, r.event_id, e.title, e.starts_at,
+              rp.product_id, ep.name, ep.price, rp.quantity
+       FROM registrations r
+       JOIN events e ON r.event_id = e.id
+       LEFT JOIN registration_products rp ON r.id = rp.registration_id
+       LEFT JOIN event_products ep ON rp.product_id = ep.id
+       WHERE r.user_id = $1 AND r.event_id = $2`,
+      [req.user.id, req.params.eventId]
+    );
+
+    if (regResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    const registrationId = regResult.rows[0].id;
+    const eventTitle = regResult.rows[0].title;
+    const eventDate = new Date(regResult.rows[0].starts_at).toLocaleDateString('fi-FI', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Extract unique products
+    const products = regResult.rows
+      .filter(r => r.product_id)
+      .reduce((acc, row) => {
+        const existing = acc.find(p => p.name === row.name && p.price === row.price);
+        if (existing) {
+          existing.quantity += row.quantity;
+        } else {
+          acc.push({
+            name: row.name,
+            price: parseFloat(row.price),
+            quantity: row.quantity
+          });
+        }
+        return acc;
+      }, []);
+
+    // Delete the registration
     const result = await pool.query(
       'DELETE FROM registrations WHERE user_id = $1 AND event_id = $2',
       [req.user.id, req.params.eventId]
     );
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Registration not found' });
+
+    // Send cancellation email (async, don't wait)
+    sendRegistrationCancellation(req.user.email, {
+      userName: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+      eventName: eventTitle,
+      registrationId,
+      refundDate: new Date().toLocaleDateString('fi-FI', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }, products).catch(err => console.error('Cancellation email error:', err));
+
     res.json({ message: 'Registration cancelled' });
   } catch (err) {
+    console.error('Failed to cancel registration:', err.message);
     res.status(500).json({ error: 'Failed to cancel registration' });
   }
 });
@@ -254,12 +316,67 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
       return res.status(403).json({ error: 'Not authorised' });
     }
 
-    const result = await pool.query(
-      'DELETE FROM registrations WHERE id = $1 AND event_id = $2 RETURNING id',
+    // Fetch registration details and user info before deleting
+    const regResult = await pool.query(
+      `SELECT r.id, r.user_id, u.email, u.first_name, u.last_name,
+              e.title, e.starts_at,
+              rp.product_id, ep.name, ep.price, rp.quantity
+       FROM registrations r
+       JOIN users u ON r.user_id = u.id
+       JOIN events e ON r.event_id = e.id
+       LEFT JOIN registration_products rp ON r.id = rp.registration_id
+       LEFT JOIN event_products ep ON rp.product_id = ep.id
+       WHERE r.id = $1 AND r.event_id = $2`,
       [req.params.registrationId, req.params.eventId]
     );
 
-    if (!result.rows[0]) return res.status(404).json({ error: 'Registration not found' });
+    if (regResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    const userEmail = regResult.rows[0].email;
+    const userName = `${regResult.rows[0].first_name || ''} ${regResult.rows[0].last_name || ''}`.trim() || userEmail;
+    const eventTitle = regResult.rows[0].title;
+    const registrationId = regResult.rows[0].id;
+
+    // Extract unique products
+    const products = regResult.rows
+      .filter(r => r.product_id)
+      .reduce((acc, row) => {
+        const existing = acc.find(p => p.name === row.name && p.price === row.price);
+        if (existing) {
+          existing.quantity += row.quantity;
+        } else {
+          acc.push({
+            name: row.name,
+            price: parseFloat(row.price),
+            quantity: row.quantity
+          });
+        }
+        return acc;
+      }, []);
+
+    // Delete the registration
+    const result = await pool.query(
+      'DELETE FROM registrations WHERE id = $1 AND event_id = $2',
+      [req.params.registrationId, req.params.eventId]
+    );
+
+    // Send cancellation email (async, don't wait)
+    sendRegistrationCancellation(userEmail, {
+      userName,
+      eventName: eventTitle,
+      registrationId,
+      refundDate: new Date().toLocaleDateString('fi-FI', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }, products).catch(err => console.error('Cancellation email error:', err));
+
     res.json({ message: 'Registration cancelled' });
   } catch (err) {
     console.error('Failed to cancel registration:', err.message);
