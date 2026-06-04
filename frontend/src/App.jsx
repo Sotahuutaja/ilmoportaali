@@ -12,6 +12,7 @@ import { AuthProvider, useAuth, fullName } from './AuthContext';
 import VerifyEmail from './pages/VerifyEmail';
 import EditEvent from './pages/EditEvent';
 import ResetPassword from './pages/ResetPassword';
+import Checkout from './pages/Checkout';
 import StripeProvider from './components/StripeProvider';
 
 
@@ -66,6 +67,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Events />} />
               <Route path="/events/:id" element={<EventDetail />} />
+              <Route path="/events/:id/checkout" element={<Checkout />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />

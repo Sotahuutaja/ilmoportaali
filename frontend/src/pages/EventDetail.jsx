@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import { formatDateTime } from '../utils/datetime';
-import PaymentForm from '../components/PaymentForm';
 
 function ProductSelector({ products, selected, setSelected, onToggle, fieldValues, setFieldValues }) {
   // Calculate effective price based on selected dropdown options
@@ -270,6 +269,7 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
 
 export default function EventDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [event, setEvent] = useState(null);
   const [products, setProducts] = useState([]);
@@ -283,10 +283,6 @@ export default function EventDetail() {
   const [teamRegistrations, setTeamRegistrations] = useState([]);
   const [isRegistered, setIsRegistered] = useState(false);
   const [allowedTeams, setAllowedTeams] = useState([]);
-
-  // Payment flow state
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [pendingRegistration, setPendingRegistration] = useState(null);
 
   // Guest registration state
   const [showGuestForm, setShowGuestForm] = useState(false);
@@ -366,40 +362,14 @@ export default function EventDetail() {
       return setError('Please select at least one product to register.');
     }
 
-    // Store registration data and show payment form
-    setPendingRegistration({
-      team_id: selectedTeam ? parseInt(selectedTeam) : null,
-      products,
+    // Redirect to checkout page with registration details in URL params
+    const checkoutParams = new URLSearchParams({
+      products: JSON.stringify(products),
+      team: selectedTeam || '',
       comments
     });
-    setShowPaymentForm(true);
-  };
 
-  const handlePaymentSuccess = async (paymentData) => {
-    setError(''); setMessage('');
-    try {
-      // Registration was already created by the backend during payment confirmation
-      setMessage('Successfully registered!');
-      setIsRegistered(true);
-      setShowPaymentForm(false);
-      setEvent(e => ({ ...e, registration_count: e.registration_count + 1 }));
-      const regs = await api.get(`/registrations/${id}`).catch(() => null);
-      if (regs) setTeamRegistrations(regs.data.registrations);
-
-      // Reset form
-      setSelectedProducts({});
-      setFieldValues({});
-      setComments('');
-      setPendingRegistration(null);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to complete registration');
-    }
-  };
-
-  const handlePaymentError = (errorMessage) => {
-    setError(errorMessage);
-    setShowPaymentForm(false);
-    setPendingRegistration(null);
+    navigate(`/events/${id}/checkout?${checkoutParams.toString()}`);
   };
 
   const cancel = async () => {
@@ -537,25 +507,12 @@ export default function EventDetail() {
             />
           </div>
 
-          {showPaymentForm && pendingRegistration ? (
-            <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: '6px' }}>
-              <PaymentForm
-                eventId={parseInt(id)}
-                selectedProducts={pendingRegistration.products}
-                teamId={pendingRegistration.team_id}
-                comments={pendingRegistration.comments}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-              />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="btn btn-primary" onClick={register}>Register</button>
-            {isRegistered && (
-              <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
-            )}
-            </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn btn-primary" onClick={register}>Continue to payment</button>
+          {isRegistered && (
+            <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
           )}
+          </div>
         </>
         );
       })()}
