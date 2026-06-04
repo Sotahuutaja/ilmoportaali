@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('./db');
 const { securityHeaders, cors } = require('./middleware/security');
 const { initDb } = require('./initDb');
+const { initPaymentSchema } = require('./initPaymentSchema');
 
 // Fail fast if critical environment variables are missing
 if (!process.env.JWT_SECRET) {
@@ -36,6 +37,8 @@ app.use('/api/events', require('./routes/events').router);
 app.use('/api/registrations', require('./routes/registrations'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/teams', require('./routes/teams'));
+app.use('/api/payments', require('./routes/payments'));
+app.use('/api/webhooks', require('./routes/webhooks'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Ilmoportaali API' });
@@ -70,6 +73,14 @@ app.listen(port, async () => {
     await initDb();
   } catch (err) {
     console.error('Database initialization failed (non-blocking):', err.message);
+    // Don't crash the server, just log the error
+  }
+
+  // Initialize payment schema in background
+  try {
+    await initPaymentSchema();
+  } catch (err) {
+    console.error('Payment schema initialization failed (non-blocking):', err.message);
     // Don't crash the server, just log the error
   }
 });

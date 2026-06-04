@@ -12,6 +12,7 @@ import { AuthProvider, useAuth, fullName } from './AuthContext';
 import VerifyEmail from './pages/VerifyEmail';
 import EditEvent from './pages/EditEvent';
 import ResetPassword from './pages/ResetPassword';
+import StripeProvider from './components/StripeProvider';
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -57,25 +58,27 @@ function Nav() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Nav />
-        <div className="container">
-          <Routes>
-            <Route path="/" element={<Events />} />
-            <Route path="/events/:id" element={<EventDetail />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/admin" element={<Admin />} />
-      <Route path="/teams" element={<Teams />} />
-      <Route path="/events/:id/registrants" element={<EventRegistrants />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route path="/events/:id/edit" element={<EditEvent />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-          </Routes>
-        </div>
-      </BrowserRouter>
+      <StripeProvider>
+        <BrowserRouter>
+          <Nav />
+          <div className="container">
+            <Routes>
+              <Route path="/" element={<Events />} />
+              <Route path="/events/:id" element={<EventDetail />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/teams" element={<Teams />} />
+        <Route path="/events/:id/registrants" element={<EventRegistrants />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/events/:id/edit" element={<EditEvent />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+            </Routes>
+          </div>
+        </BrowserRouter>
+      </StripeProvider>
     </AuthProvider>
   );
 }
