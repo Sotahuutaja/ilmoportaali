@@ -105,6 +105,37 @@ export default function Checkout() {
       .join(', ');
   };
 
+  // Helper to get product price with option overrides
+  const getProductPrice = (productId, fieldValues) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return 0;
+
+    let price = parseFloat(product.price);
+    const fields = product.fields || [];
+
+    // Check if any field option has a custom price override
+    if (fieldValues && fields.length > 0) {
+      for (const field of fields) {
+        if (field.type === 'select') {
+          const selectedValue = fieldValues[field.id];
+          if (selectedValue && field.options) {
+            const option = field.options.find(opt => {
+              const optVal = typeof opt === 'string' ? opt : opt.value;
+              return optVal === selectedValue;
+            });
+
+            if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+              price = parseFloat(option.price);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return price;
+  };
+
   if (!user) {
     return (
       <div style={{ maxWidth: 640, margin: '2rem auto' }}>
@@ -147,17 +178,18 @@ export default function Checkout() {
   // Calculate total amount from all registrations (captain + guests)
   let totalAmount = 0;
 
-  // Add captain's products
+  // Add captain's products with option-aware pricing
   totalAmount += paymentProducts.reduce((sum, p) => {
-    const product = products.find(prod => prod.id === p.product_id);
-    return sum + (parseFloat(product?.price || 0) * p.quantity);
+    const price = getProductPrice(p.product_id, p.field_values);
+    return sum + (price * p.quantity);
   }, 0);
 
-  // Add guests' products
+  // Add guests' products with option-aware pricing
   if (registrationData?.guests) {
     totalAmount += registrationData.guests.reduce((sum, guest) => {
       return sum + (guest.products?.reduce((guestSum, p) => {
-        return guestSum + (p.price * p.quantity);
+        const price = getProductPrice(p.product_id, p.field_values);
+        return guestSum + (price * p.quantity);
       }, 0) || 0);
     }, 0);
   }
@@ -183,12 +215,13 @@ export default function Checkout() {
               <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 600 }}>You (Captain)</p>
               {paymentProducts.map((p, idx) => {
                 const product = products.find(prod => prod.id === p.product_id);
+                const price = getProductPrice(p.product_id, p.field_values);
                 const fieldValuesText = formatFieldValues(p.field_values, p.product_id);
                 return (
                   <div key={idx}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', fontSize: '0.95rem' }}>
                       <span>{product?.name || 'Unknown'} ×{p.quantity}</span>
-                      <span>€{(parseFloat(product?.price || 0) * p.quantity).toFixed(2)}</span>
+                      <span>€{(price * p.quantity).toFixed(2)}</span>
                     </div>
                     {fieldValuesText && (
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', paddingLeft: '0.5rem', marginBottom: '0.3rem' }}>
@@ -212,12 +245,13 @@ export default function Checkout() {
               <div key={gIdx} style={{ marginBottom: gIdx < registrationData.guests.length - 1 ? '1rem' : '0', paddingBottom: gIdx < registrationData.guests.length - 1 ? '1rem' : '0', borderBottom: gIdx < registrationData.guests.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 600 }}>Guest: {guest.guest_first_name} {guest.guest_last_name}</p>
                 {guest.products.map((p, idx) => {
+                  const price = getProductPrice(p.product_id, p.field_values);
                   const fieldValuesText = formatFieldValues(p.field_values, p.product_id);
                   return (
                     <div key={idx}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', fontSize: '0.95rem' }}>
                         <span>{p.name} ×{p.quantity}</span>
-                        <span>€{(p.price * p.quantity).toFixed(2)}</span>
+                        <span>€{(price * p.quantity).toFixed(2)}</span>
                       </div>
                       {fieldValuesText && (
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', paddingLeft: '0.5rem', marginBottom: '0.3rem' }}>

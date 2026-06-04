@@ -71,7 +71,8 @@ export default function RegistrationReview({
             </p>
             <div style={{ border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
               {products.map((p, idx) => {
-                const subtotal = p.price * p.quantity;
+                const price = getProductPrice(p);
+                const subtotal = price * p.quantity;
                 return (
                   <div
                     key={idx}
@@ -99,11 +100,6 @@ export default function RegistrationReview({
                         ))}
                       </div>
                     )}
-                    {p.product_id && (
-                      <div style={{ marginTop: '0.2rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        Subtotal: €{(getProductPrice(p) * p.quantity).toFixed(2)}
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -122,7 +118,8 @@ export default function RegistrationReview({
                   </p>
                   <div style={{ border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
                     {guestProducts.map((p, idx) => {
-                      const subtotal = p.price * p.quantity;
+                      const price = getProductPrice(p);
+                      const subtotal = price * p.quantity;
                       return (
                         <div
                           key={idx}
@@ -148,11 +145,6 @@ export default function RegistrationReview({
                               {Object.entries(p.field_values).map(([fieldId, value]) => (
                                 <div key={fieldId}>{getFieldLabel(p.product_id, fieldId)}: <strong>{value}</strong></div>
                               ))}
-                            </div>
-                          )}
-                          {p.product_id && (
-                            <div style={{ marginTop: '0.2rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                              Subtotal: €{(getProductPrice(p) * p.quantity).toFixed(2)}
                             </div>
                           )}
                         </div>

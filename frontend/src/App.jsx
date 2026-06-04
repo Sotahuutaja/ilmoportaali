@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Teams from './pages/Teams';
+import TeamDetail from './pages/TeamDetail';
 import EventRegistrants from './pages/EventRegistrants';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth, fullName } from './AuthContext';
@@ -73,6 +74,7 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/teams" element={<Teams />} />
+        <Route path="/teams/:id" element={<TeamDetail />} />
         <Route path="/events/:id/registrants" element={<EventRegistrants />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
