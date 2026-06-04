@@ -290,7 +290,7 @@ az containerapp update --name ilmoportaali-frontend ...
 
 - Add an option to add images to products to be displayed for the users
 - Custom domain (boffaus.fi)
-- Payment handling for products (MobilePay, Paytrail)
+- Payment handling for products (Stripe)
 - Bulk event registration via Excel file import
 - Pin Azure CLI version in GitHub Actions (currently using `latest` due to credential mounting limitations with `azure/cli@v2`)
 - Enable users to register vehicles or other machines they might bring to an event
