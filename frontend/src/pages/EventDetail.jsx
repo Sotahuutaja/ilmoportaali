@@ -308,7 +308,7 @@ export default function EventDetail() {
     if (showReview && reviewRef.current) {
       setTimeout(() => {
         reviewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 0);
+      }, 150);
     }
   }, [showReview]);
 
