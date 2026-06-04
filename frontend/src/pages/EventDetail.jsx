@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import { formatDateTime } from '../utils/datetime';
+import PaymentForm from '../components/PaymentForm';
 
 function ProductSelector({ products, selected, setSelected, onToggle, fieldValues, setFieldValues }) {
   // Calculate effective price based on selected dropdown options
@@ -283,6 +284,10 @@ export default function EventDetail() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [allowedTeams, setAllowedTeams] = useState([]);
 
+  // Payment flow state
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [pendingRegistration, setPendingRegistration] = useState(null);
+
   // Guest registration state
   const [showGuestForm, setShowGuestForm] = useState(false);
   const [guestForm, setGuestForm] = useState({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
@@ -360,20 +365,41 @@ export default function EventDetail() {
     if (products.length === 0) {
       return setError('Please select at least one product to register.');
     }
+
+    // Store registration data and show payment form
+    setPendingRegistration({
+      team_id: selectedTeam ? parseInt(selectedTeam) : null,
+      products,
+      comments
+    });
+    setShowPaymentForm(true);
+  };
+
+  const handlePaymentSuccess = async (paymentData) => {
+    setError(''); setMessage('');
     try {
-      await api.post(`/registrations/${id}`, {
-        team_id: selectedTeam ? parseInt(selectedTeam) : null,
-        products,
-        comments
-      });
+      // Registration was already created by the backend during payment confirmation
       setMessage('Successfully registered!');
       setIsRegistered(true);
+      setShowPaymentForm(false);
       setEvent(e => ({ ...e, registration_count: e.registration_count + 1 }));
       const regs = await api.get(`/registrations/${id}`).catch(() => null);
       if (regs) setTeamRegistrations(regs.data.registrations);
+
+      // Reset form
+      setSelectedProducts({});
+      setFieldValues({});
+      setComments('');
+      setPendingRegistration(null);
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed');
+      setError(err.response?.data?.error || 'Failed to complete registration');
     }
+  };
+
+  const handlePaymentError = (errorMessage) => {
+    setError(errorMessage);
+    setShowPaymentForm(false);
+    setPendingRegistration(null);
   };
 
   const cancel = async () => {
@@ -511,12 +537,25 @@ export default function EventDetail() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn btn-primary" onClick={register}>Register</button>
-          {isRegistered && (
-            <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
+          {showPaymentForm && pendingRegistration ? (
+            <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: '6px' }}>
+              <PaymentForm
+                eventId={parseInt(id)}
+                selectedProducts={pendingRegistration.products}
+                teamId={pendingRegistration.team_id}
+                comments={pendingRegistration.comments}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-primary" onClick={register}>Register</button>
+            {isRegistered && (
+              <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
+            )}
+            </div>
           )}
-          </div>
         </>
         );
       })()}
