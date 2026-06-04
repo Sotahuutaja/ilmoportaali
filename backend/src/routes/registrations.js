@@ -230,13 +230,7 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
         return acc;
       }, []);
 
-    // Delete the registration
-    const result = await pool.query(
-      'DELETE FROM registrations WHERE user_id = $1 AND event_id = $2',
-      [req.user.id, req.params.eventId]
-    );
-
-    // Queue cancellation email for sending
+    // Queue cancellation email BEFORE deleting registration (so FK constraint is satisfied)
     try {
       await pool.query(
         `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
@@ -248,6 +242,12 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
       console.error('[REGISTRATIONS] Failed to queue cancellation email:', err.message);
       // Don't block the response - email will be retried
     }
+
+    // Delete the registration
+    const result = await pool.query(
+      'DELETE FROM registrations WHERE user_id = $1 AND event_id = $2',
+      [req.user.id, req.params.eventId]
+    );
 
     res.json({ message: 'Registration cancelled' });
   } catch (err) {
@@ -362,13 +362,7 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
         return acc;
       }, []);
 
-    // Delete the registration
-    const result = await pool.query(
-      'DELETE FROM registrations WHERE id = $1 AND event_id = $2',
-      [req.params.registrationId, req.params.eventId]
-    );
-
-    // Queue cancellation email for sending
+    // Queue cancellation email BEFORE deleting registration (so FK constraint is satisfied)
     try {
       await pool.query(
         `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
@@ -380,6 +374,12 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
       console.error('[REGISTRATIONS] Failed to queue cancellation email:', err.message);
       // Don't block the response - email will be retried
     }
+
+    // Delete the registration
+    const result = await pool.query(
+      'DELETE FROM registrations WHERE id = $1 AND event_id = $2',
+      [req.params.registrationId, req.params.eventId]
+    );
 
     res.json({ message: 'Registration cancelled' });
   } catch (err) {
