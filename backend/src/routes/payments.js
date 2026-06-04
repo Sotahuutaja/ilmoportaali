@@ -30,6 +30,11 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
     let totalCents = 0;
 
     for (const { product_id, quantity, field_values } of products) {
+      // Validate quantity is a positive integer
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        return res.status(400).json({ error: 'Quantity must be a positive integer' });
+      }
+
       const product = await pool.query(
         'SELECT price, fields FROM event_products WHERE id = $1 AND event_id = $2',
         [product_id, eventId]
@@ -95,11 +100,12 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
  * Called AFTER user completes payment in the UI
  */
 router.post('/confirm-payment', requireAuth, async (req, res) => {
-  const { paymentIntentId, eventId, registrations } = req.body;
-  
+  const { paymentIntentId, eventId, registrations, expectedAmount } = req.body;
+
   console.log('[PAYMENT] Received confirm-payment request');
   console.log('[PAYMENT] paymentIntentId:', paymentIntentId);
   console.log('[PAYMENT] eventId:', eventId);
+  console.log('[PAYMENT] expectedAmount:', expectedAmount);
   console.log('[PAYMENT] registrations structure:', JSON.stringify(registrations, null, 2));
 
   if (!paymentIntentId) {
@@ -140,6 +146,22 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       });
     }
 
+    // Verify that the authenticated user owns this payment intent
+    if (paymentIntent.metadata?.email !== req.user.email) {
+      console.error('[PAYMENT ERROR] Payment intent email mismatch:', paymentIntent.metadata?.email, '!==', req.user.email);
+      return res.status(403).json({ error: 'Payment intent does not belong to you' });
+    }
+
+    // Verify the payment amount matches what was expected (price reconciliation)
+    if (expectedAmount && paymentIntent.amount !== expectedAmount) {
+      console.error('[PAYMENT ERROR] Payment amount mismatch:', paymentIntent.amount, '!==', expectedAmount);
+      return res.status(400).json({
+        error: 'Payment amount mismatch. Please try again.',
+        expected: expectedAmount,
+        actual: paymentIntent.amount
+      });
+    }
+
     // Step 2: Begin transaction to create registrations and record payment
     await client.query('BEGIN');
 
@@ -147,8 +169,9 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     let totalCents = 0;
 
     // Check if captain is already registered for this event
+    // Use FOR UPDATE to lock the row and prevent race conditions with concurrent payments
     const existingCaptainReg = await client.query(
-      'SELECT id FROM registrations WHERE user_id = $1 AND event_id = $2',
+      'SELECT id FROM registrations WHERE user_id = $1 AND event_id = $2 FOR UPDATE',
       [req.user.id, eventId]
     );
     const existingCaptainRegId = existingCaptainReg.rows[0]?.id;
@@ -208,6 +231,11 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
       // Add products to registration
       for (const { product_id, quantity, field_values } of productsToAdd) {
+        // Validate quantity is a positive integer
+        if (!Number.isInteger(quantity) || quantity < 1) {
+          throw new Error('Quantity must be a positive integer');
+        }
+
         const product = await client.query(
           'SELECT price, fields FROM event_products WHERE id = $1',
           [product_id]

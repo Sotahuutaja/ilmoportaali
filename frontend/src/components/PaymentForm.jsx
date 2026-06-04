@@ -129,13 +129,17 @@ export default function PaymentForm({
         }
       };
 
+      // Convert total amount to cents for price reconciliation
+      const expectedAmount = Math.round(totalAmount * 100);
+
       const response = await fetch('/api/payments/confirm-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paymentIntentId,
           eventId,
-          registrations: payloadData
+          registrations: payloadData,
+          expectedAmount
         })
       });
 
