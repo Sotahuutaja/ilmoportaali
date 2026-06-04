@@ -1,6 +1,6 @@
 /**
- * RegistrationReview - Shows a summary of selected products before proceeding to checkout
- * Allows user to review and confirm their selections
+ * RegistrationReview - Shows a summary of captain and guest registrations before checkout
+ * Displays individual breakdowns for captain and each guest
  */
 
 export default function RegistrationReview({
@@ -10,7 +10,9 @@ export default function RegistrationReview({
   comments,
   totalAmount,
   onConfirm,
-  onCancel
+  onCancel,
+  captainName,
+  guests
 }) {
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
@@ -29,34 +31,87 @@ export default function RegistrationReview({
           )}
         </div>
 
-        {/* Products */}
+        {/* Products - Show captain and guests separately */}
         <div style={{ marginBottom: '1.5rem' }}>
-          <h4 style={{ marginBottom: '0.8rem', color: '#333' }}>Selected Products</h4>
-          <div style={{ border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
-            {products.map((p, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '0.8rem 1rem',
-                  borderBottom: idx < products.length - 1 ? '1px solid var(--border)' : 'none',
-                  background: idx % 2 === 0 ? 'transparent' : 'var(--surface-2)'
-                }}
-              >
-                <div>
-                  <strong>{p.name}</strong>
-                  <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                    × {p.quantity}
-                  </span>
-                </div>
-                <span style={{ fontWeight: 600, color: '#333' }}>
-                  €{(p.price * p.quantity).toFixed(2)}
-                </span>
-              </div>
-            ))}
+          <h4 style={{ marginBottom: '0.8rem', color: '#333' }}>Registration Breakdown</h4>
+
+          {/* Captain's products */}
+          <div style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: '6px' }}>
+            <p style={{ margin: '0 0 0.8rem 0', fontWeight: 600, fontSize: '0.95rem' }}>
+              👤 {captainName || 'You (Captain)'} {teamName && `- Team: ${teamName}`}
+            </p>
+            <div style={{ border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+              {products.map((p, idx) => {
+                const subtotal = p.price * p.quantity;
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.6rem 0.8rem',
+                      borderBottom: idx < products.length - 1 ? '1px solid var(--border)' : 'none',
+                      background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)'
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '0.9rem' }}>{p.name}</span>
+                      <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        × {p.quantity}
+                      </span>
+                    </div>
+                    <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>
+                      €{subtotal.toFixed(2)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Guests' products */}
+          {guests && guests.length > 0 && (
+            guests.map((guest, gIdx) => {
+              const guestProducts = guest.products || [];
+              const guestSubtotal = guestProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+              return (
+                <div key={gIdx} style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: '6px' }}>
+                  <p style={{ margin: '0 0 0.8rem 0', fontWeight: 600, fontSize: '0.95rem' }}>
+                    👥 {guest.guest_first_name} {guest.guest_last_name}
+                  </p>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+                    {guestProducts.map((p, idx) => {
+                      const subtotal = p.price * p.quantity;
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '0.6rem 0.8rem',
+                            borderBottom: idx < guestProducts.length - 1 ? '1px solid var(--border)' : 'none',
+                            background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)'
+                          }}
+                        >
+                          <div>
+                            <span style={{ fontSize: '0.9rem' }}>{p.name}</span>
+                            <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                              × {p.quantity}
+                            </span>
+                          </div>
+                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>
+                            €{subtotal.toFixed(2)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Comments */}

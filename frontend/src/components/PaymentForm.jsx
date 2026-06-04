@@ -9,6 +9,7 @@ import './PaymentForm.css';
 
 export default function PaymentForm({
   eventId,
+  registrationData,
   selectedProducts,
   teamId,
   comments,
@@ -25,7 +26,6 @@ export default function PaymentForm({
 
   // Format the total amount for display
   const displayAmount = totalAmount ? `€${totalAmount.toFixed(2)}` : null;
-  const amountInCents = totalAmount ? Math.round(totalAmount * 100) : 0;
 
   // Step 1: Create payment intent
   const handleCreatePaymentIntent = async () => {
@@ -103,18 +103,25 @@ export default function PaymentForm({
     }
   };
 
-  // Step 2b: Confirm payment intent and create registration
+  // Step 2b: Confirm payment intent and create registration(s)
+  // Sends either full registration data (captain + guests) or just captain data
   const confirmPayment = async (paymentIntentId) => {
     try {
+      const payloadData = registrationData || {
+        captain: {
+          products: selectedProducts,
+          teamId: teamId || null,
+          comments: comments || null
+        }
+      };
+
       const response = await fetch('/api/payments/confirm-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paymentIntentId,
           eventId,
-          products: selectedProducts,
-          teamId: teamId || null,
-          comments: comments || null
+          registrations: payloadData
         })
       });
 

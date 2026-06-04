@@ -289,7 +289,14 @@ export default function EventDetail() {
 
   // Guest registration state
   const [showGuestForm, setShowGuestForm] = useState(false);
-  const [guestForm, setGuestForm] = useState({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
+  const [guestForm, setGuestForm] = useState({
+    guest_first_name: '',
+    guest_last_name: '',
+    guest_email: '',
+    year_of_birth: new Date().getFullYear() - 18,
+    gender: '',
+    team_id: ''
+  });
   const [guestProducts, setGuestProducts] = useState({});
   const [guestFieldValues, setGuestFieldValues] = useState({});
   const [guestComments, setGuestComments] = useState('');
@@ -442,7 +449,14 @@ export default function EventDetail() {
       });
       setMessage(`Guest ${guestForm.guest_first_name} registered successfully!`);
       setShowGuestForm(false);
-      setGuestForm({ guest_first_name: '', guest_last_name: '', guest_email: '', team_id: '' });
+      setGuestForm({
+      guest_first_name: '',
+      guest_last_name: '',
+      guest_email: '',
+      year_of_birth: new Date().getFullYear() - 18,
+      gender: '',
+      team_id: ''
+    });
       setGuestProducts({});
       setGuestFieldValues({});
       setGuestComments('');
@@ -599,6 +613,29 @@ export default function EventDetail() {
                       onChange={e => setGuestForm({ ...guestForm, guest_email: e.target.value })}
                       required
                     />
+
+                    <label>Year of birth</label>
+                    <input
+                      type="number"
+                      value={guestForm.year_of_birth}
+                      onChange={e => setGuestForm({ ...guestForm, year_of_birth: e.target.value })}
+                      min="1940"
+                      max={new Date().getFullYear()}
+                      required
+                    />
+
+                    <label>Gender</label>
+                    <select
+                      value={guestForm.gender}
+                      onChange={e => setGuestForm({ ...guestForm, gender: e.target.value })}
+                      required
+                    >
+                      <option value="">Select...</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+
                     <label>Team</label>
                     <select
                       value={guestForm.team_id}

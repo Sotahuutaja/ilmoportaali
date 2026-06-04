@@ -23,6 +23,7 @@ export default function Checkout() {
   const [comments, setComments] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [registrationData, setRegistrationData] = useState(null); // Full captain + guests data
   const [paymentSuccess, setPaymentSuccess] = useState(null);
 
   useEffect(() => {
@@ -43,18 +44,18 @@ export default function Checkout() {
 
         // Parse URL parameters
         try {
-          const productsParam = searchParams.get('products');
-          const teamParam = searchParams.get('team');
-          const commentsParam = searchParams.get('comments');
+          const registrationsParam = searchParams.get('registrations');
 
-          if (productsParam) {
-            setSelectedProducts(JSON.parse(decodeURIComponent(productsParam)));
-          }
-          if (teamParam) {
-            setTeamId(parseInt(teamParam));
-          }
-          if (commentsParam) {
-            setComments(decodeURIComponent(commentsParam));
+          if (registrationsParam) {
+            const regData = JSON.parse(decodeURIComponent(registrationsParam));
+            // Store full registration data for payment processing
+            setRegistrationData(regData);
+
+            if (regData.captain) {
+              setSelectedProducts(regData.captain.products);
+              setTeamId(regData.captain.teamId);
+              setComments(regData.captain.comments);
+            }
           }
         } catch (err) {
           setError('Invalid checkout parameters');
@@ -216,6 +217,7 @@ export default function Checkout() {
               <>
                 <PaymentForm
                   eventId={parseInt(id)}
+                  registrationData={registrationData}
                   selectedProducts={paymentProducts}
                   teamId={teamId}
                   comments={comments}
