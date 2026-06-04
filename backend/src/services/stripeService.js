@@ -12,6 +12,9 @@ if (stripeKey) {
   stripe = require('stripe')(stripeKey);
 }
 
+// In-memory storage for mock payment intents (to persist metadata across calls)
+const mockPaymentIntents = {};
+
 /**
  * Create a payment intent for a registration
  * @param {number} registrationId - ID of the registration
@@ -23,7 +26,7 @@ async function createPaymentIntent(registrationId, amountCents, email) {
   if (!stripe) {
     // Mock implementation for development without Stripe account
     console.log(`[STRIPE MOCK] Creating payment intent for €${(amountCents / 100).toFixed(2)}`);
-    return {
+    const mockIntent = {
       id: `pi_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       client_secret: `pi_mock_secret_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       amount: amountCents,
@@ -31,6 +34,9 @@ async function createPaymentIntent(registrationId, amountCents, email) {
       status: 'requires_payment_method',
       metadata: { registrationId, email }
     };
+    // Store in mock map so we can retrieve it later with metadata intact
+    mockPaymentIntents[mockIntent.id] = mockIntent;
+    return mockIntent;
   }
 
   // Real Stripe API call
@@ -61,13 +67,24 @@ async function createPaymentIntent(registrationId, amountCents, email) {
  */
 async function getPaymentIntent(paymentIntentId) {
   if (!stripe) {
-    // Mock: always return succeeded for mock payment
+    // Mock: retrieve from storage if available, otherwise return basic mock
     console.log(`[STRIPE MOCK] Retrieving payment intent ${paymentIntentId}`);
+    const stored = mockPaymentIntents[paymentIntentId];
+    if (stored) {
+      return {
+        id: paymentIntentId,
+        status: 'succeeded',
+        amount: stored.amount,
+        currency: 'eur',
+        metadata: stored.metadata
+      };
+    }
     return {
       id: paymentIntentId,
       status: 'succeeded',
       amount: 0,
-      currency: 'eur'
+      currency: 'eur',
+      metadata: {}
     };
   }
 
