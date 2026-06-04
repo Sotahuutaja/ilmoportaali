@@ -33,12 +33,26 @@ export default function PaymentForm({
     setIsProcessing(true);
 
     try {
+      // Collect all products (captain + guests) for payment calculation
+      const allProducts = [...selectedProducts];
+      if (registrationData?.guests) {
+        registrationData.guests.forEach(guest => {
+          guest.products.forEach(p => {
+            allProducts.push({
+              product_id: p.product_id,
+              quantity: p.quantity,
+              field_values: p.field_values || {}
+            });
+          });
+        });
+      }
+
       const response = await fetch('/api/payments/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId,
-          products: selectedProducts,
+          products: allProducts,
           teamId: teamId || null,
           comments: comments || null
         })
