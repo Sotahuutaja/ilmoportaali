@@ -292,7 +292,6 @@ export default function EventDetail() {
   const [guestForm, setGuestForm] = useState({
     guest_first_name: '',
     guest_last_name: '',
-    guest_email: '',
     year_of_birth: new Date().getFullYear() - 18,
     gender: '',
     team_id: ''
@@ -486,7 +485,6 @@ export default function EventDetail() {
     setGuestForm({
       guest_first_name: '',
       guest_last_name: '',
-      guest_email: '',
       year_of_birth: new Date().getFullYear() - 18,
       gender: '',
       team_id: ''
@@ -640,15 +638,7 @@ export default function EventDetail() {
             onChange={e => setGuestForm({ ...guestForm, guest_last_name: e.target.value })}
             required
           />
-                    <label>Guest email</label>
-                    <input
-                      type="email"
-                      value={guestForm.guest_email}
-                      onChange={e => setGuestForm({ ...guestForm, guest_email: e.target.value })}
-                      required
-                    />
-
-                    <label>Year of birth</label>
+<label>Year of birth</label>
                     <input
                       type="number"
                       value={guestForm.year_of_birth}

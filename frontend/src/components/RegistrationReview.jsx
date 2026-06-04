@@ -47,23 +47,29 @@ export default function RegistrationReview({
                   <div
                     key={idx}
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
                       padding: '0.6rem 0.8rem',
                       borderBottom: idx < products.length - 1 ? '1px solid var(--border)' : 'none',
                       background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)'
                     }}
                   >
-                    <div>
-                      <span style={{ fontSize: '0.9rem' }}>{p.name}</span>
-                      <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                        × {p.quantity}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.3rem' }}>
+                      <div>
+                        <span style={{ fontSize: '0.9rem' }}>{p.name}</span>
+                        <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          × {p.quantity}
+                        </span>
+                      </div>
+                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>
+                        €{subtotal.toFixed(2)}
                       </span>
                     </div>
-                    <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>
-                      €{subtotal.toFixed(2)}
-                    </span>
+                    {p.field_values && Object.keys(p.field_values).length > 0 && (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                        {Object.entries(p.field_values).map(([key, value]) => (
+                          <div key={key}>{key}: <strong>{value}</strong></div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -74,7 +80,7 @@ export default function RegistrationReview({
           {guests && guests.length > 0 && (
             guests.map((guest, gIdx) => {
               const guestProducts = guest.products || [];
-              const guestSubtotal = guestProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+
               return (
                 <div key={gIdx} style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: '6px' }}>
                   <p style={{ margin: '0 0 0.8rem 0', fontWeight: 600, fontSize: '0.95rem' }}>
@@ -87,23 +93,29 @@ export default function RegistrationReview({
                         <div
                           key={idx}
                           style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
                             padding: '0.6rem 0.8rem',
                             borderBottom: idx < guestProducts.length - 1 ? '1px solid var(--border)' : 'none',
                             background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)'
                           }}
                         >
-                          <div>
-                            <span style={{ fontSize: '0.9rem' }}>{p.name}</span>
-                            <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                              × {p.quantity}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.3rem' }}>
+                            <div>
+                              <span style={{ fontSize: '0.9rem' }}>{p.name}</span>
+                              <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                × {p.quantity}
+                              </span>
+                            </div>
+                            <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>
+                              €{subtotal.toFixed(2)}
                             </span>
                           </div>
-                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>
-                            €{subtotal.toFixed(2)}
-                          </span>
+                          {p.field_values && Object.keys(p.field_values).length > 0 && (
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                              {Object.entries(p.field_values).map(([key, value]) => (
+                                <div key={key}>{key}: <strong>{value}</strong></div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

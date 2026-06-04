@@ -142,11 +142,14 @@ export default function Checkout() {
 
         {error && <p className="error">{error}</p>}
 
-        {/* Selected Products Summary */}
+        {/* Selected Products Summary - All Registrations */}
         <div style={{ background: 'var(--surface-2)', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1.1rem' }}>Your Registration</h3>
-          {paymentProducts.length > 0 ? (
-            <>
+          <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1.1rem' }}>Registration Summary</h3>
+          
+          {/* Captain's products */}
+          {paymentProducts.length > 0 && (
+            <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+              <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 600 }}>You (Captain)</p>
               {paymentProducts.map((p, idx) => {
                 const product = products.find(prod => prod.id === p.product_id);
                 return (
@@ -161,8 +164,25 @@ export default function Checkout() {
                   <strong>Comments:</strong> {comments}
                 </div>
               )}
-            </>
-          ) : (
+            </div>
+          )}
+
+          {/* Guests' products */}
+          {registrationData?.guests && registrationData.guests.length > 0 && (
+            registrationData.guests.map((guest, gIdx) => (
+              <div key={gIdx} style={{ marginBottom: gIdx < registrationData.guests.length - 1 ? '1rem' : '0', paddingBottom: gIdx < registrationData.guests.length - 1 ? '1rem' : '0', borderBottom: gIdx < registrationData.guests.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 600 }}>Guest: {guest.guest_first_name} {guest.guest_last_name}</p>
+                {guest.products.map((p, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', fontSize: '0.95rem' }}>
+                    <span>{p.name} ×{p.quantity}</span>
+                    <span>€{(p.price * p.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            ))
+          )}
+
+          {paymentProducts.length === 0 && (!registrationData?.guests || registrationData.guests.length === 0) && (
             <p style={{ color: 'var(--text-muted)', margin: 0 }}>No products selected</p>
           )}
         </div>
