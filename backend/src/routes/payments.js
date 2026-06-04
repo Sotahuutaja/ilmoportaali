@@ -113,8 +113,16 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
   const captain = registrations.captain;
   const guests = registrations.guests || [];
 
-  if (!captain || !captain.products || !Array.isArray(captain.products)) {
-    return res.status(400).json({ error: 'Captain registration with products is required' });
+  if (!captain || !Array.isArray(captain.products)) {
+    return res.status(400).json({ error: 'Captain registration is required' });
+  }
+
+  // Ensure either captain or guests have products
+  const captainHasProducts = captain.products.length > 0;
+  const guestsHaveProducts = guests.some(g => g.products && g.products.length > 0);
+
+  if (!captainHasProducts && !guestsHaveProducts) {
+    return res.status(400).json({ error: 'At least one product must be registered' });
   }
 
   const client = await pool.connect();
@@ -137,6 +145,13 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
     const registrationIds = [];
     let totalCents = 0;
+
+    // Check if captain is already registered for this event
+    const existingCaptainReg = await client.query(
+      'SELECT id FROM registrations WHERE user_id = $1 AND event_id = $2',
+      [req.user.id, eventId]
+    );
+    const existingCaptainRegId = existingCaptainReg.rows[0]?.id;
 
     // Helper function to create a single registration
     const createRegistration = async (isGuest, guestData = null) => {
@@ -161,17 +176,31 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
           ]
         );
       } else {
-        // Create captain registration
-        regResult = await client.query(
-          `INSERT INTO registrations (user_id, event_id, team_id, comments)
-           VALUES ($1, $2, $3, $4) RETURNING id`,
-          [
-            req.user.id,
-            eventId,
-            captain.teamId || null,
-            captain.comments || null
-          ]
-        );
+        // Create or update captain registration
+        if (existingCaptainRegId) {
+          // Captain already registered, update existing registration
+          regResult = await client.query(
+            `UPDATE registrations SET team_id = $1, comments = $2 WHERE id = $3 RETURNING id`,
+            [
+              captain.teamId || null,
+              captain.comments || null,
+              existingCaptainRegId
+            ]
+          );
+          regResult.rows[0].id = existingCaptainRegId;
+        } else {
+          // Create new captain registration
+          regResult = await client.query(
+            `INSERT INTO registrations (user_id, event_id, team_id, comments)
+             VALUES ($1, $2, $3, $4) RETURNING id`,
+            [
+              req.user.id,
+              eventId,
+              captain.teamId || null,
+              captain.comments || null
+            ]
+          );
+        }
       }
 
       const regId = regResult.rows[0].id;
@@ -199,10 +228,10 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       return regId;
     };
 
-    // Create captain registration
-    console.log('[PAYMENT] Creating captain registration');
+    // Create or update captain registration
+    console.log('[PAYMENT] Creating/updating captain registration');
     const captainRegId = await createRegistration(false);
-    console.log('[PAYMENT] Captain registration created:', captainRegId);
+    console.log('[PAYMENT] Captain registration ID:', captainRegId);
     registrationIds.push(captainRegId);
 
     // Create guest registrations
