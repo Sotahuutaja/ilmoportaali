@@ -316,7 +316,7 @@ export default function Checkout() {
         ) : (
           <>
             {/* Payment Form */}
-            {paymentProducts.length > 0 && (
+            {(paymentProducts.length > 0 || (registrationData?.guests && registrationData.guests.length > 0)) && (
               <>
                 <PaymentForm
                   eventId={parseInt(id)}
