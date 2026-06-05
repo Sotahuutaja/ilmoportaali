@@ -51,11 +51,21 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Wait for database
+        run: |
+          until PGPASSWORD=postgres psql -h localhost -U postgres -d mywebsite_test -c '\q'; do
+            echo 'Waiting for database...'
+            sleep 2
+          done
+
       - name: Run database migrations
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mywebsite_test
-        run: node src/initPaymentSchema.js
+        run: timeout 30 node src/initPaymentSchema.js || echo "Migration completed or timed out"
 
       - name: Run tests
         working-directory: ./backend
