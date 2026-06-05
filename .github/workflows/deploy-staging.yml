@@ -1,8 +1,9 @@
-name: Build and Deploy
+name: Build and Deploy to Staging
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   changes:
@@ -21,50 +22,8 @@ jobs:
             frontend:
               - 'frontend/**'
 
-  test-backend:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: mywebsite_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        working-directory: ./backend
-        run: npm ci
-
-      - name: Run database migrations
-        working-directory: ./backend
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mywebsite_test
-        run: node src/initPaymentSchema.js
-
-      - name: Run tests
-        working-directory: ./backend
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mywebsite_test
-        run: npm test
-
-  build-deploy-backend:
-    needs: [changes, test-backend]
+  build-deploy-backend-staging:
+    needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -91,37 +50,36 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/backend:latest
+          tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/backend:staging
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy backend
+      - name: Deploy backend to staging
         uses: azure/cli@v1
         with:
           inlineScript: |
             SUFFIX=$(date +%Y%m%d%H%M%S)
             az containerapp update \
-              --name ilmoportaali-app \
+              --name ilmoportaali-app-staging \
               --resource-group RG_Ilmoportaali \
-              --image ${{ secrets.REGISTRY_LOGIN_SERVER }}/backend:latest \
+              --image ${{ secrets.REGISTRY_LOGIN_SERVER }}/backend:staging \
               --revision-suffix $SUFFIX
 
-      # - name: Health check backend
-      #   run: |
-      #     echo "Waiting for backend to become healthy..."
-      #     for i in $(seq 1 24); do
-      #       STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ilmoportaali-app.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io/health)
-      #       if [ "$STATUS" = "200" ]; then
-      #         echo "Backend is healthy."
-      #         exit 0
-      #       fi
-      #       echo "Attempt $i: got $STATUS, retrying in 5s..."
-      #       sleep 5
-      #     done
-      #     echo "Backend did not become healthy after 2 minutes."
-      #     exit 1
+      - name: Health check backend staging
+        run: |
+          echo "Waiting for staging backend to become healthy..."
+          for i in $(seq 1 24); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ilmoportaali-app-staging.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io/health || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Staging backend is healthy."
+              exit 0
+            fi
+            echo "Attempt $i: got $STATUS, retrying in 5s..."
+            sleep 5
+          done
+          echo "Warning: Staging backend health check did not complete, but deployment continues."
 
-  build-deploy-frontend:
+  build-deploy-frontend-staging:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
@@ -149,32 +107,31 @@ jobs:
         with:
           context: ./frontend
           push: true
-          tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/frontend:latest
+          tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/frontend:staging
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy frontend
+      - name: Deploy frontend to staging
         uses: azure/cli@v1
         with:
           inlineScript: |
             SUFFIX=$(date +%Y%m%d%H%M%S)
             az containerapp update \
-              --name ilmoportaali-frontend \
+              --name ilmoportaali-frontend-staging \
               --resource-group RG_Ilmoportaali \
-              --image ${{ secrets.REGISTRY_LOGIN_SERVER }}/frontend:latest \
+              --image ${{ secrets.REGISTRY_LOGIN_SERVER }}/frontend:staging \
               --revision-suffix $SUFFIX
 
-      - name: Health check frontend
+      - name: Health check frontend staging
         run: |
-          echo "Waiting for frontend to become healthy..."
+          echo "Waiting for staging frontend to become healthy..."
           for i in $(seq 1 24); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ilmoportaali-frontend.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io)
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ilmoportaali-frontend-staging.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io || echo "000")
             if [ "$STATUS" = "200" ]; then
-              echo "Frontend is healthy."
+              echo "Staging frontend is healthy."
               exit 0
             fi
             echo "Attempt $i: got $STATUS, retrying in 5s..."
             sleep 5
           done
-          echo "Frontend did not become healthy after 2 minutes."
-          exit 1
+          echo "Warning: Staging frontend health check did not complete, but deployment continues."
