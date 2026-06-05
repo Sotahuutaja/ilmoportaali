@@ -32,11 +32,15 @@ jest.mock('../../src/services/emailService', () => ({
 
 describe('Payment Integration Tests', () => {
   let app;
+  let server;
   let eventId;
   let productId;
 
   beforeAll(async () => {
     app = require('../../src/index');
+
+    // Start server but keep reference to close it
+    server = app.listen(3001, () => {});
 
     const eventResult = await pool.query(
       `INSERT INTO events (id, title, created_by, starts_at, ends_at, registration_start, registration_end)
@@ -58,10 +62,19 @@ describe('Payment Integration Tests', () => {
   });
 
   afterAll(async () => {
+    // Clean up database
     await pool.query('DELETE FROM registrations WHERE event_id = $1', [eventId]);
     await pool.query('DELETE FROM event_products WHERE event_id = $1', [eventId]);
     await pool.query('DELETE FROM events WHERE id = $1', [eventId]);
+
+    // Close server and pool
+    if (server) {
+      server.close();
+    }
     await pool.end();
+
+    // Force exit if still pending
+    process.exit(0);
   });
 
   test('should create payment intent with valid products', async () => {
