@@ -32,9 +32,14 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
       [req.user.id, eventId]
     );
     if (existingReg.rows[0]) {
-      return res.status(409).json({
-        error: 'You are already registered for this event. Team captains cannot register twice, but you can add guests to your existing registration.'
-      });
+      // Determine if user is registering as a captain (has teamId or guests)
+      const isCapitain = teamId || false;
+
+      const errorMessage = isCapitain
+        ? 'You are already registered for this event. You cannot register for the event twice, but team captains can still register guests.'
+        : 'You are already registered for this event. To modify your registration, contact event organizers.';
+
+      return res.status(409).json({ error: errorMessage });
     }
 
     // Calculate total price (in cents)
