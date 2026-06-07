@@ -2,6 +2,18 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-06-05
+
+### DevOps & Testing
+
+- **GitHub Actions Automated Testing** — Integrated Jest tests into CI/CD pipeline, tests run automatically on every push before deployment
+- **Payment Validation Tests** — Added comprehensive validation tests for payment processing: quantity validation, field value validation, amount calculation, and edge cases
+- **Docker Test Database Auto-Creation** — PostgreSQL test database (`*_test`) automatically created via init script when Docker starts, no manual setup required
+- **Deployment Gate** — Tests must pass before code can be deployed to production, preventing broken code from reaching users
+- **Simplified Test Architecture** — Fast, focused validation tests (no external dependencies) that run in 30-60 seconds
+
+---
+
 ## [Latest] — 2026-06-04
 
 ### Security Fixes

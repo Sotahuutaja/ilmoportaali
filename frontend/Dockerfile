@@ -1,5 +1,10 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Accept Stripe publishable key as build argument
+ARG REACT_APP_STRIPE_PUBLISHABLE_KEY
+ENV REACT_APP_STRIPE_PUBLISHABLE_KEY=$REACT_APP_STRIPE_PUBLISHABLE_KEY
+
 COPY package*.json ./
 RUN npm ci
 COPY . .
