@@ -26,6 +26,17 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
+    // Check if user is already registered as captain for this event
+    const existingReg = await pool.query(
+      'SELECT id FROM registrations WHERE user_id = $1 AND event_id = $2',
+      [req.user.id, eventId]
+    );
+    if (existingReg.rows[0]) {
+      return res.status(409).json({
+        error: 'You are already registered for this event. Team captains cannot register twice, but you can add guests to your existing registration.'
+      });
+    }
+
     // Calculate total price (in cents)
     let totalCents = 0;
 
