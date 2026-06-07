@@ -38,13 +38,22 @@ export default function Checkout() {
     const redirectStatus = searchParams.get('redirect_status');
     const paymentIntentId = searchParams.get('paymentIntentId') || searchParams.get('payment_intent');
 
+    console.log('[CHECKOUT] URL params:', { redirectStatus, paymentIntentId, id });
+    console.log('[CHECKOUT] localStorage keys:', Object.keys(localStorage));
+
     if (redirectStatus && paymentIntentId) {
+      console.log('[CHECKOUT] Detected payment redirect');
       setIsProcessingRedirect(true);
       // Returning from payment provider - retrieve stored registration data and confirm
-      const saved = localStorage.getItem(`checkout_${id}`);
+      const storageKey = `checkout_${id}`;
+      console.log('[CHECKOUT] Looking for storage key:', storageKey);
+      const saved = localStorage.getItem(storageKey);
+      console.log('[CHECKOUT] Found saved data:', !!saved);
+
       if (saved) {
         try {
           const regData = JSON.parse(saved);
+          console.log('[CHECKOUT] Parsed registration data:', regData);
           handlePaymentRedirectSuccess(paymentIntentId, regData);
           return;
         } catch (err) {
@@ -53,6 +62,7 @@ export default function Checkout() {
           setIsProcessingRedirect(false);
         }
       } else {
+        console.warn('[CHECKOUT] No saved registration data found');
         setError('Payment redirect detected but no registration data found');
         setIsProcessingRedirect(false);
       }
