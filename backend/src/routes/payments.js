@@ -40,6 +40,19 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'field_values must be an object' });
       }
 
+      // Validate that select fields have values selected
+      const fields = product.rows[0].fields || [];
+      for (const field of fields) {
+        if (field.type === 'select') {
+          const selectedValue = field_values?.[field.id];
+          if (!selectedValue) {
+            return res.status(400).json({
+              error: `${field.label} is required for ${product.rows[0].name}`
+            });
+          }
+        }
+      }
+
       const product = await pool.query(
         'SELECT price, fields, quantity FROM event_products WHERE id = $1 AND event_id = $2',
         [product_id, eventId]
@@ -290,14 +303,28 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
           throw new Error('field_values must be an object');
         }
 
-        const product = await client.query(
+        // Validate select fields have values before querying product
+        const productInfo = await client.query(
           'SELECT price, fields, quantity FROM event_products WHERE id = $1',
           [product_id]
         );
 
-        if (!product.rows[0]) {
+        if (!productInfo.rows[0]) {
           throw new Error(`Product ${product_id} not found`);
         }
+
+        // Validate that select fields have values selected
+        const fields = productInfo.rows[0].fields || [];
+        for (const field of fields) {
+          if (field.type === 'select') {
+            const selectedValue = field_values?.[field.id];
+            if (!selectedValue) {
+              throw new Error(`${field.label} is required`);
+            }
+          }
+        }
+
+        const product = productInfo;
 
         // Validate available quantity for products with stock limits
         if (product.rows[0].quantity !== null) {

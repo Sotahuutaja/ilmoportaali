@@ -85,7 +85,7 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                   <div key={field.id} style={{ marginBottom: '0.5rem' }}>
                     <label style={{ fontSize: '0.78rem' }}>
                       {field.label}
-                      {field.required && <span style={{ color: '#c0392b', marginLeft: '0.2rem' }}>*</span>}
+                      {(field.type === 'select' || field.required) && <span style={{ color: '#c0392b', marginLeft: '0.2rem' }}>*</span>}
                     </label>
                     {field.type === 'select' ? (
                       <select
@@ -370,7 +370,10 @@ export default function EventDetail() {
       if (!qty) continue;
       const product = products.find(p => p.id === parseInt(productId));
       for (const field of (product?.fields || [])) {
-        if (field.required && !fv?.[productId]?.[field.id]) {
+        // Dropdown/select fields are mandatory by default
+        // Other fields are only mandatory if explicitly marked as required
+        const isMandatory = field.type === 'select' || field.required;
+        if (isMandatory && !fv?.[productId]?.[field.id]) {
           return `"${field.label}" is required for ${product.name}`;
         }
       }
