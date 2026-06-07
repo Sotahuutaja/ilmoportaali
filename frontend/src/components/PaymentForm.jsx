@@ -53,6 +53,12 @@ function PaymentFormContent({
         return;
       }
 
+      // Submit the payment element (required for Payment Element)
+      const submitResult = await elements.submit();
+      if (submitResult.error) {
+        throw new Error(submitResult.error.message);
+      }
+
       const result = await stripe.confirmPayment({
         elements,
         clientSecret,
