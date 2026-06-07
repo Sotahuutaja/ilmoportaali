@@ -190,13 +190,15 @@ export default function Checkout() {
         invoiceNumber: response.data.invoiceNumber,
         amountFormatted: response.data.amountFormatted
       });
-      console.log('[CHECKOUT] Setting isProcessingRedirect to false');
+      console.log('[CHECKOUT] Setting isProcessingRedirect to false and loading to false');
       setIsProcessingRedirect(false);
+      setLoading(false);
     } catch (err) {
       console.error('[CHECKOUT] Payment redirect confirmation error:', err);
       const errorMsg = err.response?.data?.error || err.message || 'Failed to complete payment';
       setError(errorMsg);
       setIsProcessingRedirect(false);
+      setLoading(false);
     }
   };
 
