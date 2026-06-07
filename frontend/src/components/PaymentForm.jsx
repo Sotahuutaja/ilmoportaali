@@ -3,100 +3,60 @@
  * Uses Payment Element for multiple payment methods (card, Apple Pay, Google Pay, etc.)
  */
 
-import { useState } from 'react';
-import { PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import { useState, useEffect } from 'react';
+import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import { stripePromise } from './StripeProvider';
 import './PaymentForm.css';
 
-export default function PaymentForm({
-  eventId,
-  registrationData,
+// Inner component that uses Stripe hooks (must be inside Elements provider)
+function PaymentFormContent({
+  clientSecret,
+  paymentIntentId,
+  mockMode,
+  isProcessing,
+  error,
+  displayAmount,
   selectedProducts,
+  registrationData,
   teamId,
   comments,
   totalAmount,
+  eventId,
+  setError,
+  setIsProcessing,
   onSuccess,
   onError
 }) {
   const stripe = useStripe();
   const elements = useElements();
 
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [mockMode, setMockMode] = useState(false);
-  const [error, setError] = useState(null);
+  const handleConfirmPayment = async () => {
+    if (!clientSecret || !paymentIntentId) {
+      setError('Payment not initialized');
+      return;
+    }
 
-  // Format the total amount for display
-  const displayAmount = totalAmount ? `€${totalAmount.toFixed(2)}` : null;
-
-  // Step 1: Create payment intent
-  const handleCreatePaymentIntent = async () => {
     setError(null);
     setIsProcessing(true);
 
     try {
-      // Collect all products (captain + guests) for payment calculation
-      const allProducts = [...selectedProducts];
-      if (registrationData?.guests) {
-        registrationData.guests.forEach(guest => {
-          guest.products.forEach(p => {
-            allProducts.push({
-              product_id: p.product_id,
-              quantity: p.quantity,
-              field_values: p.field_values || {}
-            });
-          });
-        });
+      // In mock mode, skip Stripe confirmation
+      if (mockMode) {
+        await confirmPaymentRegistration(paymentIntentId);
+        return;
       }
 
-      const response = await fetch('/api/payments/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventId,
-          products: allProducts,
-          teamId: teamId || null,
-          comments: comments || null
-        })
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to create payment');
+      // Real mode: confirm payment with Stripe
+      if (!stripe || !elements) {
+        setError('Stripe not loaded');
+        setIsProcessing(false);
+        return;
       }
 
-      const data = await response.json();
-
-      setMockMode(data.mockMode);
-
-      // In mock mode, auto-confirm without payment
-      if (data.mockMode) {
-        await confirmPayment(data.paymentIntentId);
-      } else {
-        // Real mode: user must complete Stripe payment
-        await handleStripePayment(data.clientSecret, data.paymentIntentId);
-      }
-    } catch (err) {
-      const errorMsg = err.message || 'Payment failed';
-      setError(errorMsg);
-      onError?.(errorMsg);
-      setIsProcessing(false);
-    }
-  };
-
-  // Step 2a: For real Stripe mode - handle payment via Payment Element
-  const handleStripePayment = async (clientSecret, paymentIntentId) => {
-    if (!stripe || !elements) {
-      setError('Stripe not loaded');
-      setIsProcessing(false);
-      return;
-    }
-
-    try {
-      // Confirm payment with Payment Element (supports multiple payment methods)
       const result = await stripe.confirmPayment({
         elements,
         clientSecret,
         confirmParams: {
-          // Return URL after payment (for redirect-based methods)
           return_url: `${window.location.origin}/checkout?paymentIntentId=${paymentIntentId}`
         }
       });
@@ -107,7 +67,7 @@ export default function PaymentForm({
       }
 
       if (result.paymentIntent.status === 'succeeded') {
-        await confirmPayment(paymentIntentId);
+        await confirmPaymentRegistration(paymentIntentId);
       } else {
         throw new Error(`Payment status: ${result.paymentIntent.status}`);
       }
@@ -119,9 +79,7 @@ export default function PaymentForm({
     }
   };
 
-  // Step 2b: Confirm payment intent and create registration(s)
-  // Sends either full registration data (captain + guests) or just captain data
-  const confirmPayment = async (paymentIntentId) => {
+  const confirmPaymentRegistration = async (paymentIntentId) => {
     try {
       const payloadData = registrationData || {
         captain: {
@@ -131,7 +89,6 @@ export default function PaymentForm({
         }
       };
 
-      // Convert total amount to cents for price reconciliation
       const expectedAmount = Math.round(totalAmount * 100);
 
       const response = await fetch('/api/payments/confirm-payment', {
@@ -151,7 +108,6 @@ export default function PaymentForm({
       }
 
       const data = await response.json();
-
       console.log('✓ Registration successful:', data);
       onSuccess?.(data);
     } catch (err) {
@@ -161,6 +117,117 @@ export default function PaymentForm({
       setIsProcessing(false);
     }
   };
+
+  return (
+    <>
+      {!mockMode && clientSecret && (
+        <div className="card-element-container">
+          <PaymentElement options={{ layout: 'tabs' }} />
+        </div>
+      )}
+
+      <button
+        onClick={handleConfirmPayment}
+        disabled={isProcessing || !displayAmount || !stripe || !elements}
+        className="payment-button"
+      >
+        {isProcessing ? 'Processing...' : `Pay ${displayAmount || ''}`}
+      </button>
+
+      <p className="payment-note">
+        {mockMode
+          ? 'Testing in mock mode. No real payment will be processed.'
+          : 'Your payment is secure and encrypted.'}
+      </p>
+    </>
+  );
+}
+
+// Outer component that manages payment intent creation
+export default function PaymentForm({
+  eventId,
+  registrationData,
+  selectedProducts,
+  teamId,
+  comments,
+  totalAmount,
+  onSuccess,
+  onError
+}) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [mockMode, setMockMode] = useState(false);
+  const [error, setError] = useState(null);
+  const [clientSecret, setClientSecret] = useState(null);
+  const [paymentIntentId, setPaymentIntentId] = useState(null);
+
+  const displayAmount = totalAmount ? `€${totalAmount.toFixed(2)}` : null;
+
+  // Create payment intent on mount
+  useEffect(() => {
+    if (!totalAmount || !eventId) {
+      setIsLoading(false);
+      return;
+    }
+
+    const createIntent = async () => {
+      setError(null);
+      setIsLoading(true);
+
+      try {
+        const allProducts = [...selectedProducts];
+        if (registrationData?.guests) {
+          registrationData.guests.forEach(guest => {
+            guest.products.forEach(p => {
+              allProducts.push({
+                product_id: p.product_id,
+                quantity: p.quantity,
+                field_values: p.field_values || {}
+              });
+            });
+          });
+        }
+
+        const response = await fetch('/api/payments/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId,
+            products: allProducts,
+            teamId: teamId || null,
+            comments: comments || null
+          })
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to create payment');
+        }
+
+        const data = await response.json();
+        setClientSecret(data.clientSecret);
+        setPaymentIntentId(data.paymentIntentId);
+        setMockMode(data.mockMode);
+      } catch (err) {
+        const errorMsg = err.message || 'Failed to initialize payment';
+        setError(errorMsg);
+        onError?.(errorMsg);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    createIntent();
+  }, [eventId, totalAmount, selectedProducts, registrationData, teamId, comments, onError]);
+
+  if (isLoading) {
+    return (
+      <div className="payment-form">
+        <h3>Complete Your Registration</h3>
+        <p>Initializing payment...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="payment-form">
@@ -181,29 +248,28 @@ export default function PaymentForm({
         )}
       </div>
 
-      {!mockMode && (
-        <div className="card-element-container">
-          <PaymentElement
-            options={{
-              layout: 'tabs'
-            }}
+      {clientSecret && (
+        <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <PaymentFormContent
+            clientSecret={clientSecret}
+            paymentIntentId={paymentIntentId}
+            mockMode={mockMode}
+            isProcessing={isProcessing}
+            error={error}
+            displayAmount={displayAmount}
+            selectedProducts={selectedProducts}
+            registrationData={registrationData}
+            teamId={teamId}
+            comments={comments}
+            totalAmount={totalAmount}
+            eventId={eventId}
+            setError={setError}
+            setIsProcessing={setIsProcessing}
+            onSuccess={onSuccess}
+            onError={onError}
           />
-        </div>
+        </Elements>
       )}
-
-      <button
-        onClick={handleCreatePaymentIntent}
-        disabled={isProcessing || !displayAmount || !stripe || !elements}
-        className="payment-button"
-      >
-        {isProcessing ? 'Processing...' : `Pay ${displayAmount || ''}`}
-      </button>
-
-      <p className="payment-note">
-        {mockMode
-          ? 'Testing in mock mode. No real payment will be processed.'
-          : 'Your payment is secure and encrypted.'}
-      </p>
     </div>
   );
 }

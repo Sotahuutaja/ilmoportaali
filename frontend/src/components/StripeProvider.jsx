@@ -20,11 +20,14 @@ if (publishableKey && publishableKey !== 'pk_test_mock_key') {
   stripePromise = Promise.resolve(null);
 }
 
-export default function StripeProvider({ children }) {
-  // In mock mode, stripe is null, so Elements won't render
-  // This is safe - CardElement will still work with mock payment flow
+export { stripePromise };
+
+export default function StripeProvider({ children, clientSecret }) {
+  // For PaymentElement, we need to pass clientSecret to Elements
+  const options = clientSecret ? { clientSecret } : {};
+
   return (
-    <Elements stripe={stripePromise} options={{}}>
+    <Elements stripe={stripePromise} options={options}>
       {children}
     </Elements>
   );
