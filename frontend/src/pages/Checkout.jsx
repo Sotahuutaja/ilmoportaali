@@ -23,6 +23,7 @@ export default function Checkout() {
   const [comments, setComments] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isProcessingRedirect, setIsProcessingRedirect] = useState(false);
   const [registrationData, setRegistrationData] = useState(null); // Full captain + guests data
   const [paymentSuccess, setPaymentSuccess] = useState(null);
 
@@ -37,8 +38,9 @@ export default function Checkout() {
     const redirectStatus = searchParams.get('redirect_status');
     const paymentIntentId = searchParams.get('paymentIntentId') || searchParams.get('payment_intent');
 
-    if (redirectStatus === 'succeeded' && paymentIntentId) {
-      // Returning from successful payment - retrieve stored registration data and confirm
+    if (redirectStatus && paymentIntentId) {
+      setIsProcessingRedirect(true);
+      // Returning from payment provider - retrieve stored registration data and confirm
       const saved = localStorage.getItem(`checkout_${id}`);
       if (saved) {
         try {
@@ -48,7 +50,11 @@ export default function Checkout() {
         } catch (err) {
           console.error('Failed to process payment redirect:', err);
           setError('Failed to process payment redirect');
+          setIsProcessingRedirect(false);
         }
+      } else {
+        setError('Payment redirect detected but no registration data found');
+        setIsProcessingRedirect(false);
       }
     }
 
@@ -125,17 +131,12 @@ export default function Checkout() {
 
   const handlePaymentRedirectSuccess = async (paymentIntentId, registrationData) => {
     // User returning from payment provider redirect (e.g., MobilePay, iDEAL)
-    // Confirm the payment and create registration
-    setLoading(true);
+    // For asynchronous payments, Stripe will send webhooks when payment completes
+    // We'll attempt to confirm, but payment might still be processing
+    console.log('[CHECKOUT] Processing payment redirect for intent:', paymentIntentId);
     setError('');
 
     try {
-      // Load event details if not already loaded
-      if (!event) {
-        const eventRes = await api.get(`/events/${id}`);
-        setEvent(eventRes.data.event);
-      }
-
       // Determine total amount from stored registration data
       let totalAmount = 0;
 
@@ -157,6 +158,7 @@ export default function Checkout() {
 
       const expectedAmount = Math.round(totalAmount * 100);
 
+      console.log('[CHECKOUT] Confirming payment with backend');
       // Confirm payment with backend
       const response = await api.post('/payments/confirm-payment', {
         paymentIntentId,
@@ -169,15 +171,18 @@ export default function Checkout() {
         throw new Error('Failed to confirm payment');
       }
 
+      console.log('[CHECKOUT] Payment confirmed successfully');
       handlePaymentSuccess({
         registrationId: response.data.registrationId,
         invoiceNumber: response.data.invoiceNumber,
         amountFormatted: response.data.amountFormatted
       });
+      setIsProcessingRedirect(false);
     } catch (err) {
-      console.error('Payment redirect confirmation error:', err);
-      setError(err.response?.data?.error || 'Failed to complete payment');
-      setLoading(false);
+      console.error('[CHECKOUT] Payment redirect confirmation error:', err);
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to complete payment';
+      setError(errorMsg);
+      setIsProcessingRedirect(false);
     }
   };
 
@@ -240,6 +245,18 @@ export default function Checkout() {
       <div style={{ maxWidth: 640, margin: '2rem auto' }}>
         <div className="card">
           <p>Please <a href="/login">log in</a> to complete checkout.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isProcessingRedirect) {
+    return (
+      <div style={{ maxWidth: 640, margin: '2rem auto' }}>
+        <div className="card">
+          <h2>Processing Payment</h2>
+          <p>Your payment is being processed. Please wait...</p>
+          {error && <p className="error">{error}</p>}
         </div>
       </div>
     );
