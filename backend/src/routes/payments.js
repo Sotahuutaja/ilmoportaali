@@ -26,22 +26,6 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Check if user is already registered as captain for this event
-    const existingReg = await pool.query(
-      'SELECT id FROM registrations WHERE user_id = $1 AND event_id = $2',
-      [req.user.id, eventId]
-    );
-    if (existingReg.rows[0]) {
-      // Determine if user is registering as a captain (has teamId or guests)
-      const isCapitain = teamId || false;
-
-      const errorMessage = isCapitain
-        ? 'You are already registered for this event. You cannot register for the event twice, but team captains can still register guests.'
-        : 'You are already registered for this event. To modify your registration, contact event organizers.';
-
-      return res.status(409).json({ error: errorMessage });
-    }
-
     // Calculate total price (in cents)
     let totalCents = 0;
 
@@ -224,6 +208,22 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       [req.user.id, eventId]
     );
     const existingCaptainRegId = existingCaptainReg.rows[0]?.id;
+
+    // Prevent non-captain users from re-registering
+    // But allow captains to add guests to their existing registration
+    if (existingCaptainRegId && captain.products.length > 0 && !registrations.guests) {
+      // User already registered and trying to re-register themselves (no guests)
+      return res.status(409).json({
+        error: 'You are already registered for this event. To modify your registration, contact event organizers.'
+      });
+    }
+
+    if (existingCaptainRegId && captain.products.length === 0 && (!registrations.guests || registrations.guests.length === 0)) {
+      // Trying to create empty registration - error
+      return res.status(400).json({
+        error: 'No products to register'
+      });
+    }
 
     // Helper function to create a single registration
     const createRegistration = async (isGuest, guestData = null) => {
