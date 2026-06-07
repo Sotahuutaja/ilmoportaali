@@ -124,6 +124,7 @@ export default function Checkout() {
   }, [id, user, navigate, searchParams]);
 
   const handlePaymentSuccess = (paymentData) => {
+    console.log('[CHECKOUT] handlePaymentSuccess called with:', paymentData);
     // Clear checkout data from localStorage after successful payment
     localStorage.removeItem(`checkout_${id}`);
 
@@ -133,6 +134,7 @@ export default function Checkout() {
       invoiceNumber: paymentData.invoiceNumber,
       amount: paymentData.amountFormatted
     });
+    console.log('[CHECKOUT] paymentSuccess state updated');
   };
 
   const handlePaymentError = (errorMessage) => {
@@ -182,11 +184,13 @@ export default function Checkout() {
       }
 
       console.log('[CHECKOUT] Payment confirmed successfully');
+      console.log('[CHECKOUT] Response data:', response.data);
       handlePaymentSuccess({
         registrationId: response.data.registrationId,
         invoiceNumber: response.data.invoiceNumber,
         amountFormatted: response.data.amountFormatted
       });
+      console.log('[CHECKOUT] Setting isProcessingRedirect to false');
       setIsProcessingRedirect(false);
     } catch (err) {
       console.error('[CHECKOUT] Payment redirect confirmation error:', err);
