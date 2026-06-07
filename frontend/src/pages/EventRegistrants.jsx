@@ -328,7 +328,7 @@ export default function EventRegistrants() {
 
   return (
     <div style={{ maxWidth: '100vw', margin: 0, padding: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.5rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginLeft: '1rem', marginRight: '1rem', marginTop: '1.5rem', marginBottom: '1rem' }}>
         <div>
           <h2>{event.title}</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
@@ -346,10 +346,10 @@ export default function EventRegistrants() {
     </div>
       </div>
 
-      {error && <p className="error" style={{ margin: '1.5rem' }}>{error}</p>}
-      {message && <p className="success" style={{ margin: '1.5rem' }}>{message}</p>}
+      {error && <p className="error" style={{ marginLeft: '1rem', marginRight: '1rem' }}>{error}</p>}
+      {message && <p className="success" style={{ marginLeft: '1rem', marginRight: '1rem' }}>{message}</p>}
 
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
         <div className="card" style={{ flex: 1, textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Total participants</p>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{registrations.length}</p>
@@ -369,7 +369,7 @@ export default function EventRegistrants() {
         </div>
       </div>
 
-      <div style={{ marginBottom: '1rem', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+      <div style={{ marginBottom: '1rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
         <input
           placeholder="Search by name, email or team..."
           value={search}
