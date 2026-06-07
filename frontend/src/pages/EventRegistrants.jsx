@@ -265,7 +265,7 @@ export default function EventRegistrants() {
   };
   
   const exportRegistrantsCSV = () => {
-  const headers = ['First name', 'Last name', 'Email', 'Team', 'Products', 'Total price', 'Type', 'Registered', 'Comments'];
+  const headers = ['First name', 'Last name', 'Email', 'Team', 'Products', 'Total price', 'Payment Status', 'Type', 'Registered', 'Comments'];
   const rows = registrations.map(r => {
     const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
     const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
@@ -283,13 +283,14 @@ export default function EventRegistrants() {
     const totalPrice = r.products
       ? r.products.reduce((sum, p) => sum + parseFloat(p.price) * p.quantity, 0).toFixed(2)
       : '0.00';
+    const paymentStatus = r.payment_status ? r.payment_status.charAt(0).toUpperCase() + r.payment_status.slice(1) : 'Unknown';
     const type = r.is_guest ? 'Guest' : 'Registered user';
     const registered = formatDateTime(r.created_at, {
       day: 'numeric', month: 'numeric', year: 'numeric',
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
     const comments = r.comments || '';
-    return [firstName, lastName, email, team, products, totalPrice, type, registered, comments];
+    return [firstName, lastName, email, team, products, totalPrice, paymentStatus, type, registered, comments];
   });
 
   const csv = [headers, ...rows]
@@ -386,6 +387,7 @@ export default function EventRegistrants() {
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Team</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Products</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Payment Status</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Registered</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
             </tr>
@@ -444,6 +446,18 @@ export default function EventRegistrants() {
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>None</span>
                     )}
+                  </td>
+                  <td style={{ padding: '0.8rem 1rem' }}>
+                    <span style={{
+                      padding: '0.3rem 0.6rem',
+                      borderRadius: '4px',
+                      fontSize: '0.85rem',
+                      fontWeight: '500',
+                      background: r.payment_status === 'paid' ? '#d4edda' : r.payment_status === 'pending' ? '#fff3cd' : '#f8d7da',
+                      color: r.payment_status === 'paid' ? '#155724' : r.payment_status === 'pending' ? '#856404' : '#721c24'
+                    }}>
+                      {r.payment_status ? r.payment_status.charAt(0).toUpperCase() + r.payment_status.slice(1) : 'Unknown'}
+                    </span>
                   </td>
                   <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                     {formatDateTime(r.created_at, {
