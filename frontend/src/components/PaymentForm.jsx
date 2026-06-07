@@ -63,7 +63,7 @@ function PaymentFormContent({
         elements,
         clientSecret,
         confirmParams: {
-          return_url: `${window.location.origin}/checkout/${eventId}?paymentIntentId=${paymentIntentId}`
+          return_url: `${window.location.origin}/events/${eventId}/checkout?paymentIntentId=${paymentIntentId}`
         }
       });
 
