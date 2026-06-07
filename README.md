@@ -70,6 +70,7 @@ All three services are containerised with Docker and orchestrated via Docker Com
 | CI/CD | GitHub Actions |
 | Cloud | Azure Container Apps + Azure Container Registry |
 | Secrets | Azure Key Vault |
+| Payments | Stripe |
 
 ---
 
@@ -137,7 +138,11 @@ JWT_SECRET=<a_long_random_secret_string>
 SENDGRID_API_KEY=<your_sendgrid_api_key>
 SENDGRID_FROM_EMAIL=<verified_sender_email>
 
-# App URL (used in email links)
+# Stripe Payments
+VITE_STRIPE_PUBLISHABLE_KEY=<your_stripe_publishable_key>
+STRIPE_SECRET_KEY=<your_stripe_secret_key>
+
+# App URL (used in email links and Stripe redirects)
 APP_URL=http://localhost
 ```
 
@@ -152,7 +157,7 @@ The application implements defense-in-depth security practices:
 - **CORS Protection** — Whitelist-based CORS restricts API access to whitelisted origins only; rejects requests from unauthorized origins
 - **JWT Security** — JWT tokens use secure signing with HS256 algorithm and configurable expiration; role claims are verified against the database on each request
   - **httpOnly Cookies** — Authentication tokens stored in secure, httpOnly cookies that are inaccessible to JavaScript, preventing XSS attacks
-  - **Token Expiration** — Short-lived access tokens (15 minutes) with refresh tokens for extended sessions (30 minutes)
+  - **Token Expiration** — Access tokens valid for 2 hours with refresh tokens for extended sessions (7 days)
 - **Database Security** — Parameterized queries prevent SQL injection; transactions ensure data consistency; foreign key constraints maintain referential integrity
 - **Password Security** — bcrypt hashing with salt for all passwords
 - **Security Headers** — X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy prevent common attacks
@@ -170,6 +175,8 @@ The application implements defense-in-depth security practices:
 - **JWT-based login** with role-based access control using secure httpOnly cookies
 - **Logout** — securely clears authentication cookies and redirects to login page
 - **Password change** from the profile page
+- **Forgot password** — users can reset their password via email-based reset links with token validation
+- **Extended session timeout** — access tokens valid for 2 hours (refresh tokens valid for 7 days)
 - **Profile page** showing account settings, team memberships, and event registrations
 - User profile collects: first name, last name, year of birth, and gender
 
@@ -206,8 +213,12 @@ The application implements defense-in-depth security practices:
 - Optional team linking during registration
 - **Comments** — users can add optional comments/notes for the event organizers
 - **Guest registration** — captains can register guests by providing first name, last name, email, team, product selections, and optional comments
+- **Payment processing** — Stripe integration for secure payment handling with multiple payment methods (card, MobilePay, iDEAL, etc.)
+- **Payment status tracking** — event organizers can view payment status for each participant (pending, paid, failed)
+- **Duplicate registration prevention** — prevents regular users from registering twice while allowing captains to register guests
+- **Mandatory product options** — users must select from dropdown options when products have custom fields
 - Capacity checking with sold-out handling
-- **CSV export** — event organizers can export all registrations including comments
+- **CSV export** — event organizers can export all registrations including comments and payment status
 
 ### Admin Panel
 
@@ -224,7 +235,8 @@ Accessible by event creators and co-managers:
 - View all events you own or co-manage (co-managed events show a badge)
 - Manage products and co-managers per event
   - **Managers view** — shows event creator and all co-managers with clear badges distinguishing roles
-- **Participant view** — summary stats (total participants, guests, revenue), search by name/email/team, edit or cancel any registration, CSV export
+- **Participant view** — summary stats (total participants, guests, revenue), search by name/email/team, edit or cancel any registration, CSV export with payment status
+  - **Payment status visibility** — view payment status (pending, paid, failed) for each participant with color-coded indicators
 - Guest registrations are shown with a guest badge
 
 ### Teams Page
@@ -290,8 +302,8 @@ az containerapp update --name ilmoportaali-frontend ...
 
 - Add an option to add images to products to be displayed for the users
 - Custom domain (boffaus.fi)
-- Payment handling for products (Stripe)
 - Bulk event registration via Excel file import
 - Pin Azure CLI version in GitHub Actions (currently using `latest` due to credential mounting limitations with `azure/cli@v2`)
 - Enable users to register vehicles or other machines they might bring to an event
 - New team creation as an option for users in the Teams page
+- Switch email provider from SendGrid to Gmail (infrastructure ready, pending configuration)

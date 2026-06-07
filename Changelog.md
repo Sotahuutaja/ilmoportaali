@@ -2,6 +2,52 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-06-07
+
+### Bug Fixes & Improvements
+
+- **Fixed Stripe Environment Variable Configuration** — Changed from process.env to import.meta.env with VITE_ prefix for Vite frontend compatibility
+  - Frontend now correctly loads Stripe publishable key from build-time environment variables
+  - GitHub Actions workflow updated to pass VITE_STRIPE_PUBLISHABLE_KEY during Docker build
+  - Payment Element now initializes properly with dynamic client secrets
+
+- **Fixed Payment Intent Return URL** — Corrected redirect path from `/checkout/:id` to `/events/:id/checkout?paymentIntentId=...` to match app routing
+
+- **Forgot Password Flow Implementation** — Complete password reset functionality with email verification
+  - Created ForgotPassword.jsx component for initial email submission
+  - Created ResetPassword.jsx component for password reset with token validation
+  - Backend endpoints: `/auth/forgot-password` and `/auth/reset-password`
+  - Reset links sent via email with secure, time-limited tokens
+
+- **Payment Status Display for Event Organizers** — Added payment_status column to participant lists
+  - Color-coded status indicators: green (paid), yellow (pending), red (failed)
+  - Payment status included in CSV exports for organizer analysis
+  - Organizers can now easily identify which participants have paid
+
+- **Mandatory Product Option Selection** — Enforced dropdown field selection during registration
+  - Frontend validation prevents submission without selecting from dropdown options
+  - Backend validation prevents bypass attempts, stores validation errors clearly
+
+- **Duplicate Registration Prevention Improved** — Enhanced logic for captain vs attendee registration
+  - Non-captains cannot register twice for same event with error: "You are already registered for this event. To modify your registration, contact event organizers."
+  - Captains can still register guests even if already registered
+  - Captain registration attempt shows error: "You are already registered for this event. You cannot register for the event twice, but team captains can still register guests."
+
+- **Session Timeout Extended** — Improved user experience for longer events
+  - Access tokens now valid for 2 hours (previously 15 minutes)
+  - Refresh tokens now valid for 7 days (previously 30 minutes)
+  - Reduces login interruptions during multi-hour events
+
+### UI/UX Improvements
+
+- **Full-Width Table Layouts** — Improved data visibility for event management
+  - EventRegistrants participant list now uses full browser width with minimal margins
+  - Admin User Management panel now uses full browser width
+  - CSS technique: 100vw with negative margins breaks out of container constraints
+  - Reduces horizontal scrolling, improves readability of multiple columns
+
+---
+
 ## 2026-06-05
 
 ### DevOps & Testing
