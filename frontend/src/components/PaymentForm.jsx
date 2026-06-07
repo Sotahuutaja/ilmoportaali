@@ -1,10 +1,10 @@
 /**
  * PaymentForm - Handles Stripe payment collection and registration completion
- * Works in mock mode (no real Stripe card needed) and real mode (with valid card)
+ * Uses Payment Element for multiple payment methods (card, Apple Pay, Google Pay, etc.)
  */
 
 import { useState } from 'react';
-import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import { PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import './PaymentForm.css';
 
 export default function PaymentForm({
@@ -67,7 +67,7 @@ export default function PaymentForm({
 
       setMockMode(data.mockMode);
 
-      // In mock mode, auto-confirm without card
+      // In mock mode, auto-confirm without payment
       if (data.mockMode) {
         await confirmPayment(data.paymentIntentId);
       } else {
@@ -82,7 +82,7 @@ export default function PaymentForm({
     }
   };
 
-  // Step 2a: For real Stripe mode - handle card payment
+  // Step 2a: For real Stripe mode - handle payment via Payment Element
   const handleStripePayment = async (clientSecret, paymentIntentId) => {
     if (!stripe || !elements) {
       setError('Stripe not loaded');
@@ -91,15 +91,17 @@ export default function PaymentForm({
     }
 
     try {
-      const cardElement = elements.getElement(CardElement);
-
-      const result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement,
-          billing_details: {}
+      // Confirm payment with Payment Element (supports multiple payment methods)
+      const result = await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        confirmParams: {
+          // Return URL after payment (for redirect-based methods)
+          return_url: `${window.location.origin}/checkout?paymentIntentId=${paymentIntentId}`
         }
       });
 
+      // If we get here, payment didn't require redirect
       if (result.error) {
         throw new Error(result.error.message);
       }
@@ -110,7 +112,7 @@ export default function PaymentForm({
         throw new Error(`Payment status: ${result.paymentIntent.status}`);
       }
     } catch (err) {
-      const errorMsg = err.message || 'Card payment failed';
+      const errorMsg = err.message || 'Payment failed';
       setError(errorMsg);
       onError?.(errorMsg);
       setIsProcessing(false);
@@ -181,17 +183,9 @@ export default function PaymentForm({
 
       {!mockMode && (
         <div className="card-element-container">
-          <label>Card Details</label>
-          <CardElement
+          <PaymentElement
             options={{
-              style: {
-                base: {
-                  fontSize: '16px',
-                  color: '#424770',
-                  '::placeholder': { color: '#aab7c4' }
-                },
-                invalid: { color: '#9e2146' }
-              }
+              layout: 'tabs'
             }}
           />
         </div>
@@ -199,7 +193,7 @@ export default function PaymentForm({
 
       <button
         onClick={handleCreatePaymentIntent}
-        disabled={isProcessing || !displayAmount}
+        disabled={isProcessing || !displayAmount || !stripe || !elements}
         className="payment-button"
       >
         {isProcessing ? 'Processing...' : `Pay ${displayAmount || ''}`}
