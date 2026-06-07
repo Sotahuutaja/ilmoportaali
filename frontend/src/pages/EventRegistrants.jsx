@@ -327,7 +327,14 @@ export default function EventRegistrants() {
   if (!event) return <p>Loading...</p>;
 
   return (
-    <div style={{ maxWidth: '100vw', margin: 0, padding: 0 }}>
+    <div style={{
+      width: '100vw',
+      marginLeft: 'calc(-50vw + 50%)',
+      marginRight: 'calc(-50vw + 50%)',
+      paddingLeft: 0,
+      paddingRight: 0,
+      position: 'relative'
+    }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginLeft: '1rem', marginRight: '1rem', marginTop: '1.5rem', marginBottom: '1rem' }}>
         <div>
           <h2>{event.title}</h2>
