@@ -33,6 +33,25 @@ export default function Checkout() {
       return;
     }
 
+    // Check if returning from payment redirect
+    const redirectStatus = searchParams.get('redirect_status');
+    const paymentIntentId = searchParams.get('paymentIntentId') || searchParams.get('payment_intent');
+
+    if (redirectStatus === 'succeeded' && paymentIntentId) {
+      // Returning from successful payment - retrieve stored registration data and confirm
+      const saved = localStorage.getItem(`checkout_${id}`);
+      if (saved) {
+        try {
+          const regData = JSON.parse(saved);
+          handlePaymentRedirectSuccess(paymentIntentId, regData);
+          return;
+        } catch (err) {
+          console.error('Failed to process payment redirect:', err);
+          setError('Failed to process payment redirect');
+        }
+      }
+    }
+
     // Fetch event and products
     Promise.all([
       api.get(`/events/${id}`),
@@ -102,6 +121,64 @@ export default function Checkout() {
 
   const handlePaymentError = (errorMessage) => {
     setError(errorMessage);
+  };
+
+  const handlePaymentRedirectSuccess = async (paymentIntentId, registrationData) => {
+    // User returning from payment provider redirect (e.g., MobilePay, iDEAL)
+    // Confirm the payment and create registration
+    setLoading(true);
+    setError('');
+
+    try {
+      // Load event details if not already loaded
+      if (!event) {
+        const eventRes = await api.get(`/events/${id}`);
+        setEvent(eventRes.data.event);
+      }
+
+      // Determine total amount from stored registration data
+      let totalAmount = 0;
+
+      // Captain's products
+      if (registrationData.captain?.products) {
+        totalAmount += registrationData.captain.products.reduce((sum, p) => {
+          return sum + (p.price * p.quantity);
+        }, 0);
+      }
+
+      // Guests' products
+      if (registrationData.guests) {
+        totalAmount += registrationData.guests.reduce((sum, guest) => {
+          return sum + (guest.products?.reduce((guestSum, p) => {
+            return guestSum + (p.price * p.quantity);
+          }, 0) || 0);
+        }, 0);
+      }
+
+      const expectedAmount = Math.round(totalAmount * 100);
+
+      // Confirm payment with backend
+      const response = await api.post('/payments/confirm-payment', {
+        paymentIntentId,
+        eventId: parseInt(id),
+        registrations: registrationData,
+        expectedAmount
+      });
+
+      if (!response.data) {
+        throw new Error('Failed to confirm payment');
+      }
+
+      handlePaymentSuccess({
+        registrationId: response.data.registrationId,
+        invoiceNumber: response.data.invoiceNumber,
+        amountFormatted: response.data.amountFormatted
+      });
+    } catch (err) {
+      console.error('Payment redirect confirmation error:', err);
+      setError(err.response?.data?.error || 'Failed to complete payment');
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
