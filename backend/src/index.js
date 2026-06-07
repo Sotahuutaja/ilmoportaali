@@ -5,7 +5,6 @@ const { initDb } = require('./initDb');
 const { initPaymentSchema } = require('./initPaymentSchema');
 const { processPendingEmails } = require('./services/emailWorker');
 
-
 // Fail fast if critical environment variables are missing
 if (!process.env.JWT_SECRET) {
   console.error('FATAL: JWT_SECRET environment variable is not set.');
