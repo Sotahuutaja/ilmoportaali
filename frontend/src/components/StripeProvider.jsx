@@ -11,12 +11,17 @@ let stripePromise = null;
 
 const publishableKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
 
+console.log('[STRIPE DEBUG] publishableKey =', publishableKey);
+console.log('[STRIPE DEBUG] All env vars starting with REACT_APP_:', Object.keys(process.env).filter(k => k.startsWith('REACT_APP_')));
+
 if (publishableKey && publishableKey !== 'pk_test_mock_key') {
   // Real Stripe account configured
+  console.log('[STRIPE] Loading real Stripe with publishable key');
   stripePromise = loadStripe(publishableKey);
 } else {
   // Mock mode - create a dummy promise that resolves to null
   console.log('[STRIPE MOCK] Running in mock mode. Real Stripe not configured.');
+  console.log('[STRIPE DEBUG] Reason: publishableKey =', publishableKey);
   stripePromise = Promise.resolve(null);
 }
 
