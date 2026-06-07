@@ -9,10 +9,10 @@ import { loadStripe } from '@stripe/stripe-js';
 // Load Stripe or use mock if not configured
 let stripePromise = null;
 
-const publishableKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
+const publishableKey = process.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
 console.log('[STRIPE DEBUG] publishableKey =', publishableKey);
-console.log('[STRIPE DEBUG] All env vars starting with REACT_APP_:', Object.keys(process.env).filter(k => k.startsWith('REACT_APP_')));
+console.log('[STRIPE DEBUG] All env vars starting with VITE_:', Object.keys(process.env).filter(k => k.startsWith('VITE_')));
 
 if (publishableKey && publishableKey !== 'pk_test_mock_key') {
   // Real Stripe account configured
