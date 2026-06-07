@@ -201,7 +201,7 @@ The application implements defense-in-depth security practices:
 - Admins can set whether team joins require approval or are auto-approved when creating/editing teams
 - Captains can toggle auto-approval setting for their teams
 - Captains can transfer captaincy to a member (which demotes themselves)
-- Users can request to join a team or be directly invited by a captain
+- Users can request to join a team
 - Captains can approve/reject join requests and remove members
 - Users can leave teams at any time
 - Team member lists are visible only to members, captains, and admins

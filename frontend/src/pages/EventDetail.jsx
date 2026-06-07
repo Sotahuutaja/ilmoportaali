@@ -138,7 +138,7 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
   );
 }
 
-function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
+function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts, isEventPast }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState({});
@@ -223,14 +223,16 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts }) {
               ) : (
                 <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>No products selected.</p>
               )}
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid #ddd', paddingTop: '0.5rem' }}>
-                <button className="btn btn-secondary" onClick={e => { e.stopPropagation(); startEditing(); }}>
-                  Edit products
-                </button>
-                <button className="btn btn-danger" onClick={e => { e.stopPropagation(); onDelete(r.id, displayName); }}>
-                  Delete registration
-                </button>
-              </div>
+              {!isEventPast && (
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid #ddd', paddingTop: '0.5rem' }}>
+                  <button className="btn btn-secondary" onClick={e => { e.stopPropagation(); startEditing(); }}>
+                    Edit products
+                  </button>
+                  <button className="btn btn-danger" onClick={e => { e.stopPropagation(); onDelete(r.id, displayName); }}>
+                    Delete registration
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -592,6 +594,7 @@ export default function EventDetail() {
   const regNotOpen = event.registration_starts_at && now < new Date(event.registration_starts_at);
   const regClosed = event.registration_ends_at && now > new Date(event.registration_ends_at);
   const registrationOpen = !regNotOpen && !regClosed;
+  const isEventPast = event.ends_at && now > new Date(event.ends_at);
 
   return (
     <div style={{ maxWidth: 640, margin: '2rem auto' }}>
@@ -617,7 +620,7 @@ export default function EventDetail() {
         {message && <p className="success">{message}</p>}
         {error && <p className="error">{error}</p>}
 
-        {user && !full && registrationOpen && (
+        {user && !full && registrationOpen && !isEventPast && (
       <>
       <h3 style={{ marginBottom: '1rem' }}>Register yourself</h3>
 
@@ -818,6 +821,7 @@ export default function EventDetail() {
               eventProducts={products}
               onDelete={handleDeleteTeamReg}
               onUpdate={handleUpdateTeamReg}
+              isEventPast={isEventPast}
               />
             ))}
           </div>
