@@ -162,8 +162,7 @@ jobs:
           tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/frontend:latest
           build-args: |
             REACT_APP_STRIPE_PUBLISHABLE_KEY=${{ secrets.STRIPE_PUBLISHABLE_KEY }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: Deploy frontend
         uses: azure/cli@v1
