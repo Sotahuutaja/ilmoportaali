@@ -353,9 +353,17 @@ export default function Admin() {
   return (
     <div>
       {/* User management */}
+      <div style={{
+        width: '100vw',
+        marginLeft: 'calc(-50vw + 50%)',
+        marginRight: 'calc(-50vw + 50%)',
+        paddingLeft: 0,
+        paddingRight: 0,
+        position: 'relative'
+      }}>
       <div
     onClick={() => setShowUsers(v => !v)}
-    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '1.5rem 0', cursor: 'pointer', userSelect: 'none' }}
+    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '1.5rem 0', marginLeft: '1rem', marginRight: '1rem', cursor: 'pointer', userSelect: 'none' }}
     >
     <h2>User management</h2>
     <span style={{ fontSize: '1rem', color: 'var(--text-muted)', transition: 'transform 0.2s', display: 'inline-block', transform: showUsers ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▼</span>
@@ -367,11 +375,11 @@ export default function Admin() {
       Export CSV
     </button>
     </div>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" style={{ marginLeft: '1rem', marginRight: '1rem' }}>{error}</p>}
 
       {showUsers && (
         <>
-          <div className="card" style={{ marginBottom: '1rem' }}>
+          <div className="card" style={{ marginBottom: '1rem', marginLeft: '1rem', marginRight: '1rem' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem' }}>
         <div>
           <label>First name</label>
@@ -445,7 +453,7 @@ export default function Admin() {
         )}
       </div>
 
-          <div className="card" style={{ padding: 0, overflow: 'auto' }}>
+          <div className="card" style={{ padding: 0, overflow: 'auto', marginLeft: '1rem', marginRight: '1rem' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
@@ -520,6 +528,7 @@ export default function Admin() {
           </div>
         </>
       )}
+      </div>
 
       {/* Team management */}
       <div
