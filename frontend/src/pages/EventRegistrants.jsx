@@ -327,8 +327,8 @@ export default function EventRegistrants() {
   if (!event) return <p>Loading...</p>;
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.5rem 0' }}>
+    <div style={{ maxWidth: '100vw', margin: 0, padding: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.5rem', marginBottom: '1rem' }}>
         <div>
           <h2>{event.title}</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
@@ -346,10 +346,10 @@ export default function EventRegistrants() {
     </div>
       </div>
 
-      {error && <p className="error">{error}</p>}
-      {message && <p className="success">{message}</p>}
+      {error && <p className="error" style={{ margin: '1.5rem' }}>{error}</p>}
+      {message && <p className="success" style={{ margin: '1.5rem' }}>{message}</p>}
 
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
         <div className="card" style={{ flex: 1, textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Total participants</p>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{registrations.length}</p>
@@ -369,27 +369,27 @@ export default function EventRegistrants() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem' }}>
+      <div style={{ marginBottom: '1rem', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
         <input
           placeholder="Search by name, email or team..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ marginBottom: 0 }}
+          style={{ marginBottom: 0, width: '100%' }}
         />
       </div>
 
-      <div style={{ padding: 0, overflow: 'auto', marginBottom: '1rem' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
+      <div style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem', marginBottom: '1rem', overflow: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600' }}>First name</th>
-        <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600' }}>Last name</th>
-              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600' }}>Email</th>
-              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600' }}>Team</th>
-              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600' }}>Products</th>
-              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600' }}>Payment Status</th>
-              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600' }}>Registered</th>
-              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'left', fontSize: '0.9rem', fontWeight: '600' }}>Actions</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>First name</th>
+        <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Last name</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Team</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Products</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Payment Status</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Registered</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -400,7 +400,7 @@ export default function EventRegistrants() {
               const email = r.email_for_export || (r.is_guest ? r.guest_email : r.user_email);
               return (
                 <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem' }}>
+                  <td style={{ padding: '0.8rem 1rem' }}>
             {r.is_guest ? (r.guest_first_name || r.guest_name || '—') : (r.first_name || '—')}
             {r.is_guest && (
             <span style={{
@@ -413,7 +413,7 @@ export default function EventRegistrants() {
             {r.is_guest ? (r.guest_last_name || '') : (r.last_name || '—')}
           </td>
                   <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{email}</td>
-                  <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem' }}>
+                  <td style={{ padding: '0.8rem 1rem' }}>
                     {r.team_name ? (
                       <span style={{
                         padding: '0.2rem 0.6rem', borderRadius: '12px',
@@ -423,7 +423,7 @@ export default function EventRegistrants() {
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Individual</span>
                     )}
                   </td>
-                  <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem' }}>
+                  <td style={{ padding: '0.8rem 1rem' }}>
                     {r.products && r.products.length > 0 ? (
                       <div>
                         {r.products.map((p, i) => {
@@ -447,11 +447,11 @@ export default function EventRegistrants() {
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>None</span>
                     )}
                   </td>
-                  <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem' }}>
+                  <td style={{ padding: '0.8rem 1rem' }}>
                     <span style={{
                       padding: '0.3rem 0.6rem',
                       borderRadius: '4px',
-                      fontSize: '0.8rem',
+                      fontSize: '0.85rem',
                       fontWeight: '500',
                       background: r.payment_status === 'paid' ? '#d4edda' : r.payment_status === 'pending' ? '#fff3cd' : '#f8d7da',
                       color: r.payment_status === 'paid' ? '#155724' : r.payment_status === 'pending' ? '#856404' : '#721c24'
@@ -459,16 +459,16 @@ export default function EventRegistrants() {
                       {r.payment_status ? r.payment_status.charAt(0).toUpperCase() + r.payment_status.slice(1) : 'Unknown'}
                     </span>
                   </td>
-                  <td style={{ padding: '0.6rem 0.8rem', color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                     {formatDateTime(r.created_at, {
                       day: 'numeric', month: 'numeric', year: 'numeric',
                       hour: '2-digit', minute: '2-digit', second: '2-digit'
                     })}
                   </td>
                   <td style={{ padding: '0.6rem 0.8rem' }}>
-            <div style={{ display: 'flex', gap: '0.3rem' }}>
-            <button className="btn btn-secondary" onClick={() => setEditingReg(r)} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>Edit</button>
-            <button className="btn btn-danger" onClick={() => handleCancel(r.id, name)} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>Cancel</button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-secondary" onClick={() => setEditingReg(r)}>Edit</button>
+            <button className="btn btn-danger" onClick={() => handleCancel(r.id, name)}>Cancel</button>
             </div>
           </td>
                 </tr>
