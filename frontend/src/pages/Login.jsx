@@ -62,7 +62,7 @@ export default function Login() {
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Log in</button>
         </form>
         <p style={{ marginTop: '1rem', textAlign: 'center' }}>
-          <Link to="/reset-password">Forgot password?</Link>
+          <Link to="/forgot-password">Forgot password?</Link>
         </p>
         <p style={{ marginTop: '0.5rem', textAlign: 'center' }}>
           No account? <Link to="/register">Register</Link>

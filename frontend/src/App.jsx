@@ -14,6 +14,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import EditEvent from './pages/EditEvent';
 import ResetPassword from './pages/ResetPassword';
 import Checkout from './pages/Checkout';
+import ForgotPassword from './pages/ForgotPassword';
 import StripeProvider from './components/StripeProvider';
 
 
@@ -78,6 +79,7 @@ export default function App() {
         <Route path="/events/:id/registrants" element={<EventRegistrants />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/events/:id/edit" element={<EditEvent />} />
         <Route path="/reset-password" element={<ResetPassword />} />
             </Routes>
