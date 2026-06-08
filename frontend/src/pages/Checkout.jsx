@@ -445,10 +445,12 @@ export default function Checkout() {
         <div style={{ background: 'var(--surface-2)', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem' }}>
           <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1.1rem' }}>Registration Summary</h3>
           
-          {/* Captain's products */}
+          {/* User's products */}
           {paymentProducts.length > 0 && (
             <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
-              <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 600 }}>You (Captain)</p>
+              <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 600 }}>
+                You{registrationData?.guests && registrationData.guests.length > 0 ? ' (Captain)' : ''}
+              </p>
               {paymentProducts.map((p, idx) => {
                 const product = products.find(prod => prod.id === p.product_id);
                 const price = getProductPrice(p.product_id, p.field_values);
