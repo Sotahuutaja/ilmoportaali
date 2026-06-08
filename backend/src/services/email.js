@@ -58,4 +58,21 @@ async function sendPasswordResetEmail(email, token) {
   });
 }
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail };
+async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret) {
+  const checkoutLink = `${APP_URL}/events/checkout?paymentIntentId=${paymentIntentClientSecret}`;
+  await sendEmail({
+    to: email,
+    subject: `Additional payment required for ${eventTitle}`,
+    html: `
+      <h2>Registration updated - Additional payment needed</h2>
+      <p>Your registration for <strong>${eventTitle}</strong> has been updated by the event organizers.</p>
+      <p>Due to the changes, an additional payment of <strong>€${(additionalAmount / 100).toFixed(2)}</strong> is required.</p>
+      <p><a href="${checkoutLink}" style="background:#1a1a2e;color:white;padding:10px 20px;text-decoration:none;border-radius:6px;">Complete payment</a></p>
+      <p>Or copy this link: ${checkoutLink}</p>
+      <p>Please complete the payment to finalize your registration.</p>
+      <p>If you have questions about this change, please contact the event organizers.</p>
+    `
+  });
+}
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendAdditionalPaymentEmail };

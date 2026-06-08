@@ -3,6 +3,78 @@ const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 const { canManageEvent } = require('../utils/eventAccess');
+const stripe = require('../services/stripeService');
+const { sendAdditionalPaymentEmail } = require('../services/email');
+
+// Helper: calculate total price for a set of products
+async function calculateProductPrice(client, products, eventId) {
+  let totalCents = 0;
+  for (const { product_id, quantity = 1, field_values = {} } of products) {
+    const product = await client.query(
+      'SELECT price, fields FROM event_products WHERE id = $1 AND event_id = $2',
+      [product_id, eventId]
+    );
+    if (!product.rows[0]) throw new Error(`Product ${product_id} not found`);
+
+    let price = parseFloat(product.rows[0].price);
+    const fields = product.rows[0].fields || [];
+
+    // Check if any dropdown field has a custom price override
+    for (const field of fields) {
+      if (field.type === 'select') {
+        const selectedValue = field_values[field.id];
+        if (selectedValue) {
+          const option = field.options.find(opt =>
+            (typeof opt === 'string' ? opt : opt.value) === selectedValue
+          );
+          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+            price = parseFloat(option.price);
+            break;
+          }
+        }
+      }
+    }
+
+    totalCents += Math.round(price * 100) * quantity;
+  }
+  return totalCents;
+}
+
+// Helper: get current total price of a registration
+async function getRegistrationPrice(client, registrationId) {
+  const result = await client.query(`
+    SELECT rp.product_id, rp.quantity, rp.field_values, ep.price, ep.fields, ep.event_id
+    FROM registration_products rp
+    JOIN event_products ep ON rp.product_id = ep.id
+    WHERE rp.registration_id = $1
+  `, [registrationId]);
+
+  let totalCents = 0;
+  for (const row of result.rows) {
+    let price = parseFloat(row.price);
+    const fields = row.fields || [];
+    const fieldValues = row.field_values || {};
+
+    // Check if any dropdown field has a custom price override
+    for (const field of fields) {
+      if (field.type === 'select') {
+        const selectedValue = fieldValues[field.id];
+        if (selectedValue) {
+          const option = field.options.find(opt =>
+            (typeof opt === 'string' ? opt : opt.value) === selectedValue
+          );
+          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+            price = parseFloat(option.price);
+            break;
+          }
+        }
+      }
+    }
+
+    totalCents += Math.round(price * 100) * row.quantity;
+  }
+  return totalCents;
+}
 
 // Helper: validate and reserve products
 async function insertProducts(client, registrationId, products, eventId) {
@@ -536,11 +608,91 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
       );
     }
 
-    // Update products
+    // Update products with payment reconciliation
     if (products !== undefined) {
+      // Calculate old total before deleting products
+      const oldTotalCents = await getRegistrationPrice(client, req.params.registrationId);
+
+      // Delete old products
       await client.query('DELETE FROM registration_products WHERE registration_id = $1', [req.params.registrationId]);
+
+      // Insert new products
       if (products.length > 0) {
         await insertProducts(client, req.params.registrationId, products, req.params.eventId);
+      }
+
+      // Calculate new total
+      const newTotalCents = products.length > 0 ? await calculateProductPrice(client, products, req.params.eventId) : 0;
+
+      // Handle payment reconciliation
+      const difference = newTotalCents - oldTotalCents;
+
+      if (difference !== 0) {
+        // Get user email
+        const userEmail = reg.rows[0].is_guest ? reg.rows[0].guest_email : (await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].user_id])).rows[0]?.email;
+
+        if (difference < 0) {
+          // Amount decreased — issue refund
+          const refundAmount = Math.abs(difference);
+
+          // Get last payment intent for this registration
+          const paymentResult = await client.query(
+            'SELECT stripe_payment_intent_id FROM payment_intents WHERE registration_id = $1 ORDER BY created_at DESC LIMIT 1',
+            [req.params.registrationId]
+          );
+
+          if (paymentResult.rows[0]) {
+            try {
+              const stripeKey = process.env.STRIPE_SECRET_KEY;
+              const stripeInstance = require('stripe')(stripeKey);
+
+              // Create refund
+              await stripeInstance.refunds.create({
+                charge: (await stripeInstance.paymentIntents.retrieve(paymentResult.rows[0].stripe_payment_intent_id)).charges.data[0].id,
+                amount: refundAmount
+              });
+
+              console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${req.params.registrationId}`);
+            } catch (err) {
+              console.error('[REFUND ERROR] Failed to issue refund:', err.message);
+              // Don't fail the registration update, just log the error
+            }
+          }
+        } else if (difference > 0) {
+          // Amount increased — create new payment intent for the difference
+          try {
+            const newPaymentIntent = await stripe.createPaymentIntent(
+              req.params.registrationId,
+              difference,
+              userEmail
+            );
+
+            // Store the additional payment intent info
+            await client.query(
+              'INSERT INTO payment_intents (stripe_payment_intent_id, registration_id, amount_cents, currency, status) VALUES ($1, $2, $3, $4, $5)',
+              [newPaymentIntent.id, req.params.registrationId, difference, 'eur', newPaymentIntent.status]
+            );
+
+            console.log(`[PAYMENT] Created additional payment intent for €${(difference / 100).toFixed(2)} for registration ${req.params.registrationId}`);
+
+            // Send email notification about additional payment
+            try {
+              await sendAdditionalPaymentEmail(
+                userEmail,
+                event.rows[0].title,
+                difference,
+                newPaymentIntent.client_secret
+              );
+              console.log(`[EMAIL] Sent additional payment notification to ${userEmail}`);
+            } catch (err) {
+              console.error('[EMAIL ERROR] Failed to send additional payment email:', err.message);
+              // Don't fail the registration update if email fails
+            }
+          } catch (err) {
+            console.error('[PAYMENT ERROR] Failed to create additional payment intent:', err.message);
+            throw new Error(`Failed to process additional payment: ${err.message}`);
+          }
+        }
       }
     }
 
@@ -569,7 +721,25 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
       GROUP BY r.id, u.first_name, u.last_name, u.email, t.name
     `, [req.params.registrationId]);
 
-    res.json({ registration: updated.rows[0] });
+    // Calculate total price of updated registration for response
+    const finalTotalCents = updated.rows[0].products && updated.rows[0].products.length > 0
+      ? await calculateProductPrice(client,
+          updated.rows[0].products.map(p => ({
+            product_id: p.product_id,
+            quantity: p.quantity,
+            field_values: p.field_values
+          })),
+          req.params.eventId
+        )
+      : 0;
+
+    res.json({
+      registration: updated.rows[0],
+      paymentInfo: {
+        totalCents: finalTotalCents,
+        totalEur: (finalTotalCents / 100).toFixed(2)
+      }
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Failed to update registration:', err.message);
