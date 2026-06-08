@@ -16,20 +16,37 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
   });
   const [selectedProducts, setSelectedProducts] = useState(
     reg.products
-      ? Object.fromEntries(reg.products.map(p => [p.product_id, p.quantity]))
+      ? Object.fromEntries(reg.products.map(p => [p.product_id, { quantity: p.quantity, field_values: p.field_values || {} }]))
       : {}
   );
   const [error, setError] = useState('');
   const [costChangeConfirmed, setCostChangeConfirmed] = useState(false);
   const [costChange, setCostChange] = useState(null);
 
-  // Calculate total cost for products
+  // Calculate total cost for products (handles both old and new formats)
   const calculateTotal = (products) => {
-    return Object.entries(products).reduce((sum, [productId, qty]) => {
+    return Object.entries(products).reduce((sum, [productId, item]) => {
+      const qty = typeof item === 'number' ? item : (item?.quantity || 0);
       if (qty > 0) {
         const product = eventProducts.find(p => p.id === parseInt(productId));
         if (product) {
-          sum += parseFloat(product.price) * qty;
+          let price = parseFloat(product.price);
+          // Check for field option overrides
+          if (typeof item === 'object' && item.field_values && product.fields) {
+            for (const field of product.fields) {
+              if (field.type === 'select' && item.field_values[field.id]) {
+                const option = field.options?.find(opt => {
+                  const optVal = typeof opt === 'string' ? opt : opt.value;
+                  return optVal === item.field_values[field.id];
+                });
+                if (option && typeof option === 'object' && option.price) {
+                  price = parseFloat(option.price);
+                  break;
+                }
+              }
+            }
+          }
+          sum += price * qty;
         }
       }
       return sum;
@@ -38,12 +55,19 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
 
   const handleSave = () => {
     const products = Object.entries(selectedProducts)
-      .filter(([, qty]) => qty > 0)
-      .map(([product_id, quantity]) => ({ product_id: parseInt(product_id), quantity }));
+      .filter(([, item]) => {
+        const qty = typeof item === 'number' ? item : (item?.quantity || 0);
+        return qty > 0;
+      })
+      .map(([product_id, item]) => {
+        const qty = typeof item === 'number' ? item : (item?.quantity || 0);
+        const field_values = typeof item === 'object' ? (item?.field_values || {}) : {};
+        return { product_id: parseInt(product_id), quantity: qty, field_values };
+      });
 
     // Calculate old and new totals
     const originalProductMap = Object.fromEntries(
-      (reg.products || []).map(p => [p.product_id.toString(), p.quantity])
+      (reg.products || []).map(p => [p.product_id.toString(), { quantity: p.quantity, field_values: p.field_values || {} }])
     );
     const oldTotal = calculateTotal(originalProductMap);
     const newTotal = calculateTotal(selectedProducts);
@@ -115,33 +139,76 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
 
         <label style={{ marginBottom: '0.5rem', display: 'block' }}>Products</label>
         {eventProducts.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No products for this event.</p>}
-        {eventProducts.map(p => (
-          <div key={p.id} style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '0.5rem', marginBottom: '0.3rem', borderRadius: '6px',
-            border: `2px solid ${selectedProducts[p.id] ? 'var(--accent)' : 'var(--border)'}`,
-            background: selectedProducts[p.id] ? 'var(--surface-3)' : 'var(--surface-2)',
-            cursor: 'pointer'
-          }}
-            onClick={() => setSelectedProducts(prev => ({
-              ...prev,
-              [p.id]: prev[p.id] ? 0 : 1
-            }))}
-          >
-            <div>
-              <strong>{p.name}</strong>
-              <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
+        {eventProducts.map(p => {
+          const isSelected = selectedProducts[p.id]?.quantity > 0 || selectedProducts[p.id] > 0;
+          const item = selectedProducts[p.id];
+          const quantity = typeof item === 'number' ? item : (item?.quantity || 0);
+          const field_values = typeof item === 'object' ? (item?.field_values || {}) : {};
+
+          return (
+            <div key={p.id} style={{
+              padding: '0.5rem', marginBottom: '0.5rem', borderRadius: '6px',
+              border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+              background: isSelected ? 'var(--surface-3)' : 'var(--surface-2)',
+            }}>
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                cursor: 'pointer'
+              }}
+                onClick={() => setSelectedProducts(prev => ({
+                  ...prev,
+                  [p.id]: prev[p.id] ? 0 : { quantity: 1, field_values: {} }
+                }))}
+              >
+                <div>
+                  <strong>{p.name}</strong>
+                  <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
+                </div>
+                {isSelected && (
+                  <input
+                    type="number" min="1" value={quantity}
+                    onClick={e => e.stopPropagation()}
+                    onChange={e => setSelectedProducts(prev => ({
+                      ...prev,
+                      [p.id]: { ...prev[p.id], quantity: parseInt(e.target.value) }
+                    }))}
+                    style={{ width: '60px', margin: 0 }}
+                  />
+                )}
+              </div>
+
+              {/* Product fields/options */}
+              {isSelected && p.fields && p.fields.length > 0 && (
+                <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
+                  {p.fields.map(field => (
+                    field.type === 'select' && (
+                      <div key={field.id} style={{ marginBottom: '0.5rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                          <strong>{field.label}</strong>
+                        </label>
+                        <select
+                          value={field_values[field.id] || ''}
+                          onChange={e => setSelectedProducts(prev => ({
+                            ...prev,
+                            [p.id]: { ...prev[p.id], field_values: { ...field_values, [field.id]: e.target.value } }
+                          }))}
+                          style={{ width: '100%', padding: '0.4rem' }}
+                        >
+                          <option value="">Select {field.label.toLowerCase()}</option>
+                          {field.options?.map(opt => {
+                            const optVal = typeof opt === 'string' ? opt : opt.value;
+                            const optLabel = typeof opt === 'string' ? opt : opt.label || opt.value;
+                            return <option key={optVal} value={optVal}>{optLabel}</option>;
+                          })}
+                        </select>
+                      </div>
+                    )
+                  ))}
+                </div>
+              )}
             </div>
-            {selectedProducts[p.id] > 0 && (
-              <input
-                type="number" min="1" value={selectedProducts[p.id]}
-                onClick={e => e.stopPropagation()}
-                onChange={e => setSelectedProducts(prev => ({ ...prev, [p.id]: parseInt(e.target.value) }))}
-                style={{ width: '60px', margin: 0 }}
-              />
-            )}
-          </div>
-        ))}
+          );
+        })}
 
         {costChange && (
           <div style={{ background: costChange.difference < 0 ? '#d4edda' : '#fff3cd', padding: '1rem', borderRadius: '6px', marginTop: '1rem', borderLeft: `4px solid ${costChange.difference < 0 ? '#28a745' : '#ffc107'}` }}>

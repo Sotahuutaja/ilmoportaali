@@ -121,33 +121,19 @@ async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = []
   });
 }
 
-async function sendAdditionalPaymentConfirmationEmail(email, eventTitle, amountPaid, addedProducts = [], allProducts = []) {
-  // Build summary of products just added
-  let addedProductsHtml = '';
-  if (addedProducts.length > 0) {
-    addedProductsHtml = '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #155724;">You just paid for:</h3>';
-    addedProductsHtml += '<ul style="margin: 0.5rem 0; padding-left: 1.5rem; background: #d4edda; padding: 1rem; border-radius: 6px;">';
-
-    for (const product of addedProducts) {
-      const qty = product.quantity || 0;
-      addedProductsHtml += `<li style="margin-bottom: 0.3rem;"><strong>${product.name}</strong> ×${qty}</li>`;
-    }
-
-    addedProductsHtml += '</ul>';
-  }
-
+async function sendAdditionalPaymentConfirmationEmail(email, eventTitle, amountPaid, products = []) {
   // Build summary of all current products
-  let allProductsHtml = '';
-  if (allProducts.length > 0) {
-    allProductsHtml = '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Your complete registration for this event:</h3>';
-    allProductsHtml += '<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">';
+  let productsSummaryHtml = '';
+  if (products.length > 0) {
+    productsSummaryHtml = '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Your registration for this event:</h3>';
+    productsSummaryHtml += '<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">';
 
-    for (const product of allProducts) {
+    for (const product of products) {
       const qty = product.quantity || 0;
-      allProductsHtml += `<li style="margin-bottom: 0.3rem;">${product.name} ×${qty}</li>`;
+      productsSummaryHtml += `<li style="margin-bottom: 0.3rem;">${product.name} ×${qty}</li>`;
     }
 
-    allProductsHtml += '</ul>';
+    productsSummaryHtml += '</ul>';
   }
 
   await sendEmail({
@@ -157,8 +143,7 @@ async function sendAdditionalPaymentConfirmationEmail(email, eventTitle, amountP
       <h2>Additional payment received</h2>
       <p>Thank you! Your additional payment for <strong>${eventTitle}</strong> has been successfully processed.</p>
       <p>Payment received: <strong>€${(amountPaid / 100).toFixed(2)}</strong></p>
-      ${addedProductsHtml}
-      ${allProductsHtml}
+      ${productsSummaryHtml}
       <p style="margin-top: 1.5rem;">Your registration is now complete.</p>
       <p>If you have any questions, please contact the event organizers.</p>
     `
