@@ -208,12 +208,35 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
   const invoice = invoiceResult.rows[0];
 
   // Build products array with prices and transformed field labels
-  const products = productsResult.rows.map(p => ({
-    name: p.name,
-    price: parseFloat(p.price),
-    quantity: p.quantity,
-    field_values: transformFieldValues(p.field_values || {}, p.fields || [])
-  }));
+  const products = productsResult.rows.map(p => {
+    // Calculate price with field option overrides
+    let price = parseFloat(p.price);
+    const fieldValues = p.field_values || {};
+    const fields = p.fields || [];
+
+    for (const field of fields) {
+      if (field.type === 'select') {
+        const selectedValue = fieldValues[field.id];
+        if (selectedValue && field.options) {
+          const option = field.options.find(opt => {
+            const optVal = typeof opt === 'string' ? opt : opt.value;
+            return optVal === selectedValue;
+          });
+          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+            price = parseFloat(option.price);
+            break;
+          }
+        }
+      }
+    }
+
+    return {
+      name: p.name,
+      price: price,
+      quantity: p.quantity,
+      field_values: transformFieldValues(fieldValues, fields)
+    };
+  });
 
   // Fetch related guest registrations
   const guestsResult = await pool.query(
@@ -245,11 +268,34 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
     guest_first_name: g.guest_first_name,
     guest_last_name: g.guest_last_name,
     comments: g.comments,
-    products: (g.products || []).map(p => ({
-      name: p.name,
-      price: parseFloat(p.price),
-      quantity: p.quantity,
-      field_values: transformFieldValues(p.field_values || {}, productFieldsMap[p.product_id] || [])
+    products: (g.products || []).map(p => {
+      // Calculate price with field option overrides for guest products
+      let price = parseFloat(p.price);
+      const fieldValues = p.field_values || {};
+      const fields = productFieldsMap[p.product_id] || [];
+
+      for (const field of fields) {
+        if (field.type === 'select') {
+          const selectedValue = fieldValues[field.id];
+          if (selectedValue && field.options) {
+            const option = field.options.find(opt => {
+              const optVal = typeof opt === 'string' ? opt : opt.value;
+              return optVal === selectedValue;
+            });
+            if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+              price = parseFloat(option.price);
+              break;
+            }
+          }
+        }
+      }
+
+      return {
+        name: p.name,
+        price: price,
+        quantity: p.quantity,
+        field_values: transformFieldValues(p.field_values || {}, productFieldsMap[p.product_id] || [])
+      };
     }))
   }));
 
