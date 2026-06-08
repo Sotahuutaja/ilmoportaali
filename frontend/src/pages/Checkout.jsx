@@ -179,35 +179,40 @@ export default function Checkout() {
     setError('');
 
     try {
-      // Determine total amount from stored registration data
-      let totalAmount = 0;
-
-      // Captain's products
-      if (registrationData.captain?.products) {
-        totalAmount += registrationData.captain.products.reduce((sum, p) => {
-          return sum + (p.price * p.quantity);
-        }, 0);
-      }
-
-      // Guests' products
-      if (registrationData.guests) {
-        totalAmount += registrationData.guests.reduce((sum, guest) => {
-          return sum + (guest.products?.reduce((guestSum, p) => {
-            return guestSum + (p.price * p.quantity);
-          }, 0) || 0);
-        }, 0);
-      }
-
-      const expectedAmount = Math.round(totalAmount * 100);
-
       console.log('[CHECKOUT] Confirming payment with backend');
-      // Confirm payment with backend
-      const response = await api.post('/payments/confirm-payment', {
+
+      let confirmPayload = {
         paymentIntentId,
-        eventId: parseInt(id),
-        registrations: registrationData,
-        expectedAmount
-      });
+        registrations: registrationData
+      };
+
+      // For normal registrations, include eventId and calculate expected amount
+      if (!registrationData?.isAdditionalPayment) {
+        // Determine total amount from stored registration data
+        let totalAmount = 0;
+
+        // Captain's products
+        if (registrationData.captain?.products) {
+          totalAmount += registrationData.captain.products.reduce((sum, p) => {
+            return sum + (p.price * p.quantity);
+          }, 0);
+        }
+
+        // Guests' products
+        if (registrationData.guests) {
+          totalAmount += registrationData.guests.reduce((sum, guest) => {
+            return sum + (guest.products?.reduce((guestSum, p) => {
+              return guestSum + (p.price * p.quantity);
+            }, 0) || 0);
+          }, 0);
+        }
+
+        confirmPayload.eventId = parseInt(id);
+        confirmPayload.expectedAmount = Math.round(totalAmount * 100);
+      }
+
+      // Confirm payment with backend
+      const response = await api.post('/payments/confirm-payment', confirmPayload);
 
       if (!response.data) {
         throw new Error('Failed to confirm payment');

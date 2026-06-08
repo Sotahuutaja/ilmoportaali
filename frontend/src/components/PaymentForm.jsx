@@ -64,11 +64,18 @@ function PaymentFormContent({
         ? '/events/checkout'
         : `/events/${eventId}/checkout`;
 
+      // Build return URL with appropriate parameters
+      let returnUrl = `${window.location.origin}${returnPath}?paymentIntentId=${paymentIntentId}`;
+      if (registrationData?.isAdditionalPayment) {
+        // Include clientSecret for additional payments so we can detect them on redirect
+        returnUrl += `&clientSecret=${clientSecret}`;
+      }
+
       const result = await stripe.confirmPayment({
         elements,
         clientSecret,
         confirmParams: {
-          return_url: `${window.location.origin}${returnPath}?paymentIntentId=${paymentIntentId}`
+          return_url: returnUrl
         }
       });
 
