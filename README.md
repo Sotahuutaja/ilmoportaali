@@ -307,3 +307,4 @@ az containerapp update --name ilmoportaali-frontend ...
 - Pin Azure CLI version in GitHub Actions (currently using `latest` due to credential mounting limitations with `azure/cli@v2`)
 - Enable users to register vehicles or other machines they might bring to an event
 - New team creation as an option for users in the Teams page
+- Volunteer management for events
