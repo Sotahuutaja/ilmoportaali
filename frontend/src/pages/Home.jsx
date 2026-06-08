@@ -74,7 +74,7 @@ export default function Home() {
 
       {/* CTA Section */}
       {user ? (
-        <div className="card" style={{ textAlign: 'center', background: 'var(--surface-2)' }}>
+        <div className="card" style={{ textAlign: 'center', background: 'var(--surface-2)', marginBottom: '3rem' }}>
           <h2 style={{ marginTop: 0 }}>Get Started</h2>
           <p>What would you like to do?</p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -92,7 +92,7 @@ export default function Home() {
           </div>
         </div>
       ) : (
-        <div className="card" style={{ textAlign: 'center', background: 'var(--surface-2)' }}>
+        <div className="card" style={{ textAlign: 'center', background: 'var(--surface-2)', marginBottom: '3rem' }}>
           <h2 style={{ marginTop: 0 }}>Ready to get started?</h2>
           <p>Sign up to create events and manage registrations</p>
           <Link to="/register" className="btn btn-primary">
@@ -100,6 +100,12 @@ export default function Home() {
           </Link>
         </div>
       )}
+
+      {/* Contact Section */}
+      <div className="card" style={{ textAlign: 'center', background: 'var(--surface-2)' }}>
+        <h2 style={{ marginTop: 0 }}>Contact Site Administrators</h2>
+        <p style={{ marginBottom: '1.5rem' }}>Issues with the website? Feedback? Want to use the site for your event? Contact us at <strong><a href="mailto:registration@sotahuuto.fi" style={{ color: 'var(--accent)', textDecoration: 'none' }}>registration@sotahuuto.fi</a></strong></p>
+      </div>
     </div>
   );
 }
