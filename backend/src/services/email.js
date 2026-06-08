@@ -150,9 +150,9 @@ async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = []
   let productChangesHtml = '';
 
   if (oldProducts.length > 0 || newProducts.length > 0) {
-    productChangesHtml = '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Registration changes:</h3>';
+    productChangesHtml = '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #333;">Registration Changes</h3>';
     productChangesHtml += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">';
-    productChangesHtml += '<tr style="background: #f5f5f5;"><th style="text-align: left; padding: 0.5rem; border: 1px solid #ddd;">Product</th><th style="text-align: center; padding: 0.5rem; border: 1px solid #ddd;">Old</th><th style="text-align: center; padding: 0.5rem; border: 1px solid #ddd;">New</th></tr>';
+    productChangesHtml += '<thead><tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;"><th style="text-align: left; padding: 0.5rem; color: #333;">Product</th><th style="text-align: center; padding: 0.5rem; color: #333;">Old Qty</th><th style="text-align: center; padding: 0.5rem; color: #333;">New Qty</th></tr></thead><tbody>';
 
     // Get all unique product IDs from old and new
     const allProductIds = new Set();
@@ -167,14 +167,14 @@ async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = []
       const newQty = newProduct?.quantity || 0;
 
       if (oldQty !== newQty) {
-        productChangesHtml += `<tr>
-          <td style="padding: 0.5rem; border: 1px solid #ddd;">${productName}</td>
-          <td style="text-align: center; padding: 0.5rem; border: 1px solid #ddd;">${oldQty}</td>
-          <td style="text-align: center; padding: 0.5rem; border: 1px solid #ddd;">${newQty}</td>
+        productChangesHtml += `<tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 0.5rem; color: #333;">${productName}</td>
+          <td style="text-align: center; padding: 0.5rem; color: #666;">${oldQty}</td>
+          <td style="text-align: center; padding: 0.5rem; color: #666;">${newQty}</td>
         </tr>`;
       }
     }
-    productChangesHtml += '</table>';
+    productChangesHtml += '</tbody></table>';
   }
 
   const userName = (userFirstName || userLastName)
@@ -188,12 +188,34 @@ async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = []
     to: email,
     subject: `Refund issued for ${eventTitle}`,
     html: `
-      <h2>Registration updated - Refund issued</h2>
-      <p>${userNameText} for <strong>${eventTitle}</strong> has been updated by the event organizers.</p>
-      ${productChangesHtml}
-      <p>Due to the changes, a refund of <strong>€${(refundAmount / 100).toFixed(2)}</strong> has been automatically processed.</p>
-      <p>The refund will appear on the original payment method within 1-3 business days.</p>
-      <p>If you have questions about this change, please contact the event organizers.</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333; margin-bottom: 0.5rem;">Registration Updated</h2>
+        <p style="color: #666; margin: 0 0 1.5rem 0;">Refund has been issued</p>
+
+        <p style="color: #333;">Hi,</p>
+
+        <p style="color: #333;">${userNameText} for <strong>${eventTitle}</strong> has been updated by the event organizers.</p>
+
+        ${productChangesHtml}
+
+        <div style="background: #f0fdf4; padding: 1.5rem; border-left: 4px solid #27ae60; border-radius: 6px; margin: 1.5rem 0;">
+          <h3 style="margin-top: 0; color: #333; margin-bottom: 1rem;">✓ Refund Processed</h3>
+          <p style="margin: 0; font-size: 1.1rem; color: #555;">Due to the changes, a refund has been automatically processed:</p>
+          <p style="margin: 1rem 0 0 0; font-size: 1.8rem; color: #27ae60; font-weight: bold;">€${(refundAmount / 100).toFixed(2)}</p>
+        </div>
+
+        <div style="background: #f5f5f5; padding: 1rem; border-radius: 6px; margin: 1.5rem 0;">
+          <h3 style="margin-top: 0; margin-bottom: 0.5rem; color: #333;">Refund Details</h3>
+          <p style="margin: 0.5rem 0; color: #555; font-size: 0.95rem;"><strong>Event:</strong> ${eventTitle}</p>
+          <p style="margin: 0.5rem 0; color: #555; font-size: 0.95rem;"><strong>Refund amount:</strong> €${(refundAmount / 100).toFixed(2)}</p>
+          <p style="margin: 0.5rem 0; color: #999; font-size: 0.9rem;">The refund will appear on your original payment method within 1-3 business days.</p>
+        </div>
+
+        <p style="color: #666; font-size: 0.95rem; margin: 1.5rem 0;">If you have questions about this change or your refund, please contact the event organizers.</p>
+
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 2rem 0;">
+        <p style="font-size: 0.9rem; color: #999; margin: 0;">This is an automated email. Please do not reply directly to this message.</p>
+      </div>
     `
   });
 }

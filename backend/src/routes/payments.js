@@ -260,11 +260,60 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
               userEmail = userResult.rows[0]?.email;
             }
 
-            // Get products for this registration
+            // Get products for this registration with prices and fields
             const productsResult = await pool.query(
-              'SELECT ep.name, rp.quantity FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1',
+              'SELECT ep.name, ep.price, ep.fields, rp.quantity, rp.field_values FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1',
               [registrationId]
             );
+
+            // Transform products to include calculated prices with field option overrides
+            const productsForEmail = productsResult.rows.map(p => {
+              let price = parseFloat(p.price);
+              let fieldValues = p.field_values || {};
+              if (typeof fieldValues === 'string') {
+                try {
+                  fieldValues = JSON.parse(fieldValues);
+                } catch (e) {
+                  fieldValues = {};
+                }
+              }
+
+              // Apply field option price override if applicable
+              const fields = p.fields || [];
+              for (const field of fields) {
+                if (field.type === 'select') {
+                  const selectedValue = fieldValues[field.id];
+                  if (selectedValue && field.options) {
+                    const option = field.options.find(opt => {
+                      const optVal = typeof opt === 'string' ? opt : opt.value;
+                      return optVal === selectedValue;
+                    });
+                    if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+                      price = parseFloat(option.price);
+                      break;
+                    }
+                  }
+                }
+              }
+
+              // Transform field_values to use field labels instead of IDs
+              const transformedFieldValues = {};
+              for (const [fieldId, fieldValue] of Object.entries(fieldValues)) {
+                const field = fields.find(f => f.id === fieldId);
+                if (field) {
+                  transformedFieldValues[field.label || field.name || fieldId] = fieldValue;
+                } else {
+                  transformedFieldValues[fieldId] = fieldValue;
+                }
+              }
+
+              return {
+                name: p.name,
+                price: price,
+                quantity: p.quantity,
+                field_values: transformedFieldValues
+              };
+            });
 
             // Send confirmation email with all current products
             if (userEmail) {
@@ -272,7 +321,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
                 userEmail,
                 reg.title,
                 existingPayment.rows[0].amount_cents,
-                productsResult.rows  // All current products for the registration
+                productsForEmail  // All current products with calculated prices
               );
               console.log('[EMAIL] Sent additional payment confirmation to', userEmail);
             }

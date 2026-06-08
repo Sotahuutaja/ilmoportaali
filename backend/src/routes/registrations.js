@@ -904,11 +904,23 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
                     }
                   }
 
+                  // Transform field_values to use field labels instead of IDs
+                  const transformedFieldValues = {};
+                  const fields = details.fields || [];
+                  for (const [fieldId, fieldValue] of Object.entries(fieldValues)) {
+                    const field = fields.find(f => f.id === fieldId);
+                    if (field) {
+                      transformedFieldValues[field.label || field.name || fieldId] = fieldValue;
+                    } else {
+                      transformedFieldValues[fieldId] = fieldValue;
+                    }
+                  }
+
                   return {
                     name: details.name,
                     price: price,
                     quantity: p.quantity || 1,
-                    field_values: fieldValues
+                    field_values: transformedFieldValues
                   };
                 });
               }
