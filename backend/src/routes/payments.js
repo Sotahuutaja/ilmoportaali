@@ -40,6 +40,15 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'field_values must be an object' });
       }
 
+      const product = await pool.query(
+        'SELECT price, fields, quantity FROM event_products WHERE id = $1 AND event_id = $2',
+        [product_id, eventId]
+      );
+
+      if (!product.rows[0]) {
+        return res.status(400).json({ error: `Product ${product_id} not found` });
+      }
+
       // Validate that select fields have values selected
       const fields = product.rows[0].fields || [];
       for (const field of fields) {
@@ -51,15 +60,6 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
             });
           }
         }
-      }
-
-      const product = await pool.query(
-        'SELECT price, fields, quantity FROM event_products WHERE id = $1 AND event_id = $2',
-        [product_id, eventId]
-      );
-
-      if (!product.rows[0]) {
-        return res.status(400).json({ error: `Product ${product_id} not found` });
       }
 
       // Validate available quantity for products with stock limits
@@ -79,7 +79,6 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
       }
 
       let productPrice = parseFloat(product.rows[0].price);
-      const fields = product.rows[0].fields || [];
 
       // Check if any dropdown option has a custom price override
       if (field_values) {
