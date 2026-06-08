@@ -64,6 +64,8 @@ export default function Checkout() {
       // For additional payments, confirm directly without needing stored registration data
       if (clientSecret) {
         console.log('[CHECKOUT] Additional payment redirect - confirming directly');
+        // Set registrationData so render doesn't show "Event not found"
+        setRegistrationData({ isAdditionalPayment: true });
         handlePaymentRedirectSuccess(paymentIntentId, { isAdditionalPayment: true });
         return;
       }

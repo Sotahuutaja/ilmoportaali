@@ -75,13 +75,45 @@ async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, p
   });
 }
 
-async function sendRefundEmail(email, eventTitle, refundAmount) {
+async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = [], newProducts = []) {
+  // Build product change summary
+  let productChangesHtml = '';
+
+  if (oldProducts.length > 0 || newProducts.length > 0) {
+    productChangesHtml = '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Your registration changes:</h3>';
+    productChangesHtml += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">';
+    productChangesHtml += '<tr style="background: #f5f5f5;"><th style="text-align: left; padding: 0.5rem; border: 1px solid #ddd;">Product</th><th style="text-align: center; padding: 0.5rem; border: 1px solid #ddd;">Old</th><th style="text-align: center; padding: 0.5rem; border: 1px solid #ddd;">New</th></tr>';
+
+    // Get all unique product IDs from old and new
+    const allProductIds = new Set();
+    oldProducts.forEach(p => allProductIds.add(p.product_id));
+    newProducts.forEach(p => allProductIds.add(p.product_id));
+
+    for (const productId of allProductIds) {
+      const oldProduct = oldProducts.find(p => p.product_id === productId);
+      const newProduct = newProducts.find(p => p.product_id === productId);
+      const productName = oldProduct?.name || newProduct?.name || `Product ${productId}`;
+      const oldQty = oldProduct?.quantity || 0;
+      const newQty = newProduct?.quantity || 0;
+
+      if (oldQty !== newQty) {
+        productChangesHtml += `<tr>
+          <td style="padding: 0.5rem; border: 1px solid #ddd;">${productName}</td>
+          <td style="text-align: center; padding: 0.5rem; border: 1px solid #ddd;">${oldQty}</td>
+          <td style="text-align: center; padding: 0.5rem; border: 1px solid #ddd;">${newQty}</td>
+        </tr>`;
+      }
+    }
+    productChangesHtml += '</table>';
+  }
+
   await sendEmail({
     to: email,
     subject: `Refund issued for ${eventTitle}`,
     html: `
       <h2>Registration updated - Refund issued</h2>
       <p>Your registration for <strong>${eventTitle}</strong> has been updated by the event organizers.</p>
+      ${productChangesHtml}
       <p>Due to the changes, a refund of <strong>€${(refundAmount / 100).toFixed(2)}</strong> has been automatically processed.</p>
       <p>The refund will appear on your original payment method within 1-3 business days.</p>
       <p>If you have questions about this change, please contact the event organizers.</p>

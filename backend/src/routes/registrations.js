@@ -632,6 +632,13 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
 
     // Update products with payment reconciliation
     if (products !== undefined) {
+      // Fetch old products before deleting them (for refund email)
+      const oldProductsResult = await client.query(
+        'SELECT rp.product_id, rp.quantity, rp.field_values, ep.name FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1',
+        [req.params.registrationId]
+      );
+      const oldProducts = oldProductsResult.rows;
+
       // Calculate old total before deleting products
       const oldTotalCents = await getRegistrationPrice(client, req.params.registrationId);
 
@@ -655,14 +662,17 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
         if (reg.rows[0].is_guest) {
           // For guests, use guest_email if available, otherwise use the captain's email (registered_by)
           userEmail = reg.rows[0].guest_email;
+          console.log(`[PAYMENT RECONCILIATION DEBUG] Guest registration - guest_email=${userEmail}, registered_by=${reg.rows[0].registered_by}`);
           if (!userEmail && reg.rows[0].registered_by) {
             const captainResult = await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].registered_by]);
             userEmail = captainResult.rows[0]?.email;
+            console.log(`[PAYMENT RECONCILIATION DEBUG] Fetched captain email: ${userEmail}`);
           }
         } else {
           // For regular users, get their email
           const userResult = await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].user_id]);
           userEmail = userResult.rows[0]?.email;
+          console.log(`[PAYMENT RECONCILIATION DEBUG] Regular user - user_id=${reg.rows[0].user_id}, email=${userEmail}`);
         }
 
         console.log(`[PAYMENT RECONCILIATION] Registration ${req.params.registrationId}: is_guest=${reg.rows[0].is_guest}, userEmail=${userEmail}, difference=${difference}`);
@@ -699,7 +709,7 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
             // Always send refund notification email when price decreases (whether Stripe refund succeeded or not)
             if (userEmail) {
               try {
-                await sendRefundEmail(userEmail, event.rows[0].title, refundAmount);
+                await sendRefundEmail(userEmail, event.rows[0].title, refundAmount, oldProducts, products);
                 console.log(`[EMAIL] Sent refund notification to ${userEmail}`);
               } catch (err) {
                 console.error('[EMAIL ERROR] Failed to send refund email:', err.message);
