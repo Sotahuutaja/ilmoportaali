@@ -145,6 +145,23 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
           const quantity = typeof item === 'number' ? item : (item?.quantity || 0);
           const field_values = typeof item === 'object' ? (item?.field_values || {}) : {};
 
+          // Calculate effective price with field option overrides
+          let displayPrice = parseFloat(p.price);
+          if (isSelected && field_values && p.fields) {
+            for (const field of p.fields) {
+              if (field.type === 'select' && field_values[field.id]) {
+                const option = field.options?.find(opt => {
+                  const optVal = typeof opt === 'string' ? opt : opt.value;
+                  return optVal === field_values[field.id];
+                });
+                if (option && typeof option === 'object' && option.price) {
+                  displayPrice = parseFloat(option.price);
+                  break;
+                }
+              }
+            }
+          }
+
           return (
             <div key={p.id} style={{
               padding: '0.5rem', marginBottom: '0.5rem', borderRadius: '6px',
@@ -162,7 +179,7 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
               >
                 <div>
                   <strong>{p.name}</strong>
-                  <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>€{parseFloat(p.price).toFixed(2)}</span>
+                  <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>€{displayPrice.toFixed(2)}</span>
                 </div>
                 {isSelected && (
                   <input
@@ -348,9 +365,29 @@ export default function EventRegistrants() {
     const reg = registrations.find(r => r.id === registrationId);
     if (!reg) return;
 
-    // Calculate total refund amount
+    // Helper to calculate price with field option overrides
+    const getProductPrice = (product) => {
+      let price = parseFloat(product.price);
+      if (product.field_values && product.fields) {
+        for (const field of product.fields) {
+          if (field.type === 'select' && product.field_values[field.id]) {
+            const option = field.options?.find(opt => {
+              const optVal = typeof opt === 'string' ? opt : opt.value;
+              return optVal === product.field_values[field.id];
+            });
+            if (option && typeof option === 'object' && option.price) {
+              price = parseFloat(option.price);
+              break;
+            }
+          }
+        }
+      }
+      return price;
+    };
+
+    // Calculate total refund amount with field option overrides
     const totalRefund = reg.products
-      ? reg.products.reduce((sum, p) => sum + parseFloat(p.price) * p.quantity, 0)
+      ? reg.products.reduce((sum, p) => sum + getProductPrice(p) * p.quantity, 0)
       : 0;
 
     // Build confirmation message with refund details
@@ -359,7 +396,14 @@ export default function EventRegistrants() {
 
     if (reg.products && reg.products.length > 0) {
       reg.products.forEach(p => {
-        message += `\n• ${p.name} ×${p.quantity} = €${(parseFloat(p.price) * p.quantity).toFixed(2)}`;
+        const price = getProductPrice(p);
+        const fieldInfo = p.field_values && Object.keys(p.field_values).length > 0
+          ? ` (${Object.entries(p.field_values).map(([fid, val]) => {
+              const fieldDef = (p.fields || []).find(f => f.id === fid);
+              return `${fieldDef?.label || fid}: ${val}`;
+            }).join(', ')})`
+          : '';
+        message += `\n• ${p.name}${fieldInfo} ×${p.quantity} = €${(price * p.quantity).toFixed(2)}`;
       });
     } else {
       message += '\n(No products)';

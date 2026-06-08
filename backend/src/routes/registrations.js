@@ -263,7 +263,7 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
     // First, fetch registration details and products before deleting
     const regResult = await pool.query(
       `SELECT r.id, r.event_id, e.title, e.starts_at,
-              rp.product_id, ep.name, ep.price, rp.quantity
+              rp.product_id, ep.name, ep.price, rp.quantity, rp.field_values, ep.fields
        FROM registrations r
        JOIN events e ON r.event_id = e.id
        LEFT JOIN registration_products rp ON r.id = rp.registration_id
@@ -287,19 +287,50 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
       minute: '2-digit'
     });
 
-    // Extract unique products
+    // Extract products and calculate prices with field option overrides
     const products = regResult.rows
       .filter(r => r.product_id)
-      .reduce((acc, row) => {
-        const existing = acc.find(p => p.name === row.name && p.price === row.price);
+      .map(row => {
+        let price = parseFloat(row.price);
+        // Parse field_values if it's a string
+        let fieldValues = row.field_values || {};
+        if (typeof fieldValues === 'string') {
+          try {
+            fieldValues = JSON.parse(fieldValues);
+          } catch (e) {
+            fieldValues = {};
+          }
+        }
+        const fields = row.fields || [];
+
+        // Apply field option price overrides
+        for (const field of fields) {
+          if (field.type === 'select') {
+            const selectedValue = fieldValues[field.id];
+            if (selectedValue && field.options) {
+              const option = field.options.find(opt =>
+                (typeof opt === 'string' ? opt : opt.value) === selectedValue
+              );
+              if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+                price = parseFloat(option.price);
+                break;
+              }
+            }
+          }
+        }
+
+        return {
+          name: row.name,
+          price: price,
+          quantity: row.quantity
+        };
+      })
+      .reduce((acc, product) => {
+        const existing = acc.find(p => p.name === product.name && p.price === product.price);
         if (existing) {
-          existing.quantity += row.quantity;
+          existing.quantity += product.quantity;
         } else {
-          acc.push({
-            name: row.name,
-            price: parseFloat(row.price),
-            quantity: row.quantity
-          });
+          acc.push(product);
         }
         return acc;
       }, []);
@@ -448,7 +479,7 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
       `SELECT r.id, r.user_id, r.is_guest, r.guest_first_name, r.guest_last_name, r.guest_email,
               u.email, u.first_name, u.last_name,
               e.title, e.starts_at,
-              rp.product_id, ep.name, ep.price, rp.quantity
+              rp.product_id, ep.name, ep.price, rp.quantity, rp.field_values, ep.fields
        FROM registrations r
        LEFT JOIN users u ON r.user_id = u.id
        JOIN events e ON r.event_id = e.id
@@ -471,19 +502,50 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
     const eventTitle = regResult.rows[0].title;
     const registrationId = regResult.rows[0].id;
 
-    // Extract unique products
+    // Extract products and calculate prices with field option overrides
     const products = regResult.rows
       .filter(r => r.product_id)
-      .reduce((acc, row) => {
-        const existing = acc.find(p => p.name === row.name && p.price === row.price);
+      .map(row => {
+        let price = parseFloat(row.price);
+        // Parse field_values if it's a string
+        let fieldValues = row.field_values || {};
+        if (typeof fieldValues === 'string') {
+          try {
+            fieldValues = JSON.parse(fieldValues);
+          } catch (e) {
+            fieldValues = {};
+          }
+        }
+        const fields = row.fields || [];
+
+        // Apply field option price overrides
+        for (const field of fields) {
+          if (field.type === 'select') {
+            const selectedValue = fieldValues[field.id];
+            if (selectedValue && field.options) {
+              const option = field.options.find(opt =>
+                (typeof opt === 'string' ? opt : opt.value) === selectedValue
+              );
+              if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+                price = parseFloat(option.price);
+                break;
+              }
+            }
+          }
+        }
+
+        return {
+          name: row.name,
+          price: price,
+          quantity: row.quantity
+        };
+      })
+      .reduce((acc, product) => {
+        const existing = acc.find(p => p.name === product.name && p.price === product.price);
         if (existing) {
-          existing.quantity += row.quantity;
+          existing.quantity += product.quantity;
         } else {
-          acc.push({
-            name: row.name,
-            price: parseFloat(row.price),
-            quantity: row.quantity
-          });
+          acc.push(product);
         }
         return acc;
       }, []);
