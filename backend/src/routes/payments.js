@@ -145,15 +145,22 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'paymentIntentId is required' });
   }
 
-  if (!eventId || !registrations) {
+  // Check if this is an additional payment (payment for existing registration)
+  const isAdditionalPayment = registrations?.isAdditionalPayment === true;
+
+  if (!isAdditionalPayment && (!eventId || !registrations)) {
     return res.status(400).json({ error: 'eventId and registrations are required' });
   }
 
-  const captain = registrations.captain;
-  const guests = registrations.guests || [];
+  // For additional payments, we just need to update payment status
+  // For normal payments, we need captain and guests info
+  if (!isAdditionalPayment) {
+    const captain = registrations.captain;
+    const guests = registrations.guests || [];
 
-  if (!captain || !Array.isArray(captain.products)) {
-    return res.status(400).json({ error: 'Captain registration is required' });
+    if (!captain || !Array.isArray(captain.products)) {
+      return res.status(400).json({ error: 'Captain registration is required' });
+    }
   }
 
   // Ensure either captain or guests have products
@@ -195,7 +202,57 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       });
     }
 
-    // Step 2: Check if this payment has already been processed (idempotency)
+    // Step 2: Handle additional payment (update existing registration)
+    if (isAdditionalPayment) {
+      console.log('[PAYMENT] Processing additional payment for intent:', paymentIntentId);
+
+      // Find which registration this additional payment belongs to
+      const existingPayment = await client.query(
+        'SELECT registration_id, amount_cents FROM payment_intents WHERE stripe_payment_intent_id = $1',
+        [paymentIntentId]
+      );
+
+      if (!existingPayment.rows[0]) {
+        return res.status(400).json({ error: 'Payment intent not found' });
+      }
+
+      const registrationId = existingPayment.rows[0].registration_id;
+
+      await client.query('BEGIN');
+
+      try {
+        // Update payment status to paid
+        await client.query(
+          'UPDATE registrations SET payment_status = $1 WHERE id = $2',
+          ['paid', registrationId]
+        );
+
+        // Record the payment in payment_intents (mark as confirmed)
+        await client.query(
+          'UPDATE payment_intents SET status = $1 WHERE stripe_payment_intent_id = $2',
+          ['succeeded', paymentIntentId]
+        );
+
+        await client.query('COMMIT');
+
+        console.log('[PAYMENT] Additional payment confirmed for registration', registrationId);
+
+        res.json({
+          success: true,
+          message: 'Additional payment processed successfully',
+          registrationId: registrationId,
+          amount: existingPayment.rows[0].amount_cents,
+          amountFormatted: `€${(existingPayment.rows[0].amount_cents / 100).toFixed(2)}`
+        });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      }
+
+      return;
+    }
+
+    // Step 3: Check if normal payment has already been processed (idempotency)
     const existingPayment = await client.query(
       'SELECT id FROM payment_intents WHERE stripe_payment_intent_id = $1',
       [paymentIntentId]
@@ -207,7 +264,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       });
     }
 
-    // Step 3: Begin transaction to create registrations and record payment
+    // Step 4: Begin transaction to create registrations and record payment
     await client.query('BEGIN');
 
     const registrationIds = [];
