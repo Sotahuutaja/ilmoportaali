@@ -188,7 +188,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     }
 
     // Verify that the authenticated user owns this payment intent
-    if (paymentIntent.metadata?.email !== req.user.email) {
+    // (skip for additional payments - ownership verified via registration lookup below)
+    if (!isAdditionalPayment && paymentIntent.metadata?.email !== req.user.email) {
       console.error('[PAYMENT ERROR] Payment intent email mismatch:', paymentIntent.metadata?.email, '!==', req.user.email);
       return res.status(403).json({ error: 'Payment intent does not belong to you' });
     }
