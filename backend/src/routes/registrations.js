@@ -770,19 +770,25 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
       const difference = newTotalCents - oldTotalCents;
 
       if (difference !== 0) {
-        // Get user email
+        // Get user email and name
         let userEmail;
+        let userFirstName;
+        let userLastName;
         if (reg.rows[0].is_guest) {
           // For guests, use guest_email if available, otherwise use the captain's email (registered_by)
           userEmail = reg.rows[0].guest_email;
+          userFirstName = reg.rows[0].guest_first_name || '';
+          userLastName = reg.rows[0].guest_last_name || '';
           if (!userEmail && reg.rows[0].registered_by) {
             const captainResult = await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].registered_by]);
             userEmail = captainResult.rows[0]?.email;
           }
         } else {
-          // For regular users, get their email
-          const userResult = await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].user_id]);
+          // For regular users, get their email and name
+          const userResult = await client.query('SELECT email, first_name, last_name FROM users WHERE id = $1', [reg.rows[0].user_id]);
           userEmail = userResult.rows[0]?.email;
+          userFirstName = userResult.rows[0]?.first_name || '';
+          userLastName = userResult.rows[0]?.last_name || '';
         }
 
         if (difference < 0) {
@@ -817,7 +823,7 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
             // Always send refund notification email when price decreases (whether Stripe refund succeeded or not)
             if (userEmail) {
               try {
-                await sendRefundEmail(userEmail, event.rows[0].title, refundAmount, oldProducts, products);
+                await sendRefundEmail(userEmail, event.rows[0].title, refundAmount, oldProducts, products, userFirstName, userLastName);
                 console.log(`[EMAIL] Sent refund notification to ${userEmail}`);
               } catch (err) {
                 console.error('[EMAIL ERROR] Failed to send refund email:', err.message);
@@ -861,7 +867,9 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
                 event.rows[0].title,
                 difference,
                 newPaymentIntent.client_secret,
-                newPaymentIntent.id
+                newPaymentIntent.id,
+                userFirstName,
+                userLastName
               );
               console.log(`[EMAIL] Sent additional payment notification to ${userEmail}`);
             } catch (err) {

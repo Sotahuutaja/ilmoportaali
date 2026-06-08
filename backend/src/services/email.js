@@ -58,29 +58,32 @@ async function sendPasswordResetEmail(email, token) {
   });
 }
 
-async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret, paymentIntentId) {
+async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret, paymentIntentId, userFirstName = null, userLastName = null) {
   const checkoutLink = `${APP_URL}/events/checkout?paymentIntentId=${paymentIntentId}&clientSecret=${paymentIntentClientSecret}&amount=${additionalAmount}`;
+  const userNameText = (userFirstName || userLastName)
+    ? `${userFirstName || ''} ${userLastName || ''}`.trim() + "'s registration"
+    : 'Your registration';
   await sendEmail({
     to: email,
     subject: `Additional payment required for ${eventTitle}`,
     html: `
       <h2>Registration updated - Additional payment needed</h2>
-      <p>Your registration for <strong>${eventTitle}</strong> has been updated by the event organizers.</p>
+      <p>${userNameText} for <strong>${eventTitle}</strong> has been updated by the event organizers.</p>
       <p>Due to the changes, an additional payment of <strong>€${(additionalAmount / 100).toFixed(2)}</strong> is required.</p>
       <p><a href="${checkoutLink}" style="background:#1a1a2e;color:white;padding:10px 20px;text-decoration:none;border-radius:6px;">Complete payment</a></p>
       <p>Or copy this link: ${checkoutLink}</p>
-      <p>Please complete the payment to finalize your registration.</p>
+      <p>Please complete the payment to finalize the registration.</p>
       <p>If you have questions about this change, please contact the event organizers.</p>
     `
   });
 }
 
-async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = [], newProducts = []) {
+async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = [], newProducts = [], userFirstName = null, userLastName = null) {
   // Build product change summary
   let productChangesHtml = '';
 
   if (oldProducts.length > 0 || newProducts.length > 0) {
-    productChangesHtml = '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Your registration changes:</h3>';
+    productChangesHtml = '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Registration changes:</h3>';
     productChangesHtml += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">';
     productChangesHtml += '<tr style="background: #f5f5f5;"><th style="text-align: left; padding: 0.5rem; border: 1px solid #ddd;">Product</th><th style="text-align: center; padding: 0.5rem; border: 1px solid #ddd;">Old</th><th style="text-align: center; padding: 0.5rem; border: 1px solid #ddd;">New</th></tr>';
 
@@ -107,15 +110,19 @@ async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = []
     productChangesHtml += '</table>';
   }
 
+  const userNameText = (userFirstName || userLastName)
+    ? `${userFirstName || ''} ${userLastName || ''}`.trim() + "'s registration"
+    : 'Your registration';
+
   await sendEmail({
     to: email,
     subject: `Refund issued for ${eventTitle}`,
     html: `
       <h2>Registration updated - Refund issued</h2>
-      <p>Your registration for <strong>${eventTitle}</strong> has been updated by the event organizers.</p>
+      <p>${userNameText} for <strong>${eventTitle}</strong> has been updated by the event organizers.</p>
       ${productChangesHtml}
       <p>Due to the changes, a refund of <strong>€${(refundAmount / 100).toFixed(2)}</strong> has been automatically processed.</p>
-      <p>The refund will appear on your original payment method within 1-3 business days.</p>
+      <p>The refund will appear on the original payment method within 1-3 business days.</p>
       <p>If you have questions about this change, please contact the event organizers.</p>
     `
   });
