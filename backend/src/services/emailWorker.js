@@ -195,6 +195,9 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
     [registrationId]
   );
 
+  console.log(`[EMAIL WORKER] Fetched ${productsResult.rows.length} registration products for registration ${registrationId}`);
+  console.log('[EMAIL WORKER] Raw query results:', JSON.stringify(productsResult.rows, null, 2));
+
   // Fetch invoice number
   const invoiceResult = await pool.query(
     `SELECT invoice_number, amount_cents FROM invoices WHERE registration_id = $1 LIMIT 1`,
@@ -222,21 +225,43 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
     }
     const fields = p.fields || [];
 
+    console.log(`[EMAIL WORKER PRICE DEBUG] Product: ${p.name}`);
+    console.log(`  - basePrice: ${p.price} (type: ${typeof p.price})`);
+    console.log(`  - p.fields type: ${typeof p.fields}, isArray: ${Array.isArray(p.fields)}`);
+    console.log(`  - p.fields raw:`, p.fields);
+    console.log(`  - fieldValues: ${JSON.stringify(fieldValues)}`);
+    console.log(`  - Fields structure:`, JSON.stringify(fields, null, 2));
+
     for (const field of fields) {
       if (field.type === 'select') {
         const selectedValue = fieldValues[field.id];
+        console.log(`  - Field "${field.label}" (id: ${field.id}), selectedValue: ${selectedValue}, hasOptions: ${!!field.options}`);
+
         if (selectedValue && field.options) {
+          console.log(`    Options array:`, JSON.stringify(field.options, null, 2));
+
           const option = field.options.find(opt => {
             const optVal = typeof opt === 'string' ? opt : opt.value;
+            console.log(`      Checking option: ${JSON.stringify(opt)} => optVal="${optVal}" vs selectedValue="${selectedValue}" => match: ${optVal === selectedValue}`);
             return optVal === selectedValue;
           });
+
+          console.log(`    Found option:`, JSON.stringify(option));
+
           if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+            console.log(`    ✓ Applying option price: ${option.price}`);
             price = parseFloat(option.price);
             break;
+          } else if (option) {
+            console.log(`    ✗ Option found but no/null price. option.price=${option.price}, typeof=${typeof option.price}`);
+          } else {
+            console.log(`    ✗ No matching option found`);
           }
         }
       }
     }
+
+    console.log(`  FINAL PRICE: €${(price).toFixed(2)}\n`);
 
     return {
       name: p.name,
@@ -290,15 +315,22 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
       }
       const fields = productFieldsMap[p.product_id] || [];
 
+      console.log(`  [GUEST] Product: ${p.name}, basePrice: ${p.price}`);
+      console.log(`    Fields:`, JSON.stringify(fields, null, 2));
+
       for (const field of fields) {
         if (field.type === 'select') {
           const selectedValue = fieldValues[field.id];
+          console.log(`    Field "${field.label}" (id: ${field.id}), selectedValue: ${selectedValue}`);
+
           if (selectedValue && field.options) {
             const option = field.options.find(opt => {
               const optVal = typeof opt === 'string' ? opt : opt.value;
               return optVal === selectedValue;
             });
+
             if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+              console.log(`    ✓ Using option price: ${option.price}`);
               price = parseFloat(option.price);
               break;
             }
@@ -306,11 +338,13 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
         }
       }
 
+      console.log(`  FINAL GUEST PRICE: €${(price).toFixed(2)}\n`);
+
       return {
         name: p.name,
         price: price,
         quantity: p.quantity,
-        field_values: transformFieldValues(p.field_values || {}, productFieldsMap[p.product_id] || [])
+        field_values: transformFieldValues(fieldValues, fields)
       };
     }))
   }));

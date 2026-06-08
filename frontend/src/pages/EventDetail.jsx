@@ -619,15 +619,18 @@ export default function EventDetail() {
           ) : (
             <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button className="btn btn-primary" onClick={register}>Continue to payment</button>
-            {isRegistered && (
-              <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
-            )}
             </div>
           )}
         </>
           );
           })()}
         </>
+      )}
+
+      {isRegistered && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+          <button className="btn btn-danger" onClick={cancel}>Cancel registration</button>
+        </div>
       )}
 
             {captainTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && (
