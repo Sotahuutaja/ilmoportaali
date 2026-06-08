@@ -732,10 +732,27 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
               userEmail
             );
 
-            // Store the additional payment intent info
+            // Store the additional payment intent info with products that triggered it
+            // Fetch product details for the new products being added
+            const productDetails = [];
+            for (const product of products) {
+              const productInfo = await client.query(
+                'SELECT id, name, price FROM event_products WHERE id = $1',
+                [product.product_id]
+              );
+              if (productInfo.rows[0]) {
+                productDetails.push({
+                  product_id: product.product_id,
+                  name: productInfo.rows[0].name,
+                  quantity: product.quantity,
+                  price: productInfo.rows[0].price
+                });
+              }
+            }
+
             await client.query(
-              'INSERT INTO payment_intents (stripe_payment_intent_id, registration_id, amount_cents, currency, status) VALUES ($1, $2, $3, $4, $5)',
-              [newPaymentIntent.id, req.params.registrationId, difference, 'eur', newPaymentIntent.status]
+              'INSERT INTO payment_intents (stripe_payment_intent_id, registration_id, amount_cents, currency, status, metadata) VALUES ($1, $2, $3, $4, $5, $6)',
+              [newPaymentIntent.id, req.params.registrationId, difference, 'eur', newPaymentIntent.status, JSON.stringify({ products: productDetails })]
             );
 
             // Update payment status to indicate additional payment is pending

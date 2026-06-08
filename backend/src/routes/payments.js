@@ -210,7 +210,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
       // Find which registration this additional payment belongs to
       const existingPayment = await client.query(
-        'SELECT registration_id, amount_cents FROM payment_intents WHERE stripe_payment_intent_id = $1',
+        'SELECT registration_id, amount_cents, metadata FROM payment_intents WHERE stripe_payment_intent_id = $1',
         [paymentIntentId]
       );
 
@@ -219,6 +219,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       }
 
       const registrationId = existingPayment.rows[0].registration_id;
+      const addedProducts = existingPayment.rows[0].metadata ? JSON.parse(existingPayment.rows[0].metadata).products || [] : [];
 
       await client.query('BEGIN');
 
@@ -266,13 +267,14 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
               [registrationId]
             );
 
-            // Send confirmation email
+            // Send confirmation email with details about what was just paid and all current products
             if (userEmail) {
               await sendAdditionalPaymentConfirmationEmail(
                 userEmail,
                 reg.title,
                 existingPayment.rows[0].amount_cents,
-                productsResult.rows
+                addedProducts,  // Products that triggered the additional payment
+                productsResult.rows  // All current products for the registration
               );
               console.log('[EMAIL] Sent additional payment confirmation to', userEmail);
             }
