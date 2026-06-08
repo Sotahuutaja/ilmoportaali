@@ -651,6 +651,8 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
         // Get user email
         const userEmail = reg.rows[0].is_guest ? reg.rows[0].guest_email : (await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].user_id])).rows[0]?.email;
 
+        console.log(`[PAYMENT RECONCILIATION] Registration ${req.params.registrationId}: is_guest=${reg.rows[0].is_guest}, userEmail=${userEmail}, difference=${difference}`);
+
         if (difference < 0) {
           // Amount decreased — issue refund
           const refundAmount = Math.abs(difference);
@@ -693,6 +695,10 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
           }
         } else if (difference > 0) {
           // Amount increased — create new payment intent for the difference
+          if (!userEmail) {
+            throw new Error('Cannot create additional payment intent: user email is missing');
+          }
+
           try {
             const newPaymentIntent = await stripe.createPaymentIntent(
               req.params.registrationId,
