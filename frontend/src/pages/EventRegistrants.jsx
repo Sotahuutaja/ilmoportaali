@@ -433,6 +433,26 @@ export default function EventRegistrants() {
     }
   };
   
+  // Helper to calculate product price with field option overrides
+  const getProductPrice = (product) => {
+    let price = parseFloat(product.price);
+    if (product.field_values && product.fields) {
+      for (const field of product.fields) {
+        if (field.type === 'select' && product.field_values[field.id]) {
+          const option = field.options?.find(opt => {
+            const optVal = typeof opt === 'string' ? opt : opt.value;
+            return optVal === product.field_values[field.id];
+          });
+          if (option && typeof option === 'object' && option.price) {
+            price = parseFloat(option.price);
+            break;
+          }
+        }
+      }
+    }
+    return price;
+  };
+
   const exportRegistrantsCSV = () => {
   const headers = ['First name', 'Last name', 'Email', 'Team', 'Products', 'Total price', 'Payment Status', 'Type', 'Registered', 'Comments'];
   const rows = registrations.map(r => {
@@ -450,7 +470,7 @@ export default function EventRegistrants() {
         }).join('; ')
       : '';
     const totalPrice = r.products
-      ? r.products.reduce((sum, p) => sum + parseFloat(p.price) * p.quantity, 0).toFixed(2)
+      ? r.products.reduce((sum, p) => sum + getProductPrice(p) * p.quantity, 0).toFixed(2)
       : '0.00';
     const paymentStatus = r.payment_status ? r.payment_status.charAt(0).toUpperCase() + r.payment_status.slice(1) : 'Unknown';
     const type = r.is_guest ? 'Guest' : 'Registered user';
@@ -490,7 +510,7 @@ export default function EventRegistrants() {
 
   const totalRevenue = registrations.reduce((sum, r) => {
     if (!r.products) return sum;
-    return sum + r.products.reduce((s, p) => s + (parseFloat(p.price) * p.quantity), 0);
+    return sum + r.products.reduce((s, p) => s + (getProductPrice(p) * p.quantity), 0);
   }, 0);
 
   if (!event) return <p>Loading...</p>;
@@ -603,13 +623,14 @@ export default function EventRegistrants() {
                     {r.products && r.products.length > 0 ? (
                       <div>
                         {r.products.map((p, i) => {
+                          const price = getProductPrice(p);
                           const fieldParts = Object.entries(p.field_values || {}).map(([fid, val]) => {
                             const fieldDef = (p.fields || []).find(f => f.id === fid);
                             return { label: fieldDef?.label || fid, val };
                           });
                           return (
                             <div key={i} style={{ fontSize: '0.8rem', marginBottom: '0.2rem' }}>
-                              <span>{p.name} x{p.quantity} — €{(parseFloat(p.price) * p.quantity).toFixed(2)}</span>
+                              <span>{p.name} x{p.quantity} — €{(price * p.quantity).toFixed(2)}</span>
                               {fieldParts.map(({ label, val }) => (
                                 <span key={label} style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', paddingLeft: '0.5rem' }}>
                                   {label}: {val}
