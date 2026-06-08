@@ -174,8 +174,16 @@ export default function PaymentForm({
 
   const displayAmount = totalAmount ? `€${totalAmount.toFixed(2)}` : null;
 
-  // Create payment intent on mount
+  // Create payment intent on mount (or use existing for additional payments)
   useEffect(() => {
+    // For additional payments, use the clientSecret from registrationData
+    if (registrationData?.isAdditionalPayment && registrationData?.clientSecret) {
+      setClientSecret(registrationData.clientSecret);
+      setPaymentIntentId(registrationData.paymentIntentId);
+      setIsLoading(false);
+      return;
+    }
+
     if (!totalAmount || !eventId) {
       setIsLoading(false);
       return;

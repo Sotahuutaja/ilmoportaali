@@ -728,6 +728,12 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
               [newPaymentIntent.id, req.params.registrationId, difference, 'eur', newPaymentIntent.status]
             );
 
+            // Update payment status to indicate additional payment is pending
+            await client.query(
+              'UPDATE registrations SET payment_status = $1 WHERE id = $2',
+              ['additional_payment_pending', req.params.registrationId]
+            );
+
             console.log(`[PAYMENT] Created additional payment intent for €${(difference / 100).toFixed(2)} for registration ${req.params.registrationId}`);
 
             // Send email notification about additional payment
