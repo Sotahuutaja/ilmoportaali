@@ -906,7 +906,6 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
 
                   // Transform field_values to use field labels instead of IDs
                   const transformedFieldValues = {};
-                  const fields = details.fields || [];
                   for (const [fieldId, fieldValue] of Object.entries(fieldValues)) {
                     const field = fields.find(f => f.id === fieldId);
                     if (field) {
