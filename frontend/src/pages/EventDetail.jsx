@@ -182,26 +182,22 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts, isEven
         }}>
           {error && <p className="error" style={{ fontSize: '0.85rem' }}>{error}</p>}
 
-          {!editing ? (
-            <>
-              {r.products && r.products.length > 0 ? (
-                r.products.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
-                    <span>{p.name} x{p.quantity}</span>
-                    <span style={{ color: 'var(--text-muted)' }}>€{(parseFloat(p.price) * p.quantity).toFixed(2)}</span>
-                  </div>
-                ))
-              ) : (
-                <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>No products selected.</p>
-              )}
-              {!isEventPast && (
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid #ddd', paddingTop: '0.5rem' }}>
-                  <button className="btn btn-danger" onClick={e => { e.stopPropagation(); onDelete(r.id, displayName); }}>
-                    Delete registration
-                  </button>
-                </div>
-              )}
-            </>
+          {r.products && r.products.length > 0 ? (
+            r.products.map((p, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
+                <span>{p.name} x{p.quantity}</span>
+                <span style={{ color: 'var(--text-muted)' }}>€{(parseFloat(p.price) * p.quantity).toFixed(2)}</span>
+              </div>
+            ))
+          ) : (
+            <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>No products selected.</p>
+          )}
+          {!isEventPast && (
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid #ddd', paddingTop: '0.5rem' }}>
+              <button className="btn btn-danger" onClick={e => { e.stopPropagation(); onDelete(r.id, displayName); }}>
+                Delete registration
+              </button>
+            </div>
           )}
         </div>
       )}
