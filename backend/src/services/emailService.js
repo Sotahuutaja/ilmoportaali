@@ -254,7 +254,7 @@ Cancellation Details:
 Event: ${eventName}
 Registration ID: ${registrationId}
 Cancellation Date: ${refundDate}
-${amountRefunded ? `Amount Refunded: ${amountRefunded}` : ''}
+${isCancelledByManager && refundAmount > 0 ? `Amount Refunded: €${(refundAmount / 100).toFixed(2)}` : ''}
 
 ${products && products.length > 0 ? `Cancelled Products:
 ${products.map(p => `  - ${p.name} × ${p.quantity} = €${(p.price * p.quantity).toFixed(2)}`).join('\n')}

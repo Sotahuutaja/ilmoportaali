@@ -527,16 +527,21 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
     // Queue confirmation email for sending (async retry pattern)
     // Insert into email_queue so it can be retried if sending fails
-    try {
-      await pool.query(
-        `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
-         VALUES ($1, $2, $3, $4)`,
-        [primaryRegId, 'registration_confirmation', req.user.email, 'pending']
-      );
-      console.log('[PAYMENT] Queued confirmation email for registration', primaryRegId);
-    } catch (err) {
-      console.error('[PAYMENT] Failed to queue confirmation email:', err.message);
-      // Don't block the response - email will be retried
+    // Only queue confirmation email if we have a valid registration ID
+    if (primaryRegId) {
+      try {
+        await pool.query(
+          `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
+           VALUES ($1, $2, $3, $4)`,
+          [primaryRegId, 'registration_confirmation', req.user.email, 'pending']
+        );
+        console.log('[PAYMENT] Queued confirmation email for registration', primaryRegId);
+      } catch (err) {
+        console.error('[PAYMENT] Failed to queue confirmation email:', err.message);
+        // Don't block the response - email will be retried
+      }
+    } else {
+      console.warn('[PAYMENT] No valid registration ID to queue confirmation email');
     }
 
     res.json({
