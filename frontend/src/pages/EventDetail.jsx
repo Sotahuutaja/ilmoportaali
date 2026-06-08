@@ -553,19 +553,26 @@ export default function EventDetail() {
 
         {user && !full && registrationOpen && !isEventPast && (
       <>
-      <h3 style={{ marginBottom: '1rem' }}>Register yourself</h3>
+      {isRegistered ? (
+        <div style={{ background: '#e3f2fd', padding: '1rem', borderRadius: '6px', borderLeft: '4px solid #2196f3', marginBottom: '1.5rem' }}>
+          <p style={{ margin: 0, color: '#1565c0', fontWeight: 500 }}>✓ You are already registered for this event</p>
+          <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#0d47a1' }}>To modify your registration, contact the event organizers or use the "Cancel registration" button below.</p>
+        </div>
+      ) : (
+        <>
+          <h3 style={{ marginBottom: '1rem' }}>Register yourself</h3>
 
-      {(() => {
-        const canRegisterIndividually = event.allow_individual_registration;
-        const hasAllowedTeam = myTeams.filter(t => allowedTeams.includes(t.id)).length > 0;
+          {(() => {
+            const canRegisterIndividually = event.allow_individual_registration;
+            const hasAllowedTeam = myTeams.filter(t => allowedTeams.includes(t.id)).length > 0;
 
-        if (!canRegisterIndividually && !hasAllowedTeam) {
-        return (
-          <p style={{ color: '#c0392b' }}>
-          Individual registration is not allowed for this event and you are not a member of any allowed team.
-          </p>
-        );
-        }
+            if (!canRegisterIndividually && !hasAllowedTeam) {
+            return (
+              <p style={{ color: '#c0392b' }}>
+              Individual registration is not allowed for this event and you are not a member of any allowed team.
+              </p>
+            );
+            }
 
         return (
         <>
@@ -618,8 +625,10 @@ export default function EventDetail() {
             </div>
           )}
         </>
-        );
-      })()}
+          );
+          })()}
+        </>
+      )}
 
             {captainTeams.filter(t => allowedTeams.includes(t.id)).length > 0 && (
               <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
