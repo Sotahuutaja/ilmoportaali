@@ -183,10 +183,12 @@ router.post('/:eventId', requireAuth, async (req, res) => {
 
 // Captain registers a guest
 router.post('/:eventId/guest', requireAuth, async (req, res) => {
-  const { guest_first_name, guest_last_name, guest_email, team_id, products = [], comments = '' } = req.body;
+  const { guest_first_name, guest_last_name, team_id, products = [], comments = '' } = req.body;
+  // Guest uses captain's email
+  const guest_email = req.user.email;
 
-  if (!guest_first_name || !guest_last_name || !guest_email) {
-    return res.status(400).json({ error: 'Guest first name, last name and email are required' });
+  if (!guest_first_name || !guest_last_name) {
+    return res.status(400).json({ error: 'Guest first name and last name are required' });
   }
   if (!team_id) {
     return res.status(400).json({ error: 'Team is required for guest registration' });
@@ -649,7 +651,19 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
 
       if (difference !== 0) {
         // Get user email
-        const userEmail = reg.rows[0].is_guest ? reg.rows[0].guest_email : (await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].user_id])).rows[0]?.email;
+        let userEmail;
+        if (reg.rows[0].is_guest) {
+          // For guests, use guest_email if available, otherwise use the captain's email (registered_by)
+          userEmail = reg.rows[0].guest_email;
+          if (!userEmail && reg.rows[0].registered_by) {
+            const captainResult = await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].registered_by]);
+            userEmail = captainResult.rows[0]?.email;
+          }
+        } else {
+          // For regular users, get their email
+          const userResult = await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].user_id]);
+          userEmail = userResult.rows[0]?.email;
+        }
 
         console.log(`[PAYMENT RECONCILIATION] Registration ${req.params.registrationId}: is_guest=${reg.rows[0].is_guest}, userEmail=${userEmail}, difference=${difference}`);
 
@@ -696,7 +710,7 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
         } else if (difference > 0) {
           // Amount increased — create new payment intent for the difference
           if (!userEmail) {
-            throw new Error('Cannot create additional payment intent: user email is missing');
+            return res.status(400).json({ error: 'Cannot add products: guest email is missing. Please update the guest email first.' });
           }
 
           try {
