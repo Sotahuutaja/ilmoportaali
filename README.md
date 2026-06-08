@@ -65,7 +65,7 @@ All three services are containerised with Docker and orchestrated via Docker Com
 | Backend | Node.js (JavaScript) |
 | Database | PostgreSQL 16 |
 | Auth | JWT (JSON Web Tokens) |
-| Email | SendGrid |
+| Email | Gmail (Nodemailer) |
 | Containerisation | Docker / Docker Compose |
 | CI/CD | GitHub Actions |
 | Cloud | Azure Container Apps + Azure Container Registry |
@@ -134,9 +134,10 @@ POSTGRES_DB=<your_db_name>
 # Auth
 JWT_SECRET=<a_long_random_secret_string>
 
-# Email (SendGrid)
-SENDGRID_API_KEY=<your_sendgrid_api_key>
-SENDGRID_FROM_EMAIL=<verified_sender_email>
+# Email (Gmail)
+GMAIL_USER=<your_gmail_or_workspace_email>
+GMAIL_PASSWORD=<gmail_app_password>
+GMAIL_FROM_EMAIL=<sender_email_address>
 
 # Stripe Payments
 VITE_STRIPE_PUBLISHABLE_KEY=<your_stripe_publishable_key>
@@ -171,7 +172,7 @@ The application implements defense-in-depth security practices:
 
 ### Authentication & Users
 
-- **Registration** with email verification via SendGrid
+- **Registration** with email verification via Gmail
 - **JWT-based login** with role-based access control using secure httpOnly cookies
 - **Logout** — securely clears authentication cookies and redirects to login page
 - **Password change** from the profile page
@@ -306,4 +307,3 @@ az containerapp update --name ilmoportaali-frontend ...
 - Pin Azure CLI version in GitHub Actions (currently using `latest` due to credential mounting limitations with `azure/cli@v2`)
 - Enable users to register vehicles or other machines they might bring to an event
 - New team creation as an option for users in the Teams page
-- Switch email provider from SendGrid to Gmail (infrastructure ready, pending configuration)
