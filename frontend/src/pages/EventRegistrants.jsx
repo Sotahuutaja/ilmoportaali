@@ -54,6 +54,9 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
   };
 
   const handleSave = () => {
+    console.log('[EDIT REGISTRANT] reg.products:', reg.products);
+    console.log('[EDIT REGISTRANT] selectedProducts:', selectedProducts);
+
     const products = Object.entries(selectedProducts)
       .filter(([, item]) => {
         const qty = typeof item === 'number' ? item : (item?.quantity || 0);
@@ -64,6 +67,8 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
         const field_values = typeof item === 'object' ? (item?.field_values || {}) : {};
         return { product_id: parseInt(product_id), quantity: qty, field_values };
       });
+
+    console.log('[EDIT REGISTRANT] products to send:', products);
 
     // Calculate old and new totals
     // Use consistent key format (numbers) for comparison
