@@ -154,21 +154,22 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
   // For additional payments, we just need to update payment status
   // For normal payments, we need captain and guests info
+  let captain, guests;
   if (!isAdditionalPayment) {
-    const captain = registrations.captain;
-    const guests = registrations.guests || [];
+    captain = registrations.captain;
+    guests = registrations.guests || [];
 
     if (!captain || !Array.isArray(captain.products)) {
       return res.status(400).json({ error: 'Captain registration is required' });
     }
-  }
 
-  // Ensure either captain or guests have products
-  const captainHasProducts = captain.products.length > 0;
-  const guestsHaveProducts = guests.some(g => g.products && g.products.length > 0);
+    // Ensure either captain or guests have products
+    const captainHasProducts = captain.products.length > 0;
+    const guestsHaveProducts = guests.some(g => g.products && g.products.length > 0);
 
-  if (!captainHasProducts && !guestsHaveProducts) {
-    return res.status(400).json({ error: 'At least one product must be registered' });
+    if (!captainHasProducts && !guestsHaveProducts) {
+      return res.status(400).json({ error: 'At least one product must be registered' });
+    }
   }
 
   const client = await pool.connect();
