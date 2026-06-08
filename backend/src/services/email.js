@@ -1,20 +1,29 @@
-const sgMail = require('@sendgrid/mail');
+const nodemailer = require('nodemailer');
 
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL;
+const FROM_EMAIL = process.env.GMAIL_FROM_EMAIL;
 const APP_URL = process.env.APP_URL;
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_PASSWORD = process.env.GMAIL_PASSWORD;
 
-// Initialize SendGrid
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+// Initialize nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: GMAIL_USER,
+    pass: GMAIL_PASSWORD
+  }
+});
 
 // Core send function
 async function sendEmail({ to, subject, html }) {
-  if (!FROM_EMAIL) throw new Error('SENDGRID_FROM_EMAIL not configured');
-  if (!process.env.SENDGRID_API_KEY) throw new Error('SENDGRID_API_KEY not configured');
+  if (!FROM_EMAIL) throw new Error('GMAIL_FROM_EMAIL not configured');
+  if (!GMAIL_USER) throw new Error('GMAIL_USER not configured');
+  if (!GMAIL_PASSWORD) throw new Error('GMAIL_PASSWORD not configured');
 
   try {
-    await sgMail.send({
-      to,
+    await transporter.sendMail({
       from: FROM_EMAIL,
+      to,
       subject,
       html
     });

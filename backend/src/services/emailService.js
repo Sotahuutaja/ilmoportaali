@@ -1,14 +1,21 @@
 /**
- * Email Service - Sends transactional emails via SendGrid
+ * Email Service - Sends transactional emails via Gmail
  */
 
-const sgMail = require('@sendgrid/mail');
+const nodemailer = require('nodemailer');
 
-// Initialize SendGrid
-const apiKey = process.env.SENDGRID_API_KEY;
-if (apiKey) {
-  sgMail.setApiKey(apiKey);
-}
+// Initialize Gmail transporter
+const gmailUser = process.env.GMAIL_USER;
+const gmailPassword = process.env.GMAIL_PASSWORD;
+const transporter = (gmailUser && gmailPassword)
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: gmailUser,
+        pass: gmailPassword
+      }
+    })
+  : null;
 
 /**
  * Send registration confirmation email
@@ -17,9 +24,9 @@ if (apiKey) {
  * @param {array} products - Array of products with {name, price, quantity}
  */
 async function sendRegistrationConfirmation(userEmail, registrationData, products = [], guests = [], captainComments = '') {
-  // Don't send if no API key configured
-  if (!apiKey) {
-    console.log('[EMAIL] SendGrid not configured, skipping email');
+  // Don't send if no Gmail credentials configured
+  if (!transporter) {
+    console.log('[EMAIL] Gmail not configured, skipping email');
     return;
   }
 
@@ -57,7 +64,7 @@ async function sendRegistrationConfirmation(userEmail, registrationData, product
 
     const msg = {
       to: userEmail,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@ilmoportaali.com',
+      from: process.env.GMAIL_FROM_EMAIL || 'noreply@ilmoportaali.com',
       subject: `Registration Confirmation - ${eventName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -158,7 +165,7 @@ Ilmoportaali Team
       `
     };
 
-    await sgMail.send(msg);
+    await transporter.sendMail(msg);
     console.log(`[EMAIL] Confirmation email sent to ${userEmail} for registration ${registrationId}`);
     return true;
   } catch (err) {
@@ -175,9 +182,9 @@ Ilmoportaali Team
  * @param {array} products - Array of products that were cancelled
  */
 async function sendRegistrationCancellation(userEmail, cancellationData, products = []) {
-  // Don't send if no API key configured
-  if (!apiKey) {
-    console.log('[EMAIL] SendGrid not configured, skipping email');
+  // Don't send if no Gmail credentials configured
+  if (!transporter) {
+    console.log('[EMAIL] Gmail not configured, skipping email');
     return;
   }
 
@@ -215,7 +222,7 @@ async function sendRegistrationCancellation(userEmail, cancellationData, product
 
     const msg = {
       to: userEmail,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@ilmoportaali.com',
+      from: process.env.GMAIL_FROM_EMAIL || 'noreply@ilmoportaali.com',
       subject: `Registration Cancelled - ${eventName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -267,7 +274,7 @@ Ilmoportaali Team
       `
     };
 
-    await sgMail.send(msg);
+    await transporter.sendMail(msg);
     console.log(`[EMAIL] Cancellation email sent to ${userEmail} for registration ${registrationId}`);
     return true;
   } catch (err) {
