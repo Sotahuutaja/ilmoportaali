@@ -59,11 +59,16 @@ function PaymentFormContent({
         throw new Error(submitResult.error.message);
       }
 
+      // For additional payments (no eventId), use /events/checkout; for normal payments use /events/:id/checkout
+      const returnPath = registrationData?.isAdditionalPayment
+        ? '/events/checkout'
+        : `/events/${eventId}/checkout`;
+
       const result = await stripe.confirmPayment({
         elements,
         clientSecret,
         confirmParams: {
-          return_url: `${window.location.origin}/events/${eventId}/checkout?paymentIntentId=${paymentIntentId}`
+          return_url: `${window.location.origin}${returnPath}?paymentIntentId=${paymentIntentId}`
         }
       });
 
