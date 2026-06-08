@@ -32,18 +32,20 @@ export default function Checkout() {
     const redirectStatus = searchParams.get('redirect_status');
     const paymentIntentId = searchParams.get('paymentIntentId') || searchParams.get('payment_intent');
     const clientSecret = searchParams.get('clientSecret');
+    const amountParam = searchParams.get('amount'); // Amount in cents from email link
 
-    console.log('[CHECKOUT] URL params:', { redirectStatus, paymentIntentId, clientSecret: !!clientSecret, id });
+    console.log('[CHECKOUT] URL params:', { redirectStatus, paymentIntentId, clientSecret: !!clientSecret, amountParam, id });
     console.log('[CHECKOUT] localStorage keys:', Object.keys(localStorage));
 
     // Handle additional payment (paymentIntentId from email link)
     if (paymentIntentId && clientSecret && !redirectStatus) {
       console.log('[CHECKOUT] Detected additional payment scenario');
-      // For additional payments, set minimal data with just the payment intent info
+      // For additional payments, set minimal data with just the payment intent info and amount
       setRegistrationData({
         isAdditionalPayment: true,
         paymentIntentId: paymentIntentId,
-        clientSecret: clientSecret
+        clientSecret: clientSecret,
+        amount: amountParam ? parseInt(amountParam) : null
       });
       setLoading(false);
       return;
@@ -380,20 +382,25 @@ export default function Checkout() {
   // Calculate total amount from all registrations (captain + guests)
   let totalAmount = 0;
 
-  // Add captain's products with option-aware pricing
-  totalAmount += paymentProducts.reduce((sum, p) => {
-    const price = getProductPrice(p.product_id, p.field_values);
-    return sum + (price * p.quantity);
-  }, 0);
-
-  // Add guests' products with option-aware pricing
-  if (registrationData?.guests) {
-    totalAmount += registrationData.guests.reduce((sum, guest) => {
-      return sum + (guest.products?.reduce((guestSum, p) => {
-        const price = getProductPrice(p.product_id, p.field_values);
-        return guestSum + (price * p.quantity);
-      }, 0) || 0);
+  // For additional payments, use the amount from URL params (already in cents)
+  if (registrationData?.isAdditionalPayment && registrationData?.amount) {
+    totalAmount = registrationData.amount / 100; // Convert cents to euros
+  } else {
+    // Add captain's products with option-aware pricing
+    totalAmount += paymentProducts.reduce((sum, p) => {
+      const price = getProductPrice(p.product_id, p.field_values);
+      return sum + (price * p.quantity);
     }, 0);
+
+    // Add guests' products with option-aware pricing
+    if (registrationData?.guests) {
+      totalAmount += registrationData.guests.reduce((sum, guest) => {
+        return sum + (guest.products?.reduce((guestSum, p) => {
+          const price = getProductPrice(p.product_id, p.field_values);
+          return guestSum + (price * p.quantity);
+        }, 0) || 0);
+      }, 0);
+    }
   }
 
   return (
