@@ -60,7 +60,15 @@ export default function Checkout() {
     if (redirectStatus && paymentIntentId) {
       console.log('[CHECKOUT] Detected payment redirect');
       setIsProcessingRedirect(true);
-      // Returning from payment provider - retrieve stored registration data and confirm
+
+      // For additional payments, confirm directly without needing stored registration data
+      if (clientSecret) {
+        console.log('[CHECKOUT] Additional payment redirect - confirming directly');
+        handlePaymentRedirectSuccess(paymentIntentId, { isAdditionalPayment: true });
+        return;
+      }
+
+      // For normal checkout, retrieve stored registration data and confirm
       const storageKey = `checkout_${id}`;
       console.log('[CHECKOUT] Looking for storage key:', storageKey);
       const saved = localStorage.getItem(storageKey);
@@ -225,7 +233,11 @@ export default function Checkout() {
   };
 
   const handleCancel = () => {
-    navigate(`/events/${id}`);
+    if (registrationData?.isAdditionalPayment) {
+      navigate('/'); // Go to events page for additional payments
+    } else {
+      navigate(`/events/${id}`); // Go to specific event for normal checkout
+    }
   };
 
   // Helper to get readable field label from product fields
