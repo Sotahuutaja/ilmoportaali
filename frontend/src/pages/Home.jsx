@@ -15,9 +15,9 @@ export default function Home() {
         textAlign: 'center',
         marginBottom: '3rem'
       }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', marginTop: 0 }}>Welcome to Ilmoportaali</h1>
+        <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', marginTop: 0 }}>Welcome to Ilmoportaali v3</h1>
         <p style={{ fontSize: '1.2rem', marginBottom: '2rem', opacity: 0.95 }}>
-          Manage events, registrations, and teams in one place
+          Centralized event management and registration service for Suomen Pehmomiekkailuliitto
         </p>
         {!user ? (
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
@@ -38,22 +38,36 @@ export default function Home() {
       {/* Features Section */}
       <div style={{ marginBottom: '3rem' }}>
         <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Features</h2>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '1.5rem'
-        }}>
-          <div className="card" style={{ textAlign: 'center' }}>
-            <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>📋 Event Management</h3>
-            <p>Create and manage events with custom products, registration fields, and teams.</p>
-          </div>
-          <div className="card" style={{ textAlign: 'center' }}>
-            <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>👥 Team Management</h3>
-            <p>Organize teams, manage memberships, and approve registrations.</p>
-          </div>
-          <div className="card" style={{ textAlign: 'center' }}>
-            <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>💳 Easy Payments</h3>
-            <p>Secure payment processing with Stripe for event registrations.</p>
+        <div className="card" style={{ background: 'var(--surface-2)' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '2rem'
+          }}>
+            <div>
+              <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>📋 Event Management</h3>
+              <p>Create and manage events with custom products, registration fields, and quantity limits. Support for product options with per-option pricing and inventory control.</p>
+            </div>
+            <div>
+              <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>💳 Secure Payments</h3>
+              <p>Integrated Stripe payment processing with support for multiple payment methods (card, MobilePay, iDEAL). Real-time payment status tracking for participants.</p>
+            </div>
+            <div>
+              <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>👥 Team Management</h3>
+              <p>Create teams with assigned captains, manage memberships, and control join request approval settings. Captains can manage team members and transfer leadership.</p>
+            </div>
+            <div>
+              <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>🔐 User Authentication</h3>
+              <p>Secure JWT-based authentication with email verification, password reset, and role-based access control (admin, creator, attendee).</p>
+            </div>
+            <div>
+              <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>🎫 Registration Management</h3>
+              <p>Flexible event registration with guest registration support, optional team assignment, and comments. CSV export for all registrations and payment data.</p>
+            </div>
+            <div>
+              <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>📊 Admin Dashboard</h3>
+              <p>Comprehensive event management for creators and co-managers. Participant search and filtering, refund processing, and detailed payment status visibility.</p>
+            </div>
           </div>
         </div>
       </div>
