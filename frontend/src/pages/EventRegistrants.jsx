@@ -15,7 +15,7 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
     team_id: reg.team_id || ''
   });
   const [selectedProducts, setSelectedProducts] = useState(
-    reg.products
+    (reg.products && Array.isArray(reg.products) && reg.products.length > 0)
       ? Object.fromEntries(reg.products.map(p => [p.product_id, { quantity: p.quantity, field_values: p.field_values || {} }]))
       : {}
   );

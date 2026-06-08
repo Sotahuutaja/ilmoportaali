@@ -806,8 +806,14 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
         )
       : 0;
 
+    // Ensure products is always an array, not null
+    const registration = updated.rows[0];
+    if (registration && !Array.isArray(registration.products)) {
+      registration.products = [];
+    }
+
     res.json({
-      registration: updated.rows[0],
+      registration: registration,
       paymentInfo: {
         totalCents: finalTotalCents,
         totalEur: (finalTotalCents / 100).toFixed(2)
