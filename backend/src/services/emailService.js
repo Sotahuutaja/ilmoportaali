@@ -182,7 +182,7 @@ async function sendRegistrationCancellation(userEmail, cancellationData, product
   }
 
   try {
-    const { userName, eventName, registrationId, amountRefunded, refundDate } = cancellationData;
+    const { userName, eventName, registrationId, refundAmount, refundDate, isCancelledByManager } = cancellationData;
 
     // Build products table HTML
     let productsHtml = '';
@@ -223,14 +223,14 @@ async function sendRegistrationCancellation(userEmail, cancellationData, product
 
           <p>Hi ${userName},</p>
 
-          <p>Your registration for <strong>${eventName}</strong> has been cancelled.</p>
+          <p>Your registration for <strong>${eventName}</strong> has been cancelled${isCancelledByManager && refundAmount > 0 ? `, and a refund of €${(refundAmount / 100).toFixed(2)} has been issued` : ''}.</p>
 
           <div style="background: #f5f5f5; padding: 1rem; border-radius: 6px; margin: 1.5rem 0;">
             <h3 style="margin-top: 0; margin-bottom: 0.5rem; color: #333;">Cancellation Details</h3>
             <p style="margin: 0.5rem 0;"><strong>Event:</strong> ${eventName}</p>
             <p style="margin: 0.5rem 0;"><strong>Registration ID:</strong> <code style="background: #fff; padding: 0.2rem 0.4rem; border-radius: 3px;">${registrationId}</code></p>
             <p style="margin: 0.5rem 0;"><strong>Cancellation Date:</strong> ${refundDate}</p>
-            ${amountRefunded ? `<p style="margin: 0.5rem 0; color: #27ae60;"><strong>Amount Refunded:</strong> ${amountRefunded}</p>` : ''}
+            ${isCancelledByManager && refundAmount > 0 ? `<p style="margin: 0.5rem 0; color: #27ae60; font-weight: bold;">✓ Amount Refunded: €${(refundAmount / 100).toFixed(2)}</p>` : ''}
           </div>
 
           ${productsHtml}

@@ -344,11 +344,35 @@ export default function EventRegistrants() {
   }, [id, user, navigate]);
 
   const handleCancel = async (registrationId, name) => {
-    if (!window.confirm(`Cancel registration for ${name}?`)) return;
+    // Find the registration to show refund details
+    const reg = registrations.find(r => r.id === registrationId);
+    if (!reg) return;
+
+    // Calculate total refund amount
+    const totalRefund = reg.products
+      ? reg.products.reduce((sum, p) => sum + parseFloat(p.price) * p.quantity, 0)
+      : 0;
+
+    // Build confirmation message with refund details
+    let message = `⚠️ Cancel registration for ${name}?\n\n`;
+    message += `A REFUND of €${totalRefund.toFixed(2)} will be issued for:\n`;
+
+    if (reg.products && reg.products.length > 0) {
+      reg.products.forEach(p => {
+        message += `\n• ${p.name} ×${p.quantity} = €${(parseFloat(p.price) * p.quantity).toFixed(2)}`;
+      });
+    } else {
+      message += '\n(No products)';
+    }
+
+    message += '\n\nThe user will receive a cancellation email with refund details.';
+
+    if (!window.confirm(message)) return;
+
     try {
       await api.delete(`/registrations/${id}/registrations/${registrationId}`);
       setRegistrations(registrations.filter(r => r.id !== registrationId));
-      setMessage(`Registration for ${name} cancelled.`);
+      setMessage(`Registration for ${name} cancelled. Refund of €${totalRefund.toFixed(2)} issued.`);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel registration');
     }

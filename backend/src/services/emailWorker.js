@@ -125,7 +125,9 @@ async function sendQueuedEmail(emailRecord) {
           userName: emailData.userName,
           eventName: emailData.eventName,
           registrationId: emailData.registrationId,
-          refundDate: emailData.refundDate
+          refundDate: emailData.refundDate,
+          refundAmount: emailData.refundAmount,
+          isCancelledByManager: emailData.isCancelledByManager
         }, emailData.products);
       } else {
         throw new Error(`Unknown email type with body: ${email_type}`);
