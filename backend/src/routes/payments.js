@@ -235,6 +235,14 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
           ['succeeded', paymentIntentId]
         );
 
+        // Create invoice for additional payment
+        const additionalInvoiceNumber = `INV-${registrationId}-${Date.now()}`;
+        await client.query(
+          `INSERT INTO invoices (registration_id, amount_cents, invoice_number, paid_at)
+           VALUES ($1, $2, $3, NOW())`,
+          [registrationId, existingPayment.rows[0].amount_cents, additionalInvoiceNumber]
+        );
+
         await client.query('COMMIT');
 
         console.log('[PAYMENT] Additional payment confirmed for registration', registrationId);
