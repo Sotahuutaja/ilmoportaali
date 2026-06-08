@@ -75,4 +75,18 @@ async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, p
   });
 }
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendAdditionalPaymentEmail };
+async function sendRefundEmail(email, eventTitle, refundAmount) {
+  await sendEmail({
+    to: email,
+    subject: `Refund issued for ${eventTitle}`,
+    html: `
+      <h2>Registration updated - Refund issued</h2>
+      <p>Your registration for <strong>${eventTitle}</strong> has been updated by the event organizers.</p>
+      <p>Due to the changes, a refund of <strong>€${(refundAmount / 100).toFixed(2)}</strong> has been automatically processed.</p>
+      <p>The refund will appear on your original payment method within 1-3 business days.</p>
+      <p>If you have questions about this change, please contact the event organizers.</p>
+    `
+  });
+}
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendAdditionalPaymentEmail, sendRefundEmail };

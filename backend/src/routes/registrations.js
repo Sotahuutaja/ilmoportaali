@@ -4,7 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 const { canManageEvent } = require('../utils/eventAccess');
 const stripe = require('../services/stripeService');
-const { sendAdditionalPaymentEmail } = require('../services/email');
+const { sendAdditionalPaymentEmail, sendRefundEmail } = require('../services/email');
 
 // Helper: calculate total price for a set of products
 async function calculateProductPrice(client, products, eventId) {
@@ -566,23 +566,39 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
     await client.query('BEGIN');
 
     if (reg.rows[0].is_guest) {
-      // Update guest details
-      await client.query(
-        `UPDATE registrations SET
-          guest_first_name = COALESCE($1, guest_first_name),
-          guest_last_name = COALESCE($2, guest_last_name),
-          guest_email = COALESCE($3, guest_email)
-          ${team_id !== undefined ? ', team_id = $5' : ''}
-          ${comments !== undefined ? `, comments = $${team_id !== undefined ? 6 : 5}` : ''}
-          WHERE id = $4`,
-        team_id !== undefined && comments !== undefined
-          ? [guest_first_name, guest_last_name, guest_email, req.params.registrationId, team_id || null, comments || null]
-          : team_id !== undefined
-          ? [guest_first_name, guest_last_name, guest_email, req.params.registrationId, team_id || null]
-          : comments !== undefined
-          ? [guest_first_name, guest_last_name, guest_email, req.params.registrationId, comments || null]
-          : [guest_first_name, guest_last_name, guest_email, req.params.registrationId]
-      );
+      // Update guest details — only if they're actually provided
+      const updateParts = [];
+      const params = [];
+      let paramIndex = 1;
+
+      if (guest_first_name) {
+        updateParts.push(`guest_first_name = $${paramIndex++}`);
+        params.push(guest_first_name);
+      }
+      if (guest_last_name) {
+        updateParts.push(`guest_last_name = $${paramIndex++}`);
+        params.push(guest_last_name);
+      }
+      if (guest_email) {
+        updateParts.push(`guest_email = $${paramIndex++}`);
+        params.push(guest_email);
+      }
+      if (team_id !== undefined) {
+        updateParts.push(`team_id = $${paramIndex++}`);
+        params.push(team_id || null);
+      }
+      if (comments !== undefined) {
+        updateParts.push(`comments = $${paramIndex++}`);
+        params.push(comments || null);
+      }
+
+      if (updateParts.length > 0) {
+        params.push(req.params.registrationId);
+        await client.query(
+          `UPDATE registrations SET ${updateParts.join(', ')} WHERE id = $${paramIndex}`,
+          params
+        );
+      }
     } else {
       // Update registered user details and team
       if (team_id !== undefined) {
@@ -657,6 +673,15 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
               });
 
               console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${req.params.registrationId}`);
+
+              // Send refund notification email
+              try {
+                await sendRefundEmail(userEmail, event.rows[0].title, refundAmount);
+                console.log(`[EMAIL] Sent refund notification to ${userEmail}`);
+              } catch (err) {
+                console.error('[EMAIL ERROR] Failed to send refund email:', err.message);
+                // Don't fail the refund if email fails
+              }
             } catch (err) {
               console.error('[REFUND ERROR] Failed to issue refund:', err.message);
               // Don't fail the registration update, just log the error

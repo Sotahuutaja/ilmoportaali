@@ -228,21 +228,44 @@ export default function EventRegistrants() {
   const [eventProducts, setEventProducts] = useState([]);
 
   useEffect(() => {
-    if (!user || (user.role !== 'admin' && user.role !== 'creator')) {
+    if (!user) {
       navigate('/');
       return;
     }
+
+    // Load event details
     api.get(`/events/${id}`)
-      .then(res => setEvent(res.data.event))
+      .then(res => {
+        setEvent(res.data.event);
+        // Check if user is creator or co-manager; if not admin, verify authorization
+        if (user.role !== 'admin' && res.data.event.creator_id !== user.id) {
+          const isComanager = (res.data.event.co_managers || []).some(cm => cm.id === user.id);
+          if (!isComanager) {
+            setError('Not authorized to view this event');
+            navigate('/');
+            return;
+          }
+        }
+      })
       .catch(() => setError('Failed to load event'));
+
+    // Load registrations (backend will validate access)
     api.get(`/registrations/${id}`)
       .then(res => setRegistrations(res.data.registrations))
-      .catch(() => setError('Failed to load registrations'));
-  api.get('/teams')
-    .then(res => setTeams(res.data.teams));
-  api.get(`/events/${id}/products`)
-    .then(res => setEventProducts(res.data.products));
-  }, [id, user]);
+      .catch(err => {
+        if (err.response?.status === 403) {
+          setError('Not authorized to view registrations');
+          navigate('/');
+        } else {
+          setError('Failed to load registrations');
+        }
+      });
+
+    api.get('/teams')
+      .then(res => setTeams(res.data.teams));
+    api.get(`/events/${id}/products`)
+      .then(res => setEventProducts(res.data.products));
+  }, [id, user, navigate]);
 
   const handleCancel = async (registrationId, name) => {
     if (!window.confirm(`Cancel registration for ${name}?`)) return;
