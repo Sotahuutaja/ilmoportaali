@@ -405,15 +405,39 @@ router.get('/:eventId', requireAuth, async (req, res) => {
   }
 });
 
-// Cancel any registration (admin, event creator, or co-manager)
+// Cancel any registration (admin, event creator, co-manager, or team captain of the registration's team)
 router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req, res) => {
   try {
     const event = await pool.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
     if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
 
+    // Fetch registration details first to check authorization
+    const regCheck = await pool.query(
+      'SELECT team_id FROM registrations WHERE id = $1 AND event_id = $2',
+      [req.params.registrationId, req.params.eventId]
+    );
+
+    if (regCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+
+    const registrationTeamId = regCheck.rows[0].team_id;
+
+    // Check authorisation — admin, event creator, co-manager, or captain of the team
     const canManage = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
-    if (!canManage) {
-      return res.status(403).json({ error: 'Not authorised' });
+    let isAuthorised = canManage;
+
+    // Also allow team captains to cancel their team's registrations
+    if (!isAuthorised && registrationTeamId) {
+      const captainCheck = await pool.query(
+        'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+        [registrationTeamId, req.user.id, 'captain', 'approved']
+      );
+      isAuthorised = !!captainCheck.rows[0];
+    }
+
+    if (!isAuthorised) {
+      return res.status(403).json({ error: 'Not authorised to cancel this registration' });
     }
 
     // Fetch registration details and user info before deleting
@@ -551,18 +575,10 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
     const reg = await client.query('SELECT * FROM registrations WHERE id = $1', [req.params.registrationId]);
     if (!reg.rows[0]) return res.status(404).json({ error: 'Registration not found' });
 
-    // Check authorisation — admin, event creator, co-manager, or captain of the registration's team
+    // Check authorisation — only admin, event creator, or co-manager can edit registrations
     const canManage = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
     if (!canManage) {
-      if (reg.rows[0].team_id) {
-        const captainCheck = await client.query(
-          'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
-          [reg.rows[0].team_id, req.user.id, 'captain', 'approved']
-        );
-        if (!captainCheck.rows[0]) return res.status(403).json({ error: 'Not authorised' });
-      } else {
-        return res.status(403).json({ error: 'Not authorised' });
-      }
+      return res.status(403).json({ error: 'Not authorised to edit registrations' });
     }
 
     await client.query('BEGIN');

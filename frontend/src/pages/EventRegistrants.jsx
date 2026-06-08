@@ -575,7 +575,9 @@ export default function EventRegistrants() {
                   </td>
                   <td style={{ padding: '0.6rem 0.8rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="btn btn-secondary" onClick={() => setEditingReg(r)}>Edit</button>
+            {(user.role === 'admin' || event?.is_owner) && (
+              <button className="btn btn-secondary" onClick={() => setEditingReg(r)}>Edit</button>
+            )}
             <button className="btn btn-danger" onClick={() => handleCancel(r.id, name)}>Cancel</button>
             </div>
           </td>
