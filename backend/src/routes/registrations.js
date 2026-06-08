@@ -426,6 +426,7 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
     // Check authorisation — admin, event creator, co-manager, or captain of the team
     const canManage = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
     let isAuthorised = canManage;
+    let isManagerCancellation = canManage; // Track if cancelled by manager (not captain)
 
     // Also allow team captains to cancel their team's registrations
     if (!isAuthorised && registrationTeamId) {
@@ -434,6 +435,7 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
         [registrationTeamId, req.user.id, 'captain', 'approved']
       );
       isAuthorised = !!captainCheck.rows[0];
+      // isManagerCancellation stays false for captain cancellations
     }
 
     if (!isAuthorised) {
@@ -486,6 +488,37 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
         return acc;
       }, []);
 
+    // Issue refund if cancelled by manager (admin/creator/co-manager)
+    let refundAmount = 0;
+    if (isManagerCancellation) {
+      try {
+        // Get the payment intent and amount for this registration
+        const paymentResult = await pool.query(
+          'SELECT stripe_payment_intent_id, amount_cents FROM payment_intents WHERE registration_id = $1 ORDER BY created_at DESC LIMIT 1',
+          [registrationId]
+        );
+
+        if (paymentResult.rows[0]) {
+          const paymentIntentId = paymentResult.rows[0].stripe_payment_intent_id;
+          refundAmount = paymentResult.rows[0].amount_cents;
+
+          // Issue refund through Stripe
+          const stripeKey = process.env.STRIPE_SECRET_KEY;
+          const stripeInstance = require('stripe')(stripeKey);
+
+          await stripeInstance.refunds.create({
+            payment_intent: paymentIntentId,
+            amount: refundAmount
+          });
+
+          console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${registrationId} (manager cancellation)`);
+        }
+      } catch (err) {
+        console.error('[REFUND ERROR] Failed to issue refund:', err.message);
+        // Don't fail the cancellation if refund fails - continue with deletion
+      }
+    }
+
     // Queue cancellation email BEFORE deleting registration (so FK constraint is satisfied)
     try {
       const refundDate = new Date().toLocaleDateString('fi-FI', {
@@ -510,7 +543,9 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
             eventName: eventTitle,
             registrationId,
             refundDate,
-            products
+            products,
+            refundAmount: isManagerCancellation ? refundAmount : 0,
+            isCancelledByManager: isManagerCancellation
           }),
           'pending'
         ]
