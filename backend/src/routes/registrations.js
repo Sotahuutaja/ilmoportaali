@@ -114,6 +114,8 @@ router.post('/:eventId', requireAuth, async (req, res) => {
   const { team_id, products = [], comments = '' } = req.body;
   const client = await pool.connect();
 
+  console.log(`[REGISTRATION] User ${req.user.id} (${req.user.email}) attempting to register for event ${req.params.eventId}. Products: ${products.length}`);
+
   try {
     await client.query('BEGIN');
 
@@ -187,6 +189,8 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
   // Guest uses captain's email
   const guest_email = req.user.email;
 
+  console.log(`[GUEST REGISTRATION] Captain ${req.user.id} (${req.user.email}) registering guest: ${guest_first_name} ${guest_last_name}`);
+
   if (!guest_first_name || !guest_last_name) {
     return res.status(400).json({ error: 'Guest first name and last name are required' });
   }
@@ -248,6 +252,7 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
     }
 
     await client.query('COMMIT');
+    console.log(`[GUEST REGISTRATION] Successfully created guest registration ${reg.rows[0].id} for event ${req.params.eventId}`);
     res.status(201).json({ message: 'Guest registered successfully' });
   } catch (err) {
     await client.query('ROLLBACK');
