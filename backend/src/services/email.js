@@ -60,8 +60,11 @@ async function sendPasswordResetEmail(email, token) {
 
 async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret, paymentIntentId, userFirstName = null, userLastName = null) {
   const checkoutLink = `${APP_URL}/events/checkout?paymentIntentId=${paymentIntentId}&clientSecret=${paymentIntentClientSecret}&amount=${additionalAmount}`;
-  const userNameText = (userFirstName || userLastName)
-    ? `${userFirstName || ''} ${userLastName || ''}`.trim() + "'s registration"
+  const userName = (userFirstName || userLastName)
+    ? `${userFirstName || ''} ${userLastName || ''}`.trim()
+    : null;
+  const userNameText = userName
+    ? `<strong style="background-color: #fff3cd; padding: 2px 6px; border-radius: 3px;">${userName}</strong>'s registration`
     : 'Your registration';
   await sendEmail({
     to: email,
@@ -110,8 +113,11 @@ async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = []
     productChangesHtml += '</table>';
   }
 
-  const userNameText = (userFirstName || userLastName)
-    ? `${userFirstName || ''} ${userLastName || ''}`.trim() + "'s registration"
+  const userName = (userFirstName || userLastName)
+    ? `${userFirstName || ''} ${userLastName || ''}`.trim()
+    : null;
+  const userNameText = userName
+    ? `<strong style="background-color: #d4edda; padding: 2px 6px; border-radius: 3px;">${userName}</strong>'s registration`
     : 'Your registration';
 
   await sendEmail({
