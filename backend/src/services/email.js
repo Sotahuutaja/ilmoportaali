@@ -58,8 +58,8 @@ async function sendPasswordResetEmail(email, token) {
   });
 }
 
-async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret) {
-  const checkoutLink = `${APP_URL}/events/checkout?paymentIntentId=${paymentIntentClientSecret}`;
+async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret, paymentIntentId) {
+  const checkoutLink = `${APP_URL}/events/checkout?paymentIntentId=${paymentIntentId}&clientSecret=${paymentIntentClientSecret}`;
   await sendEmail({
     to: email,
     subject: `Additional payment required for ${eventTitle}`,

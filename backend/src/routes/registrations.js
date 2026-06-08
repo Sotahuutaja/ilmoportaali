@@ -734,7 +734,8 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
                 userEmail,
                 event.rows[0].title,
                 difference,
-                newPaymentIntent.client_secret
+                newPaymentIntent.client_secret,
+                newPaymentIntent.id
               );
               console.log(`[EMAIL] Sent additional payment notification to ${userEmail}`);
             } catch (err) {

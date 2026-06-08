@@ -37,9 +37,24 @@ export default function Checkout() {
     // Check if returning from payment redirect
     const redirectStatus = searchParams.get('redirect_status');
     const paymentIntentId = searchParams.get('paymentIntentId') || searchParams.get('payment_intent');
+    const clientSecret = searchParams.get('clientSecret');
 
-    console.log('[CHECKOUT] URL params:', { redirectStatus, paymentIntentId, id });
+    console.log('[CHECKOUT] URL params:', { redirectStatus, paymentIntentId, clientSecret: !!clientSecret, id });
     console.log('[CHECKOUT] localStorage keys:', Object.keys(localStorage));
+
+    // Handle additional payment (paymentIntentId from email link)
+    if (paymentIntentId && clientSecret && !redirectStatus) {
+      console.log('[CHECKOUT] Detected additional payment scenario');
+      setIsProcessingRedirect(true);
+      // For additional payments, set minimal data with just the payment intent info
+      setRegistrationData({
+        isAdditionalPayment: true,
+        paymentIntentId: paymentIntentId,
+        clientSecret: clientSecret
+      });
+      setLoading(false);
+      return;
+    }
 
     if (redirectStatus && paymentIntentId) {
       console.log('[CHECKOUT] Detected payment redirect');
@@ -497,7 +512,7 @@ export default function Checkout() {
         ) : (
           <>
             {/* Payment Form */}
-            {(paymentProducts.length > 0 || (registrationData?.guests && registrationData.guests.length > 0)) && (
+            {(paymentProducts.length > 0 || (registrationData?.guests && registrationData.guests.length > 0) || registrationData?.isAdditionalPayment) && (
               <>
                 <PaymentForm
                   eventId={parseInt(id)}
