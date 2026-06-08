@@ -346,7 +346,7 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
         quantity: p.quantity,
         field_values: transformFieldValues(fieldValues, fields)
       };
-    }))
+    })
   }));
 
   // Send email
