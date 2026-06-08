@@ -68,6 +68,7 @@ export default function App() {
           <div className="container">
             <Routes>
               <Route path="/" element={<Events />} />
+              <Route path="/events/checkout" element={<Checkout />} />
               <Route path="/events/:id/checkout" element={<Checkout />} />
               <Route path="/events/:id/registrants" element={<EventRegistrants />} />
               <Route path="/events/:id/edit" element={<EditEvent />} />
