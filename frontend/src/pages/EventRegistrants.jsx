@@ -57,14 +57,19 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
     console.log('[EDIT REGISTRANT] reg.products:', reg.products);
     console.log('[EDIT REGISTRANT] selectedProducts:', selectedProducts);
 
-    const products = Object.entries(selectedProducts)
-      .filter(([, item]) => {
+    const entries = Object.entries(selectedProducts);
+    console.log('[EDIT REGISTRANT] Object.entries(selectedProducts):', entries);
+
+    const products = entries
+      .filter(([productId, item]) => {
         const qty = typeof item === 'number' ? item : (item?.quantity || 0);
+        console.log(`[EDIT REGISTRANT] Checking product ${productId}: qty=${qty}, passes filter=${qty > 0}`);
         return qty > 0;
       })
       .map(([product_id, item]) => {
         const qty = typeof item === 'number' ? item : (item?.quantity || 0);
         const field_values = typeof item === 'object' ? (item?.field_values || {}) : {};
+        console.log(`[EDIT REGISTRANT] Mapping product ${product_id}: qty=${qty}, field_values=${JSON.stringify(field_values)}`);
         return { product_id: parseInt(product_id), quantity: qty, field_values };
       });
 
