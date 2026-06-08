@@ -554,15 +554,17 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
     let refundAmount = 0;
     if (isManagerCancellation) {
       try {
-        // Get the payment intent and amount for this registration
+        // Calculate refund amount from current products (not original payment, in case products were edited)
+        refundAmount = products.reduce((total, p) => total + (p.price * p.quantity * 100), 0);
+
+        // Get the payment intent ID for refunding through Stripe
         const paymentResult = await pool.query(
-          'SELECT stripe_payment_intent_id, amount_cents FROM payment_intents WHERE registration_id = $1 ORDER BY created_at DESC LIMIT 1',
+          'SELECT stripe_payment_intent_id FROM payment_intents WHERE registration_id = $1 ORDER BY created_at DESC LIMIT 1',
           [registrationId]
         );
 
         if (paymentResult.rows[0]) {
           const paymentIntentId = paymentResult.rows[0].stripe_payment_intent_id;
-          refundAmount = paymentResult.rows[0].amount_cents;
 
           // Issue refund through Stripe
           const stripeKey = process.env.STRIPE_SECRET_KEY;
