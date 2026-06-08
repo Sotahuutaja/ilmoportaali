@@ -360,15 +360,12 @@ router.get('/:eventId', requireAuth, async (req, res) => {
     // Check if user can manage this event (admin, creator, or co-manager)
     const canManage = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
 
-    console.log(`[REGISTRATIONS AUTH] User ${req.user.id} (role: ${req.user.role}) accessing event ${req.params.eventId}. Can manage: ${canManage}`);
-
     if (!canManage) {
       // Captains can see their team's registrations
       const captainOf = await pool.query(
         'SELECT team_id FROM team_members WHERE user_id = $1 AND role = $2 AND status = $3',
         [req.user.id, 'captain', 'approved']
       );
-      console.log(`[REGISTRATIONS AUTH] User is captain of ${captainOf.rows.length} team(s)`);
       if (captainOf.rows.length === 0) {
         return res.status(403).json({ error: 'Not authorised' });
       }
@@ -678,12 +675,16 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
               console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${req.params.registrationId}`);
 
               // Send refund notification email
-              try {
-                await sendRefundEmail(userEmail, event.rows[0].title, refundAmount);
-                console.log(`[EMAIL] Sent refund notification to ${userEmail}`);
-              } catch (err) {
-                console.error('[EMAIL ERROR] Failed to send refund email:', err.message);
-                // Don't fail the refund if email fails
+              if (userEmail) {
+                try {
+                  await sendRefundEmail(userEmail, event.rows[0].title, refundAmount);
+                  console.log(`[EMAIL] Sent refund notification to ${userEmail}`);
+                } catch (err) {
+                  console.error('[EMAIL ERROR] Failed to send refund email:', err.message);
+                  // Don't fail the refund if email fails
+                }
+              } else {
+                console.warn('[EMAIL] No email address available for refund notification');
               }
             } catch (err) {
               console.error('[REFUND ERROR] Failed to issue refund:', err.message);
@@ -733,7 +734,8 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
     // Return updated registration
     const updated = await pool.query(`
       SELECT
-        r.*,
+        r.id, r.user_id, r.event_id, r.team_id, r.is_guest, r.guest_first_name, r.guest_last_name, r.guest_email,
+        r.comments, r.payment_status, r.created_at, r.registered_by,
         u.first_name, u.last_name, u.email as user_email,
         t.name as team_name,
         json_agg(json_build_object(
