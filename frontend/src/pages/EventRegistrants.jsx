@@ -93,7 +93,6 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
     if (reg.is_guest) {
     payload.guest_first_name = form.guest_first_name;
     payload.guest_last_name = form.guest_last_name;
-    payload.guest_email = form.email;
   } else {
       payload.first_name = form.first_name;
       payload.last_name = form.last_name;
@@ -120,8 +119,6 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
       <input value={form.guest_first_name} onChange={e => setForm({ ...form, guest_first_name: e.target.value })} />
       <label>Guest last name</label>
       <input value={form.guest_last_name} onChange={e => setForm({ ...form, guest_last_name: e.target.value })} />
-            <label>Guest email</label>
-            <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
           </>
         ) : (
           <>
@@ -201,7 +198,7 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
                           {field.options?.map(opt => {
                             const optVal = typeof opt === 'string' ? opt : opt.value;
                             const optLabel = typeof opt === 'string' ? opt : opt.label || opt.value;
-                            const optPrice = typeof opt === 'object' && opt.price ? ` (+€${parseFloat(opt.price).toFixed(2)})` : '';
+                            const optPrice = typeof opt === 'object' && opt.price ? ` (€${parseFloat(opt.price).toFixed(2)})` : '';
                             const displayLabel = optLabel + optPrice;
                             return <option key={optVal} value={optVal}>{displayLabel}</option>;
                           })}
@@ -270,7 +267,6 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
                     if (reg.is_guest) {
                       payload.guest_first_name = form.guest_first_name;
                       payload.guest_last_name = form.guest_last_name;
-                      payload.guest_email = form.email;
                     } else {
                       payload.first_name = form.first_name;
                       payload.last_name = form.last_name;
