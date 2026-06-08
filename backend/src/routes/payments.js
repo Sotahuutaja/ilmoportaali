@@ -332,8 +332,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       });
     }
 
-    if (existingCaptainRegId && captain.products.length === 0 && (!registrations.guests || registrations.guests.length === 0)) {
-      // Trying to create empty registration - error
+    // Check if trying to create an empty registration (no captain products AND no guests)
+    if (captain.products.length === 0 && (!registrations.guests || registrations.guests.length === 0)) {
       return res.status(400).json({
         error: 'No products to register'
       });
@@ -478,11 +478,16 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       return regId;
     };
 
-    // Create or update captain registration
-    console.log('[PAYMENT] Creating/updating captain registration');
-    const captainRegId = await createRegistration(false);
-    console.log('[PAYMENT] Captain registration ID:', captainRegId);
-    registrationIds.push(captainRegId);
+    // Create or update captain registration (only if captain has products)
+    let captainRegId;
+    if (captain.products.length > 0) {
+      console.log('[PAYMENT] Creating/updating captain registration');
+      captainRegId = await createRegistration(false);
+      console.log('[PAYMENT] Captain registration ID:', captainRegId);
+      registrationIds.push(captainRegId);
+    } else {
+      console.log('[PAYMENT] Skipping captain registration - captain has no products');
+    }
 
     // Create guest registrations
     console.log('[PAYMENT] Creating guest registrations, count:', guests.length);
@@ -494,19 +499,20 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       registrationIds.push(guestRegId);
     }
 
-    // Record payment intent (link to captain registration)
+    // Record payment intent (link to first registration - captain if exists, otherwise first guest)
+    const primaryRegId = captainRegId || registrationIds[0];
     await client.query(
       `INSERT INTO payment_intents (stripe_payment_intent_id, registration_id, amount_cents, status)
        VALUES ($1, $2, $3, $4)`,
-      [paymentIntentId, captainRegId, totalCents, paymentIntent.status]
+      [paymentIntentId, primaryRegId, totalCents, paymentIntent.status]
     );
 
     // Create invoice
-    const invoiceNumber = `INV-${captainRegId}-${Date.now()}`;
+    const invoiceNumber = `INV-${primaryRegId}-${Date.now()}`;
     await client.query(
       `INSERT INTO invoices (registration_id, amount_cents, invoice_number, paid_at)
        VALUES ($1, $2, $3, NOW())`,
-      [captainRegId, totalCents, invoiceNumber]
+      [primaryRegId, totalCents, invoiceNumber]
     );
 
     // Update payment status to 'paid' for captain and all guest registrations
@@ -525,9 +531,9 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       await pool.query(
         `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
          VALUES ($1, $2, $3, $4)`,
-        [captainRegId, 'registration_confirmation', req.user.email, 'pending']
+        [primaryRegId, 'registration_confirmation', req.user.email, 'pending']
       );
-      console.log('[PAYMENT] Queued confirmation email for registration', captainRegId);
+      console.log('[PAYMENT] Queued confirmation email for registration', primaryRegId);
     } catch (err) {
       console.error('[PAYMENT] Failed to queue confirmation email:', err.message);
       // Don't block the response - email will be retried
@@ -536,7 +542,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     res.json({
       success: true,
       message: `Registration completed successfully (${registrationIds.length} registration(s))`,
-      registrationId: captainRegId,
+      registrationId: primaryRegId,
       registrationIds,
       invoiceNumber,
       amount: totalCents,
