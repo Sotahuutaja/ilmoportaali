@@ -1,0 +1,91 @@
+import { useAuth } from '../AuthContext';
+import { Link } from 'react-router-dom';
+
+export default function Home() {
+  const { user } = useAuth();
+
+  return (
+    <div style={{ maxWidth: '900px', margin: '0 auto', paddingTop: '3rem' }}>
+      {/* Hero Section */}
+      <div style={{
+        background: 'linear-gradient(135deg, var(--accent) 0%, #0052a3 100%)',
+        color: 'white',
+        padding: '4rem 2rem',
+        borderRadius: '8px',
+        textAlign: 'center',
+        marginBottom: '3rem'
+      }}>
+        <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', marginTop: 0 }}>Welcome to Ilmoportaali</h1>
+        <p style={{ fontSize: '1.2rem', marginBottom: '2rem', opacity: 0.95 }}>
+          Manage events, registrations, and teams in one place
+        </p>
+        {!user ? (
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <Link to="/login" className="btn btn-primary" style={{ background: 'white', color: 'var(--accent)', borderColor: 'white' }}>
+              Log in
+            </Link>
+            <Link to="/register" className="btn" style={{ borderColor: 'white', color: 'white' }}>
+              Create account
+            </Link>
+          </div>
+        ) : (
+          <Link to="/events" className="btn btn-primary" style={{ background: 'white', color: 'var(--accent)', borderColor: 'white' }}>
+            Browse Events
+          </Link>
+        )}
+      </div>
+
+      {/* Features Section */}
+      <div style={{ marginBottom: '3rem' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Features</h2>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1.5rem'
+        }}>
+          <div className="card" style={{ textAlign: 'center' }}>
+            <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>📋 Event Management</h3>
+            <p>Create and manage events with custom products, registration fields, and teams.</p>
+          </div>
+          <div className="card" style={{ textAlign: 'center' }}>
+            <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>👥 Team Management</h3>
+            <p>Organize teams, manage memberships, and approve registrations.</p>
+          </div>
+          <div className="card" style={{ textAlign: 'center' }}>
+            <h3 style={{ color: 'var(--accent)', marginTop: 0 }}>💳 Easy Payments</h3>
+            <p>Secure payment processing with Stripe for event registrations.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      {user ? (
+        <div className="card" style={{ textAlign: 'center', background: 'var(--surface-2)' }}>
+          <h2 style={{ marginTop: 0 }}>Get Started</h2>
+          <p>What would you like to do?</p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link to="/events" className="btn btn-primary">
+              Browse Events
+            </Link>
+            <Link to="/teams" className="btn btn-secondary">
+              My Teams
+            </Link>
+            {(user.role === 'admin' || user.role === 'creator') && (
+              <Link to="/dashboard" className="btn btn-secondary">
+                Dashboard
+              </Link>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="card" style={{ textAlign: 'center', background: 'var(--surface-2)' }}>
+          <h2 style={{ marginTop: 0 }}>Ready to get started?</h2>
+          <p>Sign up to create events and manage registrations</p>
+          <Link to="/register" className="btn btn-primary">
+            Create an Account
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}

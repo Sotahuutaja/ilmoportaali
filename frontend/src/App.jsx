@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
+import Home from './pages/Home';
 import Events from './pages/Events';
 import EventDetail from './pages/EventDetail';
 import Login from './pages/Login';
@@ -31,7 +32,7 @@ function Nav() {
     <nav>
       <Link to="/" className="site-title">Ilmoportaali</Link>
       <div className="nav-center">
-        <Link to="/">Events</Link>
+        <Link to="/events">Events</Link>
         <Link to="/teams">Teams</Link>
         {(user?.role === 'admin' || user?.role === 'creator') && (
           <Link to="/dashboard">Management</Link>
@@ -67,7 +68,8 @@ export default function App() {
           <Nav />
           <div className="container">
             <Routes>
-              <Route path="/" element={<Events />} />
+              <Route path="/" element={<Home />} />
+              <Route path="/events" element={<Events />} />
               <Route path="/events/checkout" element={<Checkout />} />
               <Route path="/events/:id/checkout" element={<Checkout />} />
               <Route path="/events/:id/registrants" element={<EventRegistrants />} />
