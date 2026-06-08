@@ -360,12 +360,15 @@ router.get('/:eventId', requireAuth, async (req, res) => {
     // Check if user can manage this event (admin, creator, or co-manager)
     const canManage = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
 
+    console.log(`[REGISTRATIONS AUTH] User ${req.user.id} (role: ${req.user.role}) accessing event ${req.params.eventId}. Can manage: ${canManage}`);
+
     if (!canManage) {
       // Captains can see their team's registrations
       const captainOf = await pool.query(
         'SELECT team_id FROM team_members WHERE user_id = $1 AND role = $2 AND status = $3',
         [req.user.id, 'captain', 'approved']
       );
+      console.log(`[REGISTRATIONS AUTH] User is captain of ${captainOf.rows.length} team(s)`);
       if (captainOf.rows.length === 0) {
         return res.status(403).json({ error: 'Not authorised' });
       }
