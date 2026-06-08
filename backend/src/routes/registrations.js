@@ -351,13 +351,16 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
   }
 });
 
-// Get registrations for an event (creator or admin)
+// Get registrations for an event (creator, co-manager, admin, or captain)
 router.get('/:eventId', requireAuth, async (req, res) => {
   try {
     const event = await pool.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
     if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
 
-    if (req.user.role !== 'admin' && event.rows[0].creator_id !== req.user.id) {
+    // Check if user can manage this event (admin, creator, or co-manager)
+    const canManage = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
+
+    if (!canManage) {
       // Captains can see their team's registrations
       const captainOf = await pool.query(
         'SELECT team_id FROM team_members WHERE user_id = $1 AND role = $2 AND status = $3',
@@ -400,13 +403,14 @@ router.get('/:eventId', requireAuth, async (req, res) => {
   }
 });
 
-// Cancel any registration (admin or event creator)
+// Cancel any registration (admin, event creator, or co-manager)
 router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req, res) => {
   try {
     const event = await pool.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
     if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
 
-    if (req.user.role !== 'admin' && event.rows[0].creator_id !== req.user.id) {
+    const canManage = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
+    if (!canManage) {
       return res.status(403).json({ error: 'Not authorised' });
     }
 

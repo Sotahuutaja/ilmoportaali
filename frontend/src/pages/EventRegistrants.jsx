@@ -144,21 +144,23 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
         ))}
 
         {costChange && (
-          <div style={{ background: '#fff3cd', padding: '1rem', borderRadius: '6px', marginTop: '1rem', borderLeft: '4px solid #ffc107' }}>
-            <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#856404' }}>
-              ⚠️ Cost change detected
+          <div style={{ background: costChange.difference < 0 ? '#d4edda' : '#fff3cd', padding: '1rem', borderRadius: '6px', marginTop: '1rem', borderLeft: `4px solid ${costChange.difference < 0 ? '#28a745' : '#ffc107'}` }}>
+            <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: costChange.difference < 0 ? '#155724' : '#856404' }}>
+              {costChange.difference < 0 ? '✓ Refund will be issued' : '⚠️ Additional payment required'}
             </p>
-            <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: '#856404' }}>
+            <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: costChange.difference < 0 ? '#155724' : '#856404' }}>
               Old total: <strong>€{costChange.oldTotal.toFixed(2)}</strong>
             </p>
-            <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: '#856404' }}>
+            <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: costChange.difference < 0 ? '#155724' : '#856404' }}>
               New total: <strong>€{costChange.newTotal.toFixed(2)}</strong>
             </p>
-            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#856404' }}>
-              Difference: <strong>{costChange.difference > 0 ? '+' : ''}€{costChange.difference.toFixed(2)}</strong>
+            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: costChange.difference < 0 ? '#155724' : '#856404' }}>
+              {costChange.difference < 0 ? 'Refund amount:' : 'Additional payment:'} <strong>{costChange.difference > 0 ? '+' : ''}€{Math.abs(costChange.difference).toFixed(2)}</strong>
             </p>
-            <p style={{ margin: '0.8rem 0 0 0', fontSize: '0.85rem', color: '#856404' }}>
-              ⚠️ No refund or additional charge will be applied. Confirm to proceed.
+            <p style={{ margin: '0.8rem 0 0 0', fontSize: '0.85rem', color: costChange.difference < 0 ? '#155724' : '#856404' }}>
+              {costChange.difference < 0
+                ? '✓ A refund will be automatically processed to the original payment method.'
+                : '⚠️ User will receive an email with a link to pay the additional amount.'}
             </p>
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
               <button
