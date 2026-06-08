@@ -357,7 +357,8 @@ export default function Checkout() {
     );
   }
 
-  if (!event) {
+  // For additional payments, we don't need event details - skip this check
+  if (!event && !registrationData?.isAdditionalPayment) {
     return (
       <div style={{ maxWidth: 640, margin: '2rem auto' }}>
         <div className="card">
@@ -399,14 +400,22 @@ export default function Checkout() {
     <div style={{ maxWidth: 640, margin: '2rem auto' }}>
       <div className="card">
         <h2>Checkout</h2>
-        <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-          Event: <strong>{event.title}</strong><br />
-          📍 {event.location} | 📅 {formatDateTime(event.starts_at)}
-        </p>
+        {event && (
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+            Event: <strong>{event.title}</strong><br />
+            📍 {event.location} | 📅 {formatDateTime(event.starts_at)}
+          </p>
+        )}
+        {registrationData?.isAdditionalPayment && (
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+            <strong>Complete Additional Payment</strong>
+          </p>
+        )}
 
         {error && <p className="error">{error}</p>}
 
-        {/* Selected Products Summary - All Registrations */}
+        {/* Selected Products Summary - All Registrations (hide for additional payments) */}
+        {!registrationData?.isAdditionalPayment && (
         <div style={{ background: 'var(--surface-2)', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem' }}>
           <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1.1rem' }}>Registration Summary</h3>
           
@@ -470,6 +479,7 @@ export default function Checkout() {
             <p style={{ color: 'var(--text-muted)', margin: 0 }}>No products selected</p>
           )}
         </div>
+        )}
 
         {/* Success Message */}
         {paymentSuccess ? (
@@ -484,7 +494,7 @@ export default function Checkout() {
             }}>
               <h3 style={{ marginTop: 0, marginBottom: '0.5rem' }}>✓ Payment Successful!</h3>
               <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
-                Your registration for <strong>{event.title}</strong> has been confirmed.
+                Your {event ? `registration for ${event.title}` : 'additional payment'} has been confirmed.
               </p>
               <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
                 Registration ID: <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{paymentSuccess.registrationId}</code>
@@ -520,7 +530,7 @@ export default function Checkout() {
             {(paymentProducts.length > 0 || (registrationData?.guests && registrationData.guests.length > 0) || registrationData?.isAdditionalPayment) && (
               <>
                 <PaymentForm
-                  eventId={parseInt(id)}
+                  eventId={id ? parseInt(id) : null}
                   registrationData={registrationData}
                   selectedProducts={paymentProducts}
                   teamId={teamId}
