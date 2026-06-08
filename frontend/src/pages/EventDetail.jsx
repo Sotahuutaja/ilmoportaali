@@ -140,8 +140,6 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
 
 function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts, isEventPast }) {
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [selectedProducts, setSelectedProducts] = useState({});
   const [error, setError] = useState('');
   const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
   const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
@@ -149,43 +147,16 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts, isEven
     ? `${firstName} ${lastName}`
     : firstName || lastName || r.user_email;
 
-  const startEditing = () => {
-    setSelectedProducts(
-      r.products
-        ? Object.fromEntries(r.products.map(p => [p.product_id, p.quantity]))
-        : {}
-    );
-    setEditing(true);
-  };
-
-  const handleSave = async () => {
-    setError('');
-    const products = Object.entries(selectedProducts)
-      .filter(([, qty]) => qty > 0)
-      .map(([product_id, quantity]) => ({ product_id: parseInt(product_id), quantity }));
-
-    if (products.length === 0) {
-      setError('Please select at least one product.');
-      return;
-    }
-
-    try {
-      await onUpdate(r.id, { products });
-      setEditing(false);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to update');
-    }
-  };
 
 
   return (
     <div style={{ marginBottom: '0.2rem' }}>
       <div
-        onClick={() => !editing && setOpen(v => !v)}
+        onClick={() => setOpen(v => !v)}
         style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '0.4rem 0.6rem', borderRadius: open ? '6px 6px 0 0' : '6px',
-          background: 'var(--surface-2)', cursor: editing ? 'default' : 'pointer',
+          background: 'var(--surface-2)', cursor: 'pointer',
           userSelect: 'none'
         }}
       >
@@ -225,47 +196,11 @@ function RegistrationRow({ r, eventId, onDelete, onUpdate, eventProducts, isEven
               )}
               {!isEventPast && (
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid #ddd', paddingTop: '0.5rem' }}>
-                  <button className="btn btn-secondary" onClick={e => { e.stopPropagation(); startEditing(); }}>
-                    Edit products
-                  </button>
                   <button className="btn btn-danger" onClick={e => { e.stopPropagation(); onDelete(r.id, displayName); }}>
                     Delete registration
                   </button>
                 </div>
               )}
-            </>
-          ) : (
-            <>
-              <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Select products:</p>
-              {eventProducts.map(p => {
-                const isSelected = !!selectedProducts[p.id] && selectedProducts[p.id] > 0;
-                return (
-                  <div
-                    key={p.id}
-                    onClick={e => { e.stopPropagation(); setSelectedProducts(prev => ({ ...prev, [p.id]: prev[p.id] > 0 ? 0 : 1 })); }}
-                    style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '0.4rem', marginBottom: '0.3rem', borderRadius: '4px',
-                      border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
-                      background: isSelected ? 'var(--surface-3)' : 'var(--surface-2)', cursor: 'pointer'
-                    }}
-                  >
-                    <span>{p.name} — €{parseFloat(p.price).toFixed(2)}</span>
-                    {isSelected && (
-                      <input
-                        type="number" min="1" value={selectedProducts[p.id]}
-                        onClick={e => e.stopPropagation()}
-                        onChange={e => setSelectedProducts(prev => ({ ...prev, [p.id]: parseInt(e.target.value) || 1 }))}
-                        style={{ width: '50px', margin: 0 }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <button className="btn btn-primary" onClick={e => { e.stopPropagation(); handleSave(); }}>Save</button>
-                <button className="btn btn-secondary" onClick={e => { e.stopPropagation(); setEditing(false); setError(''); }}>Cancel</button>
-              </div>
             </>
           )}
         </div>
