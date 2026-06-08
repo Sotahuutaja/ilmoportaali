@@ -74,6 +74,8 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
       });
 
     console.log('[EDIT REGISTRANT] products to send:', products);
+    console.log('[EDIT REGISTRANT] products array length:', products.length);
+    console.log('[EDIT REGISTRANT] products as JSON:', JSON.stringify(products));
 
     // Calculate old and new totals
     // Use consistent key format (numbers) for comparison
@@ -248,8 +250,15 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
                   // Trigger save in next render
                   setTimeout(() => {
                     const products = Object.entries(selectedProducts)
-                      .filter(([, qty]) => qty > 0)
-                      .map(([product_id, quantity]) => ({ product_id: parseInt(product_id), quantity }));
+                      .filter(([, item]) => {
+                        const qty = typeof item === 'number' ? item : (item?.quantity || 0);
+                        return qty > 0;
+                      })
+                      .map(([product_id, item]) => {
+                        const qty = typeof item === 'number' ? item : (item?.quantity || 0);
+                        const field_values = typeof item === 'object' ? (item?.field_values || {}) : {};
+                        return { product_id: parseInt(product_id), quantity: qty, field_values };
+                      });
                     const payload = {
                       team_id: form.team_id ? parseInt(form.team_id) : null,
                       products
