@@ -678,6 +678,7 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
           );
 
           if (paymentResult.rows[0]) {
+            let refundIssued = false;
             try {
               const stripeKey = process.env.STRIPE_SECRET_KEY;
               const stripeInstance = require('stripe')(stripeKey);
@@ -689,22 +690,23 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
               });
 
               console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${req.params.registrationId}`);
-
-              // Send refund notification email
-              if (userEmail) {
-                try {
-                  await sendRefundEmail(userEmail, event.rows[0].title, refundAmount);
-                  console.log(`[EMAIL] Sent refund notification to ${userEmail}`);
-                } catch (err) {
-                  console.error('[EMAIL ERROR] Failed to send refund email:', err.message);
-                  // Don't fail the refund if email fails
-                }
-              } else {
-                console.warn('[EMAIL] No email address available for refund notification');
-              }
+              refundIssued = true;
             } catch (err) {
               console.error('[REFUND ERROR] Failed to issue refund:', err.message);
-              // Don't fail the registration update, just log the error
+              // Don't fail the registration update, continue to send email notification
+            }
+
+            // Always send refund notification email when price decreases (whether Stripe refund succeeded or not)
+            if (userEmail) {
+              try {
+                await sendRefundEmail(userEmail, event.rows[0].title, refundAmount);
+                console.log(`[EMAIL] Sent refund notification to ${userEmail}`);
+              } catch (err) {
+                console.error('[EMAIL ERROR] Failed to send refund email:', err.message);
+                // Don't fail the registration update if email fails
+              }
+            } else {
+              console.warn('[EMAIL] No email address available for refund notification');
             }
           }
         } else if (difference > 0) {
