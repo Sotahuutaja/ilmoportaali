@@ -7,7 +7,7 @@ const express = require('express');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentIntent, getPaymentIntent, isConfigured } = require('../services/stripeService');
-const { sendRegistrationConfirmation } = require('../services/emailService');
+const { sendAdditionalPaymentConfirmationEmail } = require('../services/email');
 
 const router = express.Router();
 
@@ -238,6 +238,49 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
         await client.query('COMMIT');
 
         console.log('[PAYMENT] Additional payment confirmed for registration', registrationId);
+
+        // Send confirmation email with product summary
+        try {
+          // Fetch registration details and products
+          const regDetails = await pool.query(
+            'SELECT r.id, r.is_guest, r.guest_email, r.user_id, r.registered_by, e.title FROM registrations r JOIN events e ON r.event_id = e.id WHERE r.id = $1',
+            [registrationId]
+          );
+
+          if (regDetails.rows[0]) {
+            const reg = regDetails.rows[0];
+
+            // Get user email
+            let userEmail = reg.guest_email;
+            if (!userEmail && reg.registered_by) {
+              const captainResult = await pool.query('SELECT email FROM users WHERE id = $1', [reg.registered_by]);
+              userEmail = captainResult.rows[0]?.email;
+            } else if (!userEmail && reg.user_id) {
+              const userResult = await pool.query('SELECT email FROM users WHERE id = $1', [reg.user_id]);
+              userEmail = userResult.rows[0]?.email;
+            }
+
+            // Get products for this registration
+            const productsResult = await pool.query(
+              'SELECT ep.name, rp.quantity FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1',
+              [registrationId]
+            );
+
+            // Send confirmation email
+            if (userEmail) {
+              await sendAdditionalPaymentConfirmationEmail(
+                userEmail,
+                reg.title,
+                existingPayment.rows[0].amount_cents,
+                productsResult.rows
+              );
+              console.log('[EMAIL] Sent additional payment confirmation to', userEmail);
+            }
+          }
+        } catch (emailErr) {
+          console.error('[EMAIL ERROR] Failed to send additional payment confirmation:', emailErr.message);
+          // Don't fail the payment if email fails
+        }
 
         res.json({
           success: true,

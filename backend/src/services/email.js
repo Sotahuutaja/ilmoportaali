@@ -121,4 +121,34 @@ async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = []
   });
 }
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendAdditionalPaymentEmail, sendRefundEmail };
+async function sendAdditionalPaymentConfirmationEmail(email, eventTitle, amountPaid, products = []) {
+  // Build product summary
+  let productSummaryHtml = '';
+
+  if (products.length > 0) {
+    productSummaryHtml = '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Payment for:</h3>';
+    productSummaryHtml += '<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">';
+
+    for (const product of products) {
+      const qty = product.quantity || 0;
+      productSummaryHtml += `<li style="margin-bottom: 0.3rem;">${product.name} ×${qty}</li>`;
+    }
+
+    productSummaryHtml += '</ul>';
+  }
+
+  await sendEmail({
+    to: email,
+    subject: `Payment confirmed for ${eventTitle}`,
+    html: `
+      <h2>Additional payment received</h2>
+      <p>Thank you! Your additional payment for <strong>${eventTitle}</strong> has been successfully processed.</p>
+      ${productSummaryHtml}
+      <p>Payment received: <strong>€${(amountPaid / 100).toFixed(2)}</strong></p>
+      <p>Your registration is now complete.</p>
+      <p>If you have any questions, please contact the event organizers.</p>
+    `
+  });
+}
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendAdditionalPaymentEmail, sendRefundEmail, sendAdditionalPaymentConfirmationEmail };
