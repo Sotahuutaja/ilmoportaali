@@ -862,6 +862,57 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
 
             // Send email notification about additional payment
             try {
+              // Fetch product details for the new products
+              let productsForEmail = [];
+              if (products.length > 0) {
+                const productDetailsResult = await client.query(
+                  `SELECT id, name, price, fields FROM event_products WHERE id = ANY($1)`,
+                  [products.map(p => p.product_id)]
+                );
+                const productDetailsMap = {};
+                productDetailsResult.rows.forEach(p => {
+                  productDetailsMap[p.id] = { name: p.name, price: p.price, fields: p.fields || [] };
+                });
+
+                productsForEmail = products.map(p => {
+                  const details = productDetailsMap[p.product_id] || { name: 'Unknown', price: 0, fields: [] };
+                  let price = parseFloat(details.price);
+                  let fieldValues = p.field_values || {};
+                  if (typeof fieldValues === 'string') {
+                    try {
+                      fieldValues = JSON.parse(fieldValues);
+                    } catch (e) {
+                      fieldValues = {};
+                    }
+                  }
+
+                  // Apply field option price override if applicable
+                  const fields = details.fields || [];
+                  for (const field of fields) {
+                    if (field.type === 'select') {
+                      const selectedValue = fieldValues[field.id];
+                      if (selectedValue && field.options) {
+                        const option = field.options.find(opt => {
+                          const optVal = typeof opt === 'string' ? opt : opt.value;
+                          return optVal === selectedValue;
+                        });
+                        if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+                          price = parseFloat(option.price);
+                          break;
+                        }
+                      }
+                    }
+                  }
+
+                  return {
+                    name: details.name,
+                    price: price,
+                    quantity: p.quantity || 1,
+                    field_values: fieldValues
+                  };
+                });
+              }
+
               await sendAdditionalPaymentEmail(
                 userEmail,
                 event.rows[0].title,
@@ -869,7 +920,8 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
                 newPaymentIntent.client_secret,
                 newPaymentIntent.id,
                 userFirstName,
-                userLastName
+                userLastName,
+                productsForEmail
               );
               console.log(`[EMAIL] Sent additional payment notification to ${userEmail}`);
             } catch (err) {

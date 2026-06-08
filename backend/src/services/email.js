@@ -67,7 +67,7 @@ async function sendPasswordResetEmail(email, token) {
   });
 }
 
-async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret, paymentIntentId, userFirstName = null, userLastName = null) {
+async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret, paymentIntentId, userFirstName = null, userLastName = null, products = []) {
   const checkoutLink = `${APP_URL}/events/checkout?paymentIntentId=${paymentIntentId}&clientSecret=${paymentIntentClientSecret}&amount=${additionalAmount}`;
   const userName = (userFirstName || userLastName)
     ? `${userFirstName || ''} ${userLastName || ''}`.trim()
@@ -75,6 +75,36 @@ async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, p
   const userNameText = userName
     ? `<strong style="background-color: #fff3cd; padding: 2px 6px; border-radius: 3px;">${userName}</strong>'s registration`
     : 'Your registration';
+
+  // Build products table HTML
+  let productsHtml = '';
+  if (products && products.length > 0) {
+    productsHtml = `
+      <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #333;">Updated Products</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
+        <thead>
+          <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+            <th style="padding: 0.5rem; text-align: left; color: #333;">Product</th>
+            <th style="padding: 0.5rem; text-align: center; color: #333;">Qty</th>
+            <th style="padding: 0.5rem; text-align: right; color: #333;">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${products.map(p => `
+            <tr style="border-bottom: 1px solid #eee;">
+              <td style="padding: 0.5rem; color: #333;">
+                ${p.name}
+                ${p.field_values && Object.keys(p.field_values).length > 0 ? `<br/><span style="font-size: 0.85rem; color: #999;">${Object.entries(p.field_values).map(([key, val]) => `${key}: ${val}`).join(', ')}</span>` : ''}
+              </td>
+              <td style="padding: 0.5rem; text-align: center; color: #666;">${p.quantity}</td>
+              <td style="padding: 0.5rem; text-align: right; color: #333;">€${(p.price * p.quantity).toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
   await sendEmail({
     to: email,
     subject: `Additional payment required for ${eventTitle}`,
@@ -86,6 +116,8 @@ async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, p
         <p style="color: #333;">Hi,</p>
 
         <p style="color: #333;">${userNameText} for <strong>${eventTitle}</strong> has been updated by the event organizers.</p>
+
+        ${productsHtml}
 
         <div style="background: #fffbf0; padding: 1.5rem; border-left: 4px solid #f39c12; border-radius: 6px; margin: 1.5rem 0;">
           <h3 style="margin-top: 0; color: #333; margin-bottom: 1rem;">Additional Payment Due</h3>
@@ -167,30 +199,64 @@ async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = []
 }
 
 async function sendAdditionalPaymentConfirmationEmail(email, eventTitle, amountPaid, products = []) {
-  // Build summary of all current products
-  let productsSummaryHtml = '';
-  if (products.length > 0) {
-    productsSummaryHtml = '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Your registration for this event:</h3>';
-    productsSummaryHtml += '<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">';
-
-    for (const product of products) {
-      const qty = product.quantity || 0;
-      productsSummaryHtml += `<li style="margin-bottom: 0.3rem;">${product.name} ×${qty}</li>`;
-    }
-
-    productsSummaryHtml += '</ul>';
+  // Build products table HTML
+  let productsHtml = '';
+  if (products && products.length > 0) {
+    productsHtml = `
+      <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #333;">Your Registration</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
+        <thead>
+          <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+            <th style="padding: 0.5rem; text-align: left; color: #333;">Product</th>
+            <th style="padding: 0.5rem; text-align: center; color: #333;">Qty</th>
+            <th style="padding: 0.5rem; text-align: right; color: #333;">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${products.map(p => `
+            <tr style="border-bottom: 1px solid #eee;">
+              <td style="padding: 0.5rem; color: #333;">
+                ${p.name}
+                ${p.field_values && Object.keys(p.field_values).length > 0 ? `<br/><span style="font-size: 0.85rem; color: #999;">${Object.entries(p.field_values).map(([key, val]) => `${key}: ${val}`).join(', ')}</span>` : ''}
+              </td>
+              <td style="padding: 0.5rem; text-align: center; color: #666;">${p.quantity}</td>
+              <td style="padding: 0.5rem; text-align: right; color: #333;">€${(p.price * p.quantity).toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
   }
 
   await sendEmail({
     to: email,
     subject: `Payment confirmed for ${eventTitle}`,
     html: `
-      <h2>Additional payment received</h2>
-      <p>Thank you! Your additional payment for <strong>${eventTitle}</strong> has been successfully processed.</p>
-      <p>Payment received: <strong>€${(amountPaid / 100).toFixed(2)}</strong></p>
-      ${productsSummaryHtml}
-      <p style="margin-top: 1.5rem;">Your registration is now complete.</p>
-      <p>If you have any questions, please contact the event organizers.</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #27ae60; margin-bottom: 0.5rem;">Payment Confirmed!</h2>
+        <p style="color: #666; margin: 0 0 1.5rem 0;">Your payment has been successfully processed</p>
+
+        <p style="color: #333;">Thank you for completing your payment!</p>
+
+        <div style="background: #f0fdf4; padding: 1.5rem; border-left: 4px solid #27ae60; border-radius: 6px; margin: 1.5rem 0;">
+          <h3 style="margin-top: 0; color: #333; margin-bottom: 1rem;">✓ Payment Received</h3>
+          <p style="margin: 0; font-size: 1.1rem; color: #555;">Your additional payment for <strong>${eventTitle}</strong> has been successfully processed.</p>
+          <p style="margin: 1rem 0 0 0; font-size: 1.8rem; color: #27ae60; font-weight: bold;">€${(amountPaid / 100).toFixed(2)}</p>
+        </div>
+
+        ${productsHtml}
+
+        <div style="background: #f5f5f5; padding: 1rem; border-radius: 6px; margin: 1.5rem 0;">
+          <h3 style="margin-top: 0; margin-bottom: 0.5rem; color: #333;">Registration Status</h3>
+          <p style="margin: 0.5rem 0; color: #555; font-size: 0.95rem;"><strong>Event:</strong> ${eventTitle}</p>
+          <p style="margin: 0.5rem 0; color: #27ae60; font-weight: bold;">✓ Your registration is now complete and confirmed.</p>
+        </div>
+
+        <p style="color: #666; font-size: 0.95rem; margin: 1.5rem 0;">If you have any questions about your registration or payment, please contact the event organizers.</p>
+
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 2rem 0;">
+        <p style="font-size: 0.9rem; color: #999; margin: 0;">This is an automated email. Please do not reply directly to this message.</p>
+      </div>
     `
   });
 }
