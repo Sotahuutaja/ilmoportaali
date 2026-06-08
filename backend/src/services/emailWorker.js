@@ -211,7 +211,15 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
   const products = productsResult.rows.map(p => {
     // Calculate price with field option overrides
     let price = parseFloat(p.price);
-    const fieldValues = p.field_values || {};
+    // Parse field_values if it's a string (from database)
+    let fieldValues = p.field_values || {};
+    if (typeof fieldValues === 'string') {
+      try {
+        fieldValues = JSON.parse(fieldValues);
+      } catch (e) {
+        fieldValues = {};
+      }
+    }
     const fields = p.fields || [];
 
     for (const field of fields) {
@@ -271,7 +279,15 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
     products: (g.products || []).map(p => {
       // Calculate price with field option overrides for guest products
       let price = parseFloat(p.price);
-      const fieldValues = p.field_values || {};
+      // Parse field_values if it's a string (from database)
+      let fieldValues = p.field_values || {};
+      if (typeof fieldValues === 'string') {
+        try {
+          fieldValues = JSON.parse(fieldValues);
+        } catch (e) {
+          fieldValues = {};
+        }
+      }
       const fields = productFieldsMap[p.product_id] || [];
 
       for (const field of fields) {
