@@ -96,6 +96,11 @@ export default function Dashboard() {
     }
   };
 
+  // Separate upcoming and past events
+  const now = new Date();
+  const upcomingEvents = events.filter(e => new Date(e.starts_at) > now);
+  const pastEvents = events.filter(e => new Date(e.starts_at) <= now);
+
   return (
     <div>
       <h2 style={{ margin: '1.5rem 0' }}>Event Management</h2>
@@ -134,30 +139,59 @@ export default function Dashboard() {
         </form>
       </div>
 
-      <h3 style={{ margin: '1.5rem 0 1rem' }}>Your events</h3>
-      {events.map(event => (
-        <div className="card" key={event.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <strong>{event.title}</strong>
-            {!event.is_owner && (
-              <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: '8px', background: '#8e44ad', color: 'white' }}>co-manager</span>
-            )}
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              {formatDate(event.starts_at)} &nbsp;|&nbsp;
-              {event.registration_count} registered
-              {event.capacity ? ` / ${event.capacity}` : ''}
-            </p>
+      <h3 style={{ margin: '1.5rem 0 1rem' }}>Your upcoming events</h3>
+      {upcomingEvents.length > 0 ? (
+        upcomingEvents.map(event => (
+          <div className="card" key={event.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <strong>{event.title}</strong>
+              {!event.is_owner && (
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: '8px', background: '#8e44ad', color: 'white' }}>co-manager</span>
+              )}
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                {formatDate(event.starts_at)} &nbsp;|&nbsp;
+                {event.registration_count} registered
+                {event.capacity ? ` / ${event.capacity}` : ''}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Link to={`/events/${event.id}/registrants`}><button className="btn btn-secondary">Participants</button></Link>
+              <button className="btn btn-secondary" onClick={() => openManagers(event)}>Managers</button>
+              <Link to={`/events/${event.id}/edit`}><button className="btn btn-secondary">Edit</button></Link>
+              {(event.is_owner || user.role === 'admin') && (
+                <button className="btn btn-danger" onClick={() => handleDelete(event.id)}>Delete</button>
+              )}
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Link to={`/events/${event.id}/registrants`}><button className="btn btn-secondary">Participants</button></Link>
-            <button className="btn btn-secondary" onClick={() => openManagers(event)}>Managers</button>
-            <Link to={`/events/${event.id}/edit`}><button className="btn btn-secondary">Edit</button></Link>
-            {(event.is_owner || user.role === 'admin') && (
-              <button className="btn btn-danger" onClick={() => handleDelete(event.id)}>Delete</button>
-            )}
+        ))
+      ) : (
+        <p style={{ color: 'var(--text-muted)' }}>No upcoming events</p>
+      )}
+
+      <h3 style={{ margin: '1.5rem 0 1rem' }}>Your past events</h3>
+      {pastEvents.length > 0 ? (
+        pastEvents.map(event => (
+          <div className="card" key={event.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.7 }}>
+            <div>
+              <strong>{event.title}</strong>
+              {!event.is_owner && (
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: '8px', background: '#8e44ad', color: 'white' }}>co-manager</span>
+              )}
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                {formatDate(event.starts_at)} &nbsp;|&nbsp;
+                {event.registration_count} registered
+                {event.capacity ? ` / ${event.capacity}` : ''}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Link to={`/events/${event.id}/registrants`}><button className="btn btn-secondary">Participants</button></Link>
+              <button className="btn btn-secondary" onClick={() => openManagers(event)}>Managers</button>
+            </div>
           </div>
-        </div>
-      ))}
+        ))
+      ) : (
+        <p style={{ color: 'var(--text-muted)' }}>No past events</p>
+      )}
 
       {managingManagers && (
         <div className="card" style={{ marginTop: '1.5rem' }}>
