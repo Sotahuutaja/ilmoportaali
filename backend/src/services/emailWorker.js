@@ -170,6 +170,8 @@ async function sendQueuedEmail(emailRecord) {
  * Send confirmation email by reconstructing data from database
  */
 async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
+  console.log(`[EMAIL WORKER] === STARTING sendConfirmationEmailFromQueue for registration ${registrationId} ===`);
+
   // Fetch registration details
   const regResult = await pool.query(
     `SELECT r.*, e.id as event_id, e.title, e.starts_at
