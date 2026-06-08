@@ -54,28 +54,18 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
   };
 
   const handleSave = () => {
-    console.log('[EDIT REGISTRANT] reg.products:', reg.products);
-    console.log('[EDIT REGISTRANT] selectedProducts:', selectedProducts);
-
     const entries = Object.entries(selectedProducts);
-    console.log('[EDIT REGISTRANT] Object.entries(selectedProducts):', entries);
 
     const products = entries
       .filter(([productId, item]) => {
         const qty = typeof item === 'number' ? item : (item?.quantity || 0);
-        console.log(`[EDIT REGISTRANT] Checking product ${productId}: qty=${qty}, passes filter=${qty > 0}`);
         return qty > 0;
       })
       .map(([product_id, item]) => {
         const qty = typeof item === 'number' ? item : (item?.quantity || 0);
         const field_values = typeof item === 'object' ? (item?.field_values || {}) : {};
-        console.log(`[EDIT REGISTRANT] Mapping product ${product_id}: qty=${qty}, field_values=${JSON.stringify(field_values)}`);
         return { product_id: parseInt(product_id), quantity: qty, field_values };
       });
-
-    console.log('[EDIT REGISTRANT] products to send:', products);
-    console.log('[EDIT REGISTRANT] products array length:', products.length);
-    console.log('[EDIT REGISTRANT] products as JSON:', JSON.stringify(products));
 
     // Calculate old and new totals
     // Use consistent key format (numbers) for comparison
@@ -194,11 +184,11 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
               {isSelected && p.fields && p.fields.length > 0 && (
                 <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
                   {p.fields.map(field => (
-                    field.type === 'select' && (
-                      <div key={field.id} style={{ marginBottom: '0.5rem' }}>
-                        <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                          <strong>{field.label}</strong>
-                        </label>
+                    <div key={field.id} style={{ marginBottom: '0.5rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                        <strong>{field.label}</strong>
+                      </label>
+                      {field.type === 'select' && (
                         <select
                           value={field_values[field.id] || ''}
                           onChange={e => setSelectedProducts(prev => ({
@@ -211,11 +201,25 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
                           {field.options?.map(opt => {
                             const optVal = typeof opt === 'string' ? opt : opt.value;
                             const optLabel = typeof opt === 'string' ? opt : opt.label || opt.value;
-                            return <option key={optVal} value={optVal}>{optLabel}</option>;
+                            const optPrice = typeof opt === 'object' && opt.price ? ` (+€${parseFloat(opt.price).toFixed(2)})` : '';
+                            const displayLabel = optLabel + optPrice;
+                            return <option key={optVal} value={optVal}>{displayLabel}</option>;
                           })}
                         </select>
-                      </div>
-                    )
+                      )}
+                      {field.type === 'text' && (
+                        <input
+                          type="text"
+                          value={field_values[field.id] || ''}
+                          onChange={e => setSelectedProducts(prev => ({
+                            ...prev,
+                            [p.id]: { ...prev[p.id], field_values: { ...field_values, [field.id]: e.target.value } }
+                          }))}
+                          style={{ width: '100%', padding: '0.4rem', boxSizing: 'border-box' }}
+                          placeholder={`Enter ${field.label.toLowerCase()}`}
+                        />
+                      )}
+                    </div>
                   ))}
                 </div>
               )}

@@ -78,17 +78,12 @@ async function getRegistrationPrice(client, registrationId) {
 
 // Helper: validate and reserve products
 async function insertProducts(client, registrationId, products, eventId) {
-  console.log(`[INSERT PRODUCTS] Inserting ${products.length} products for registration ${registrationId}`);
   for (const { product_id, quantity = 1, field_values = {} } of products) {
-    console.log(`[INSERT PRODUCTS] Processing product ${product_id}: qty=${quantity}, field_values=${JSON.stringify(field_values)}`);
     const product = await client.query(
       'SELECT * FROM event_products WHERE id = $1 AND event_id = $2',
       [product_id, eventId]
     );
-    if (!product.rows[0]) {
-      console.error(`[INSERT PRODUCTS ERROR] Product ${product_id} not found`);
-      throw new Error(`Product ${product_id} not found`);
-    }
+    if (!product.rows[0]) throw new Error(`Product ${product_id} not found`);
 
     if (product.rows[0].quantity !== null) {
       const used = await client.query(
@@ -96,19 +91,13 @@ async function insertProducts(client, registrationId, products, eventId) {
         [product_id]
       );
       const remaining = product.rows[0].quantity - parseInt(used.rows[0].used);
-      console.log(`[INSERT PRODUCTS] Stock check for product ${product_id}: total=${product.rows[0].quantity}, used=${used.rows[0].used}, remaining=${remaining}`);
-      if (remaining < quantity) {
-        console.error(`[INSERT PRODUCTS ERROR] Insufficient stock for ${product.rows[0].name}`);
-        throw new Error(`Product "${product.rows[0].name}" has insufficient stock`);
-      }
+      if (remaining < quantity) throw new Error(`Product "${product.rows[0].name}" has insufficient stock`);
     }
 
     // Validate required custom fields
     const fields = product.rows[0].fields || [];
-    console.log(`[INSERT PRODUCTS] Checking ${fields.length} fields for product ${product_id}:`, JSON.stringify(fields));
     for (const field of fields) {
       if (field.required && !field_values[field.id]) {
-        console.error(`[INSERT PRODUCTS ERROR] Required field "${field.label}" missing for product "${product.rows[0].name}"`);
         throw new Error(`"${field.label}" is required for product "${product.rows[0].name}"`);
       }
     }
@@ -117,9 +106,7 @@ async function insertProducts(client, registrationId, products, eventId) {
       'INSERT INTO registration_products (registration_id, product_id, quantity, field_values) VALUES ($1, $2, $3, $4)',
       [registrationId, product_id, quantity, JSON.stringify(field_values)]
     );
-    console.log(`[INSERT PRODUCTS] Successfully inserted product ${product_id} for registration ${registrationId}`);
   }
-  console.log(`[INSERT PRODUCTS] All products inserted successfully`);
 }
 
 // Register self for an event
@@ -645,31 +632,22 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
 
     // Update products with payment reconciliation
     if (products !== undefined) {
-      console.log(`[UPDATE REGISTRATION] Registration ${req.params.registrationId}: products array received`, JSON.stringify(products));
-
       // Fetch old products before deleting them (for refund email)
       const oldProductsResult = await client.query(
         'SELECT rp.product_id, rp.quantity, rp.field_values, ep.name FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1',
         [req.params.registrationId]
       );
       const oldProducts = oldProductsResult.rows;
-      console.log(`[UPDATE REGISTRATION] Old products before deletion:`, JSON.stringify(oldProducts));
 
       // Calculate old total before deleting products
       const oldTotalCents = await getRegistrationPrice(client, req.params.registrationId);
-      console.log(`[UPDATE REGISTRATION] Old total: ${oldTotalCents / 100} EUR`);
 
       // Delete old products
       await client.query('DELETE FROM registration_products WHERE registration_id = $1', [req.params.registrationId]);
-      console.log(`[UPDATE REGISTRATION] Deleted old products`);
 
       // Insert new products
       if (products.length > 0) {
-        console.log(`[UPDATE REGISTRATION] Inserting ${products.length} new products...`);
         await insertProducts(client, req.params.registrationId, products, req.params.eventId);
-        console.log(`[UPDATE REGISTRATION] Successfully inserted products`);
-      } else {
-        console.log(`[UPDATE REGISTRATION] No products to insert (products.length === 0)`);
       }
 
       // Calculate new total
@@ -684,20 +662,15 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
         if (reg.rows[0].is_guest) {
           // For guests, use guest_email if available, otherwise use the captain's email (registered_by)
           userEmail = reg.rows[0].guest_email;
-          console.log(`[PAYMENT RECONCILIATION DEBUG] Guest registration - guest_email=${userEmail}, registered_by=${reg.rows[0].registered_by}`);
           if (!userEmail && reg.rows[0].registered_by) {
             const captainResult = await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].registered_by]);
             userEmail = captainResult.rows[0]?.email;
-            console.log(`[PAYMENT RECONCILIATION DEBUG] Fetched captain email: ${userEmail}`);
           }
         } else {
           // For regular users, get their email
           const userResult = await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].user_id]);
           userEmail = userResult.rows[0]?.email;
-          console.log(`[PAYMENT RECONCILIATION DEBUG] Regular user - user_id=${reg.rows[0].user_id}, email=${userEmail}`);
         }
-
-        console.log(`[PAYMENT RECONCILIATION] Registration ${req.params.registrationId}: is_guest=${reg.rows[0].is_guest}, userEmail=${userEmail}, difference=${difference}`);
 
         if (difference < 0) {
           // Amount decreased — issue refund
