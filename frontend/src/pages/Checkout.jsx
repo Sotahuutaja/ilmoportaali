@@ -28,12 +28,6 @@ export default function Checkout() {
   const [paymentSuccess, setPaymentSuccess] = useState(null);
 
   useEffect(() => {
-    // Redirect if not logged in
-    if (!user) {
-      navigate(`/events/${id}`);
-      return;
-    }
-
     // Check if returning from payment redirect
     const redirectStatus = searchParams.get('redirect_status');
     const paymentIntentId = searchParams.get('paymentIntentId') || searchParams.get('payment_intent');
@@ -45,7 +39,6 @@ export default function Checkout() {
     // Handle additional payment (paymentIntentId from email link)
     if (paymentIntentId && clientSecret && !redirectStatus) {
       console.log('[CHECKOUT] Detected additional payment scenario');
-      setIsProcessingRedirect(true);
       // For additional payments, set minimal data with just the payment intent info
       setRegistrationData({
         isAdditionalPayment: true,
@@ -53,6 +46,12 @@ export default function Checkout() {
         clientSecret: clientSecret
       });
       setLoading(false);
+      return;
+    }
+
+    // Redirect if not logged in
+    if (!user) {
+      navigate(`/events/${id}`);
       return;
     }
 
@@ -83,7 +82,13 @@ export default function Checkout() {
       }
     }
 
-    // Fetch event and products
+    // Fetch event and products (only if we have an id)
+    if (!id) {
+      setError('Event ID is required');
+      setLoading(false);
+      return;
+    }
+
     Promise.all([
       api.get(`/events/${id}`),
       api.get(`/events/${id}/products`)

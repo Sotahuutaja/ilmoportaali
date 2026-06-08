@@ -68,19 +68,19 @@ export default function App() {
           <div className="container">
             <Routes>
               <Route path="/" element={<Events />} />
-              <Route path="/events/:id" element={<EventDetail />} />
               <Route path="/events/:id/checkout" element={<Checkout />} />
+              <Route path="/events/:id/registrants" element={<EventRegistrants />} />
+              <Route path="/events/:id/edit" element={<EditEvent />} />
+              <Route path="/events/:id" element={<EventDetail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/teams" element={<Teams />} />
         <Route path="/teams/:id" element={<TeamDetail />} />
-        <Route path="/events/:id/registrants" element={<EventRegistrants />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/events/:id/edit" element={<EditEvent />} />
         <Route path="/reset-password" element={<ResetPassword />} />
             </Routes>
           </div>
