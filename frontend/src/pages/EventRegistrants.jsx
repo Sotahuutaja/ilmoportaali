@@ -66,8 +66,9 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
       });
 
     // Calculate old and new totals
+    // Use consistent key format (numbers) for comparison
     const originalProductMap = Object.fromEntries(
-      (reg.products || []).map(p => [p.product_id.toString(), { quantity: p.quantity, field_values: p.field_values || {} }])
+      (reg.products || []).map(p => [p.product_id, { quantity: p.quantity, field_values: p.field_values || {} }])
     );
     const oldTotal = calculateTotal(originalProductMap);
     const newTotal = calculateTotal(selectedProducts);
