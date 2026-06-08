@@ -235,21 +235,10 @@ export default function EventRegistrants() {
 
     // Load event details
     api.get(`/events/${id}`)
-      .then(res => {
-        setEvent(res.data.event);
-        // Check if user is creator or co-manager; if not admin, verify authorization
-        if (user.role !== 'admin' && res.data.event.creator_id !== user.id) {
-          const isComanager = (res.data.event.co_managers || []).some(cm => cm.id === user.id);
-          if (!isComanager) {
-            setError('Not authorized to view this event');
-            navigate('/');
-            return;
-          }
-        }
-      })
+      .then(res => setEvent(res.data.event))
       .catch(() => setError('Failed to load event'));
 
-    // Load registrations (backend will validate access)
+    // Load registrations (backend will validate access for creator, co-manager, admin, or captain)
     api.get(`/registrations/${id}`)
       .then(res => setRegistrations(res.data.registrations))
       .catch(err => {
