@@ -682,9 +682,9 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
               const stripeKey = process.env.STRIPE_SECRET_KEY;
               const stripeInstance = require('stripe')(stripeKey);
 
-              // Create refund
+              // Create refund using payment intent directly (works in both real and mock Stripe)
               await stripeInstance.refunds.create({
-                charge: (await stripeInstance.paymentIntents.retrieve(paymentResult.rows[0].stripe_payment_intent_id)).charges.data[0].id,
+                payment_intent: paymentResult.rows[0].stripe_payment_intent_id,
                 amount: refundAmount
               });
 
