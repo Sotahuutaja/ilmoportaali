@@ -2,6 +2,60 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-06-08
+
+### Features & Improvements
+
+- **Email Provider Migration** — Switched from SendGrid to Gmail via nodemailer
+  - Reduced email service dependencies and costs
+  - Updated environment variables: GMAIL_USER, GMAIL_PASSWORD, GMAIL_FROM_EMAIL
+  - All existing email functionality preserved with improved reliability
+
+- **Professional Email Template Redesign** — All transactional emails now have consistent, polished styling
+  - Additional payment required email now displays product details with prices
+  - Additional payment confirmation email redesigned with green success styling
+  - Refund issued email redesigned with professional layout matching other emails
+  - Registration cancellation email shows correct refund amounts
+  - All emails now use proper HTML structure with max-width containers and consistent typography
+
+- **Dedicated Homepage** — Created Home.jsx with dedicated landing page
+  - Changed root path "/" to display homepage instead of Events page
+  - Updated title to "Ilmoportaali v3"
+  - Updated subtitle to "Centralized event management and registration service for Suomen Pehmomiekkailuliitto"
+  - Features section now displays key capabilities from README
+  - Added "Contact Site Administrators" section with email contact information
+  - Events are now accessible via "/events" route
+
+- **Invoice Creation for Additional Payments** — Additional payments now generate invoices for complete record-keeping
+  - Invoices created with same format as initial payments (INV-{registrationId}-{timestamp})
+  - Ensures all payments are properly tracked and documented
+  - Supports refund reconciliation across multiple payments
+
+### Bug Fixes
+
+- **Fixed Product Option Labels in Emails** — Product custom fields now display readable labels instead of field IDs
+  - Emails show "Size: Large" instead of "ke2r7ef: L"
+  - Field value transformation applied consistently across all email templates
+
+- **Fixed Payment Confirmation Email Prices** — Payment confirmation email no longer displays "€NaN" for product prices
+  - Query now fetches price and fields data for accurate price calculation
+  - Field option price overrides applied correctly
+  - All product pricing calculations consistent with registration form
+
+- **Fixed Refund Amount Calculation** — Refund now calculated from current products instead of original payment amount
+  - When admin cancels registration, refund reflects actual current product total
+  - Accounts for product changes made after initial registration
+  - Refund email "Amount Refunded" now matches the product table total
+
+### Technical
+
+- **Removed SendGrid Dependencies** — Replaced @sendgrid/mail with nodemailer
+  - Cleaner dependency footprint
+  - Updated backend/package.json: removed SendGrid, added nodemailer@^8.0.10
+  - All email configuration now via Gmail credentials
+
+---
+
 ## 2026-06-07
 
 ### Bug Fixes & Improvements
