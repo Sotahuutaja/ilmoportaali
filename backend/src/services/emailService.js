@@ -230,14 +230,22 @@ async function sendRegistrationCancellation(userEmail, cancellationData, product
 
           <p>Hi ${userName},</p>
 
-          <p>Your registration for <strong>${eventName}</strong> has been cancelled${isCancelledByManager && refundAmount > 0 ? `, and a refund of €${(refundAmount / 100).toFixed(2)} has been issued` : ''}.</p>
+          <p>Your registration for <strong>${eventName}</strong> has been cancelled, and a refund has been issued.</p>
+
+          ${refundAmount > 0 ? `
+            <div style="background: #f0fdf4; padding: 1.5rem; border-left: 4px solid #27ae60; border-radius: 6px; margin: 1.5rem 0;">
+              <h3 style="margin-top: 0; color: #333; margin-bottom: 1rem;">✓ Refund Processed</h3>
+              <p style="margin: 0; font-size: 1.1rem; color: #555;">A refund has been automatically processed:</p>
+              <p style="margin: 1rem 0 0 0; font-size: 1.8rem; color: #27ae60; font-weight: bold;">€${(refundAmount / 100).toFixed(2)}</p>
+            </div>
+          ` : ''}
 
           <div style="background: #f5f5f5; padding: 1rem; border-radius: 6px; margin: 1.5rem 0;">
             <h3 style="margin-top: 0; margin-bottom: 0.5rem; color: #333;">Cancellation Details</h3>
             <p style="margin: 0.5rem 0;"><strong>Event:</strong> ${eventName}</p>
             <p style="margin: 0.5rem 0;"><strong>Registration ID:</strong> <code style="background: #fff; padding: 0.2rem 0.4rem; border-radius: 3px;">${registrationId}</code></p>
             <p style="margin: 0.5rem 0;"><strong>Cancellation Date:</strong> ${refundDate}</p>
-            ${isCancelledByManager && refundAmount > 0 ? `<p style="margin: 0.5rem 0; color: #27ae60; font-weight: bold;">✓ Amount Refunded: €${(refundAmount / 100).toFixed(2)}</p>` : ''}
+            <p style="margin: 0.5rem 0; color: #999; font-size: 0.9rem;">The refund will appear on your original payment method within 1-3 business days.</p>
           </div>
 
           ${productsHtml}
