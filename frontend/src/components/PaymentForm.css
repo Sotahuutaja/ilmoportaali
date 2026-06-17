@@ -53,6 +53,7 @@
 
 .card-element-container {
   margin-bottom: 20px;
+  min-height: 450px;
 }
 
 .card-element-container label {
