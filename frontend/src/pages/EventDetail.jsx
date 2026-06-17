@@ -409,10 +409,20 @@ export default function EventDetail() {
   };
 
   const cancel = async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel your registration?\n\n' +
+      'Your full registration fee will be refunded to your original payment method.\n\n' +
+      'This action cannot be undone.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     setError(''); setMessage('');
     try {
       await api.delete(`/registrations/${id}`);
-      setMessage('Registration cancelled.');
+      setMessage('Registration cancelled. You will receive a refund shortly.');
       setIsRegistered(false);
       setEvent(e => ({ ...e, registration_count: e.registration_count - 1 }));
       const regs = await api.get(`/registrations/${id}`).catch(() => null);
