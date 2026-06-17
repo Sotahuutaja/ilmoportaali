@@ -3,9 +3,9 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 24px;
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
-  margin-right: calc(-50vw + 50%);
+  width: 50vw;
+  margin-left: calc(-25vw + 50%);
+  margin-right: auto;
 }
 
 .payment-form h3 {

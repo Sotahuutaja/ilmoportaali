@@ -140,7 +140,7 @@ function PaymentFormContent({
     <>
       {!mockMode && clientSecret && (
         <div className="card-element-container">
-          <PaymentElement options={{ layout: 'tabs' }} />
+          <PaymentElement options={{ layout: 'radios' }} />
         </div>
       )}
 
