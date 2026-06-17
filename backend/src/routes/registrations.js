@@ -335,6 +335,37 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
         return acc;
       }, []);
 
+    // Process refund for user-initiated cancellation
+    let refundAmount = 0;
+    try {
+      // Calculate refund amount from current products
+      refundAmount = products.reduce((total, p) => total + (p.price * p.quantity * 100), 0);
+
+      // Get the payment intent ID for refunding through Stripe
+      const paymentResult = await pool.query(
+        'SELECT stripe_payment_intent_id FROM payment_intents WHERE registration_id = $1 ORDER BY created_at DESC LIMIT 1',
+        [registrationId]
+      );
+
+      if (paymentResult.rows[0]) {
+        const paymentIntentId = paymentResult.rows[0].stripe_payment_intent_id;
+
+        // Issue refund through Stripe
+        const stripeKey = process.env.STRIPE_SECRET_KEY;
+        const stripeInstance = require('stripe')(stripeKey);
+
+        await stripeInstance.refunds.create({
+          payment_intent: paymentIntentId,
+          amount: refundAmount
+        });
+
+        console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${registrationId} (user cancellation)`);
+      }
+    } catch (err) {
+      console.error('[REFUND ERROR] Failed to issue refund:', err.message);
+      // Don't fail the cancellation if refund fails - continue with deletion
+    }
+
     // Queue cancellation email BEFORE deleting registration (so FK constraint is satisfied)
     try {
       const refundDate = new Date().toLocaleDateString('fi-FI', {
@@ -359,7 +390,9 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
             eventName: eventTitle,
             registrationId,
             refundDate,
-            products
+            refundAmount,
+            products,
+            isCancelledByManager: false
           }),
           'pending'
         ]
