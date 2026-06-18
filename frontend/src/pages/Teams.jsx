@@ -11,6 +11,7 @@ export default function Teams() {
   const [myTeams, setMyTeams] = useState([]);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     api.get('/teams').then(res => setTeams(res.data.teams));
@@ -44,18 +45,47 @@ export default function Teams() {
 
   const myStatusInTeam = (teamId) => myTeams.find(t => t.id === teamId);
 
+  const filterTeams = (teamsToFilter) => {
+    if (!searchQuery.trim()) return teamsToFilter;
+    const query = searchQuery.toLowerCase();
+    return teamsToFilter.filter(t =>
+      t.name.toLowerCase().includes(query) ||
+      (t.description && t.description.toLowerCase().includes(query))
+    );
+  };
+
+  const filteredMyTeams = filterTeams(myTeams);
+  const filteredOtherTeams = filterTeams(teams.filter(team => !myStatusInTeam(team.id)));
+
   return (
     <div>
       <h2 style={{ margin: '1.5rem 0' }}>Teams</h2>
       {error && <p className="error">{error}</p>}
       {message && <p className="success">{message}</p>}
 
+      <div style={{ marginBottom: '1.5rem' }}>
+        <input
+          type="text"
+          placeholder="Search teams by name or description..."
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            fontSize: '1rem',
+            border: '1px solid var(--border)',
+            borderRadius: '6px',
+            boxSizing: 'border-box'
+          }}
+        />
+      </div>
+
       <div>
 
-        {myTeams.length > 0 && (
+        {filteredMyTeams.length > 0 && (
           <div style={{ marginBottom: '1.5rem' }}>
             <h3 style={{ marginBottom: '0.5rem' }}>My teams</h3>
-            {myTeams.map(t => (
+            {filteredMyTeams.map(t => (
         <div className="card" key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <strong>{t.name}</strong>
@@ -78,7 +108,7 @@ export default function Teams() {
         )}
 
         <h3 style={{ marginBottom: '0.5rem' }}>Other teams</h3>
-        {teams.filter(team => !myStatusInTeam(team.id)).map(team => {
+        {filteredOtherTeams.map(team => {
           const myStatus = myStatusInTeam(team.id);
           const joinButtonText = team.auto_approve_joins ? 'Join' : 'Request to join';
           return (
@@ -124,7 +154,11 @@ export default function Teams() {
           );
         })}
 
-        {teams.filter(team => !myStatusInTeam(team.id)).length === 0 && <p style={{ color: 'var(--text-muted)' }}>No other teams available.</p>}
+        {filteredOtherTeams.length === 0 && (
+          <p style={{ color: 'var(--text-muted)' }}>
+            {teams.filter(team => !myStatusInTeam(team.id)).length === 0 ? 'No other teams available.' : 'No teams match your search.'}
+          </p>
+        )}
       </div>
     </div>
   );
