@@ -2,6 +2,61 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-06-18
+
+### Features & Improvements
+
+- **Automatic Team Joining on Registration** — Users can now auto-join teams during event registration
+  - Added per-event "Auto-approve team joins" setting for each allowed team
+  - When enabled, users selecting the team during registration automatically become approved members
+  - Event creators can toggle auto-join in event management interface with checkbox
+  - Captains no longer need to manually approve registrations for teams with auto-join enabled
+
+- **Team Selection in Event Registration** — Users can select from all eligible teams during registration
+  - Team dropdown now shows all eligible teams, not just teams user is already a member of
+  - Displays "Team: None" option to register without a team (when individual registration allowed)
+  - Works seamlessly with auto-join feature for team auto-membership
+
+- **Team Search Functionality** — Added search bar to Teams page for easier team discovery
+  - Search by team name or description (case-insensitive)
+  - Real-time filtering as user types
+  - Smart empty state differentiates between no teams available vs no matches found
+  - Scales well as team directory grows
+
+- **Enhanced User Registration History** — Improved "My registrations" display with time-based organization
+  - Renamed section to "My upcoming events" for upcoming registrations
+  - Added "My past events" section for concluded/past events
+  - Team information now always displayed ("Team: X" or "Team: None")
+  - Both sections show identical event details (location, date, team, registered products)
+
+- **Improved Event Description Formatting** — Event descriptions now support line breaks
+  - Textarea input allows multi-line descriptions during event creation
+  - Line breaks preserved when displaying descriptions in event cards and detail page
+  - Uses white-space: pre-wrap CSS to maintain formatting
+
+### Bug Fixes
+
+- **Team Captain Cancellations Now Issue Refunds** — Fixed refund handling for captain-initiated cancellations
+  - Previously: only admin/manager cancellations triggered refunds
+  - Now: both team captains and managers issuing refunds are correctly processed
+  - Refund emails sent to original payment email (guest_email with fallback to captain email)
+  - Refund amounts calculated from current products for accurate reimbursement
+
+- **Prevented Event Deletion with Active Registrations** — Added safety check for event deletion
+  - Event deletion now blocked if registrations exist
+  - Error message: "All registrations must be cancelled individually before the event can be deleted"
+  - Ensures refunds are properly issued via individual cancellation process
+  - Provides registration count to help event organizers understand pending work
+
+### Database Schema
+
+- **Added event_teams.auto_approve_joins** — Per-event auto-join setting for team registrations
+  - Boolean column, defaults to false
+  - Allows flexible configuration of auto-approval per event/team combination
+  - Migration: `ALTER TABLE event_teams ADD COLUMN IF NOT EXISTS auto_approve_joins BOOLEAN NOT NULL DEFAULT FALSE`
+
+---
+
 ## 2026-06-08
 
 ### Features & Improvements

@@ -564,6 +564,7 @@ export default function Checkout() {
                   teamId={teamId}
                   comments={comments}
                   totalAmount={totalAmount}
+                  stripeMode={event?.stripe_mode || 'test'}
                   onSuccess={handlePaymentSuccess}
                   onError={handlePaymentError}
                 />

@@ -14,7 +14,8 @@ export default function EditEvent() {
     title: '', description: '', location: '',
     starts_at: '', ends_at: '', capacity: '',
     allow_individual_registration: true,
-    registration_starts_at: '', registration_ends_at: ''
+    registration_starts_at: '', registration_ends_at: '',
+    stripe_mode: 'test'
   });
   const [products, setProducts] = useState([]);
   const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [] });
@@ -52,7 +53,8 @@ export default function EditEvent() {
       capacity: e.capacity || '',
       allow_individual_registration: e.allow_individual_registration ?? true,
       registration_starts_at: toHelsinki(e.registration_starts_at),
-      registration_ends_at: toHelsinki(e.registration_ends_at)
+      registration_ends_at: toHelsinki(e.registration_ends_at),
+      stripe_mode: e.stripe_mode || 'test'
     });
     setProducts(productsRes.data.products);
     setEventTeams(eventTeamsRes.data.teams);
@@ -225,7 +227,49 @@ export default function EditEvent() {
           <input type="datetime-local" value={form.registration_starts_at} onChange={e => setForm({ ...form, registration_starts_at: e.target.value })} required />
           <label>Registration closes at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_ends_at} onChange={e => setForm({ ...form, registration_ends_at: e.target.value })} required />
-          <button type="submit" className="btn btn-primary">Save changes</button>
+
+          <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--surface-2)', borderRadius: '6px' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Payment Mode</label>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, stripe_mode: 'test' })}
+                style={{
+                  padding: '0.6rem 1.2rem',
+                  backgroundColor: form.stripe_mode === 'test' ? '#f39c12' : 'var(--surface-3)',
+                  color: form.stripe_mode === 'test' ? 'white' : 'var(--text)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: form.stripe_mode === 'test' ? '600' : '500',
+                  fontSize: '0.95rem'
+                }}
+              >
+                🧪 Test Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, stripe_mode: 'live' })}
+                style={{
+                  padding: '0.6rem 1.2rem',
+                  backgroundColor: form.stripe_mode === 'live' ? '#27ae60' : 'var(--surface-3)',
+                  color: form.stripe_mode === 'live' ? 'white' : 'var(--text)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: form.stripe_mode === 'live' ? '600' : '500',
+                  fontSize: '0.95rem'
+                }}
+              >
+                💳 Live Mode
+              </button>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+              {form.stripe_mode === 'test' ? 'Test mode: Users will see test payment methods, no real charges.' : 'Live mode: Real payments will be processed.'}
+            </p>
+          </div>
+
+          <button type="submit" className="btn btn-primary" style={{ marginTop: '1.5rem' }}>Save changes</button>
         </form>
       </div>
 

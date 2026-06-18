@@ -1,26 +1,43 @@
 /**
  * StripeProvider - Wraps the app with Stripe Elements context
  * Makes Stripe functionality available to all child components
+ * Supports both live and test mode Stripe keys
  */
 
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 
-// Load Stripe or use mock if not configured
-let stripePromise = null;
+// Load Stripe keys for both modes
+let stripeLivePromise = null;
+let stripeTestPromise = null;
+let stripePromise = null; // Default to live for backward compatibility
 
-const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+const publishableKeyLive = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+const publishableKeyTest = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY_TEST;
 
-if (publishableKey && publishableKey !== 'pk_test_mock_key') {
-  // Real Stripe account configured
-  stripePromise = loadStripe(publishableKey);
+// Load live mode Stripe
+if (publishableKeyLive && publishableKeyLive !== 'pk_test_mock_key') {
+  stripeLivePromise = loadStripe(publishableKeyLive);
+  stripePromise = stripeLivePromise; // Default to live
 } else {
-  // Mock mode - create a dummy promise that resolves to null
-  console.log('[STRIPE MOCK] Running in mock mode. Real Stripe not configured.');
-  stripePromise = Promise.resolve(null);
+  console.log('[STRIPE MOCK] Live mode Stripe not configured.');
+  stripeLivePromise = Promise.resolve(null);
 }
 
-export { stripePromise };
+// Load test mode Stripe
+if (publishableKeyTest && publishableKeyTest !== 'pk_test_mock_key') {
+  stripeTestPromise = loadStripe(publishableKeyTest);
+} else {
+  console.log('[STRIPE MOCK] Test mode Stripe not configured.');
+  stripeTestPromise = Promise.resolve(null);
+}
+
+// If only test mode is configured, use it as default
+if (!stripeLivePromise && stripeTestPromise) {
+  stripePromise = stripeTestPromise;
+}
+
+export { stripePromise, stripeLivePromise, stripeTestPromise };
 
 export default function StripeProvider({ children, clientSecret }) {
   // For PaymentElement, we need to pass clientSecret to Elements

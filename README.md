@@ -179,6 +179,9 @@ The application implements defense-in-depth security practices:
 - **Forgot password** — users can reset their password via email-based reset links with token validation
 - **Extended session timeout** — access tokens valid for 2 hours (refresh tokens valid for 7 days)
 - **Profile page** showing account settings, team memberships, and event registrations
+  - **My upcoming events** — displays registered events with location, date, team assignment, and registered products
+  - **My past events** — shows concluded events with the same information for historical reference
+  - Team information always visible (shows team name or "Team: None")
 - User profile collects: first name, last name, year of birth, and gender
 
 ### Events
@@ -206,12 +209,14 @@ The application implements defense-in-depth security practices:
 - Captains can approve/reject join requests and remove members
 - Users can leave teams at any time
 - Team member lists are visible only to members, captains, and admins
+- **Search functionality** — Teams page includes search by team name or description for easy discovery
 
 ### Event Registration
 
 - Registered users select products when signing up for an event
 - Registration is only possible within the event's registration period
-- Optional team linking during registration
+- **Team selection during registration** — users can select from all eligible teams during registration, even if not currently a member
+- **Automatic team joining** — event creators can enable auto-approval for team registration, automatically making users approved team members upon successful payment
 - **Comments** — users can add optional comments/notes for the event organizers
 - **Guest registration** — captains can register guests by providing first name, last name, email, team, product selections, and optional comments
 - **Payment processing** — Stripe integration for secure payment handling with multiple payment methods (card, MobilePay, iDEAL, etc.)
@@ -220,6 +225,7 @@ The application implements defense-in-depth security practices:
 - **Mandatory product options** — users must select from dropdown options when products have custom fields
 - Capacity checking with sold-out handling
 - **CSV export** — event organizers can export all registrations including comments and payment status
+- **Event descriptions support formatting** — line breaks preserved in multi-line event descriptions
 
 ### Admin Panel
 
@@ -236,12 +242,15 @@ Accessible by event creators and co-managers:
 - View all events you own or co-manage (co-managed events show a badge)
 - Manage products and co-managers per event
   - **Managers view** — shows event creator and all co-managers with clear badges distinguishing roles
+- **Team management per event** — add/remove eligible teams and toggle auto-approval for automatic team joining upon registration
 - **Participant view** — summary stats (total participants, guests, revenue), search by name/email/team, edit or cancel any registration, CSV export with payment status
   - **Payment status visibility** — view payment status (pending, paid, failed) for each participant with color-coded indicators
 - Guest registrations are shown with a guest badge
+- **Event deletion protection** — cannot delete events with active registrations; requires cancelling all registrations first to ensure proper refund processing
 
 ### Teams Page
 
+- **Search functionality** — search teams by name or description for easy discovery as the team directory grows
 - **My teams** section showing teams you are a member of with role and status
 - **Other teams** section showing available teams you can join (filtered to exclude your teams)
 - Intelligent join button: shows "Join" for teams with auto-approval enabled, "Request to join" for teams requiring approval
