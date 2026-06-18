@@ -26,10 +26,11 @@ if (publishableKeyLive && publishableKeyLive !== 'pk_test_mock_key') {
 
 // Load test mode Stripe
 if (publishableKeyTest && publishableKeyTest !== 'pk_test_mock_key') {
+  console.log('[STRIPE] Test mode key configured');
   stripeTestPromise = loadStripe(publishableKeyTest);
 } else {
-  console.log('[STRIPE MOCK] Test mode Stripe not configured.');
-  stripeTestPromise = Promise.resolve(null);
+  console.log('[STRIPE MOCK] Test mode key not configured, will fall back to live mode');
+  stripeTestPromise = null;
 }
 
 // If only test mode is configured, use it as default

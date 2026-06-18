@@ -181,8 +181,17 @@ export default function PaymentForm({
   const [paymentIntentId, setPaymentIntentId] = useState(null);
 
   // Select the correct Stripe promise based on mode
-  const selectedStripePromise = stripeMode === 'test' ? stripeTestPromise : stripeLivePromise;
-  const activeStripePromise = selectedStripePromise || stripePromise; // Fallback to default
+  let activeStripePromise;
+  if (stripeMode === 'test') {
+    if (stripeTestPromise) {
+      activeStripePromise = stripeTestPromise;
+    } else {
+      console.warn('[STRIPE] Test mode requested but test key not configured, falling back to live mode');
+      activeStripePromise = stripeLivePromise || stripePromise;
+    }
+  } else {
+    activeStripePromise = stripeLivePromise || stripePromise;
+  }
 
   const displayAmount = totalAmount ? `€${totalAmount.toFixed(2)}` : null;
 
