@@ -453,12 +453,20 @@ export default function EventRegistrants() {
     return price;
   };
 
+  const getAge = (yearOfBirth) => {
+    if (!yearOfBirth) return '—';
+    const currentYear = new Date().getFullYear();
+    const age = currentYear - parseInt(yearOfBirth);
+    return age > 0 ? age : '—';
+  };
+
   const exportRegistrantsCSV = () => {
-  const headers = ['First name', 'Last name', 'Email', 'Team', 'Products', 'Total price', 'Payment Status', 'Type', 'Registered', 'Comments'];
+  const headers = ['First name', 'Last name', 'Email', 'Age', 'Team', 'Products', 'Total price', 'Payment Status', 'Type', 'Registered', 'Comments'];
   const rows = registrations.map(r => {
     const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
     const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
     const email = r.email_for_export || (r.is_guest ? r.guest_email : r.user_email);
+    const age = r.is_guest ? getAge(r.guest_year_of_birth) : getAge(r.year_of_birth);
     const team = r.team_name || '';
     const products = r.products
       ? r.products.map(p => {
@@ -479,7 +487,7 @@ export default function EventRegistrants() {
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
     const comments = r.comments || '';
-    return [firstName, lastName, email, team, products, totalPrice, paymentStatus, type, registered, comments];
+    return [firstName, lastName, email, age, team, products, totalPrice, paymentStatus, type, registered, comments];
   });
 
   const csv = [headers, ...rows]
@@ -580,6 +588,7 @@ export default function EventRegistrants() {
             <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>First name</th>
         <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Last name</th>
+              <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Age</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Team</th>
               <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Products</th>
@@ -607,6 +616,9 @@ export default function EventRegistrants() {
           </td>
           <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem' }}>
             {r.is_guest ? (r.guest_last_name || '') : (r.last_name || '—')}
+          </td>
+          <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem', textAlign: 'center' }}>
+            {r.is_guest ? getAge(r.guest_year_of_birth) : getAge(r.year_of_birth)}
           </td>
                   <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{email}</td>
                   <td style={{ padding: '0.8rem 1rem' }}>
