@@ -509,12 +509,14 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
     // Fetch registration details and user info before deleting
     // Handle both regular (with user_id) and guest registrations (without user_id)
     const regResult = await pool.query(
-      `SELECT r.id, r.user_id, r.is_guest, r.guest_first_name, r.guest_last_name, r.guest_email,
+      `SELECT r.id, r.user_id, r.is_guest, r.guest_first_name, r.guest_last_name, r.guest_email, r.registered_by,
               u.email, u.first_name, u.last_name,
+              rb.email as registered_by_email,
               e.title, e.starts_at,
               rp.product_id, ep.name, ep.price, rp.quantity, rp.field_values, ep.fields
        FROM registrations r
        LEFT JOIN users u ON r.user_id = u.id
+       LEFT JOIN users rb ON r.registered_by = rb.id
        JOIN events e ON r.event_id = e.id
        LEFT JOIN registration_products rp ON r.id = rp.registration_id
        LEFT JOIN event_products ep ON rp.product_id = ep.id
@@ -528,7 +530,10 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
 
     // Get email and name from either user or guest fields
     const isGuest = regResult.rows[0].is_guest;
-    const userEmail = isGuest ? regResult.rows[0].guest_email : regResult.rows[0].email;
+    // For guests, use guest_email if present; otherwise fall back to registered_by email (the captain who registered them)
+    const userEmail = isGuest
+      ? (regResult.rows[0].guest_email || regResult.rows[0].registered_by_email)
+      : regResult.rows[0].email;
     const userName = isGuest
       ? `${regResult.rows[0].guest_first_name || ''} ${regResult.rows[0].guest_last_name || ''}`.trim()
       : `${regResult.rows[0].first_name || ''} ${regResult.rows[0].last_name || ''}`.trim() || regResult.rows[0].email;
@@ -583,9 +588,9 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
         return acc;
       }, []);
 
-    // Issue refund if cancelled by manager (admin/creator/co-manager)
+    // Issue refund for any authorised cancellation (manager or team captain)
     let refundAmount = 0;
-    if (isManagerCancellation) {
+    if (isAuthorised) {
       try {
         // Calculate refund amount from current products (not original payment, in case products were edited)
         refundAmount = products.reduce((total, p) => total + (p.price * p.quantity * 100), 0);
@@ -608,7 +613,8 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
             amount: refundAmount
           });
 
-          console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${registrationId} (manager cancellation)`);
+          const cancellationType = isManagerCancellation ? 'manager cancellation' : 'team captain cancellation';
+          console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${registrationId} (${cancellationType})`);
         }
       } catch (err) {
         console.error('[REFUND ERROR] Failed to issue refund:', err.message);
