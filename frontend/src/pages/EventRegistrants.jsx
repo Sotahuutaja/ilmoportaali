@@ -360,6 +360,20 @@ export default function EventRegistrants() {
       .then(res => setEventProducts(res.data.products));
   }, [id, user, navigate]);
 
+  // Refresh registrations when page regains focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        api.get(`/registrations/${id}`)
+          .then(res => setRegistrations(res.data.registrations))
+          .catch(err => console.error('Failed to refresh registrations:', err));
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [id]);
+
   const handleCancel = async (registrationId, name) => {
     // Find the registration to show refund details
     const reg = registrations.find(r => r.id === registrationId);
