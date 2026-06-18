@@ -440,7 +440,7 @@ router.get('/:eventId', requireAuth, async (req, res) => {
     const result = await pool.query(`
       SELECT
         r.*,
-        u.first_name, u.last_name, u.email as user_email,
+        u.first_name, u.last_name, u.email as user_email, u.year_of_birth,
         t.name as team_name,
         COALESCE(u.email, reg_by.email) as email_for_export,
         json_agg(json_build_object(
@@ -458,7 +458,7 @@ router.get('/:eventId', requireAuth, async (req, res) => {
       LEFT JOIN registration_products rp ON r.id = rp.registration_id
       LEFT JOIN event_products ep ON rp.product_id = ep.id
       WHERE r.event_id = $1
-      GROUP BY r.id, u.first_name, u.last_name, u.email, t.name, reg_by.email
+      GROUP BY r.id, u.first_name, u.last_name, u.email, u.year_of_birth, t.name, reg_by.email
       ORDER BY r.created_at ASC
     `, [req.params.eventId]);
 
