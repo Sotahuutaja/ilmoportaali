@@ -558,7 +558,7 @@ export default function EventDetail() {
               backgroundColor: event.stripe_mode === 'live' ? '#27ae60' : '#f39c12',
               color: 'white'
             }}>
-              {event.stripe_mode === 'live' ? '💳 Live Payments' : '🧪 Test Mode'}
+              {event.stripe_mode === 'live' ? 'Live Payments' : 'Test Mode'}
             </span>
           </div>
         )}

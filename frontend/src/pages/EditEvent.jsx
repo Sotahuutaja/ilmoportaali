@@ -245,7 +245,7 @@ export default function EditEvent() {
                   fontSize: '0.95rem'
                 }}
               >
-                🧪 Test Mode
+                Test Mode
               </button>
               <button
                 type="button"
@@ -261,7 +261,7 @@ export default function EditEvent() {
                   fontSize: '0.95rem'
                 }}
               >
-                💳 Live Mode
+                Live Mode
               </button>
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
