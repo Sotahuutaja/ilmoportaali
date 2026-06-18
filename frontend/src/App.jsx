@@ -18,6 +18,7 @@ import Checkout from './pages/Checkout';
 import ForgotPassword from './pages/ForgotPassword';
 import StripeProvider from './components/StripeProvider';
 
+
 function Nav() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
