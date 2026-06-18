@@ -94,15 +94,10 @@ router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req,
 
 // Update event (creator, co-manager, or admin)
 router.put('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
-  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at, stripe_mode } = req.body;
+  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at } = req.body;
 
   if (!registration_starts_at || !registration_ends_at) {
     return res.status(400).json({ error: 'Registration start and end times are required' });
-  }
-
-  // Validate stripe_mode if provided
-  if (stripe_mode && !['test', 'live'].includes(stripe_mode)) {
-    return res.status(400).json({ error: 'stripe_mode must be either "test" or "live"' });
   }
 
   try {
@@ -114,10 +109,10 @@ router.put('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (re
 
     const result = await pool.query(`
       UPDATE events
-      SET title=$1, description=$2, location=$3, starts_at=$4, ends_at=$5, capacity=$6, allow_individual_registration=$7, registration_starts_at=$8, registration_ends_at=$9, stripe_mode=$10
-      WHERE id=$11
+      SET title=$1, description=$2, location=$3, starts_at=$4, ends_at=$5, capacity=$6, allow_individual_registration=$7, registration_starts_at=$8, registration_ends_at=$9
+      WHERE id=$10
       RETURNING *
-    `, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, stripe_mode || 'test', req.params.id]);
+    `, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, req.params.id]);
 
     res.json({ event: result.rows[0] });
   } catch (err) {

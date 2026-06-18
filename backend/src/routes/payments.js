@@ -107,13 +107,12 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Total amount must be greater than €0.01' });
     }
 
-    // Create payment intent using event's stripe_mode (mock or real)
-    const stripeMode = event.rows[0].stripe_mode || 'test';
-    const paymentIntent = await createPaymentIntent(null, totalCents, req.user.email, stripeMode);
+    // Create payment intent (mock or real)
+    const paymentIntent = await createPaymentIntent(null, totalCents, req.user.email);
 
     // Don't store in session - pass back to frontend instead
 
-    console.log(`[PAYMENT] Created intent ${paymentIntent.id} for €${(totalCents / 100).toFixed(2)} in ${stripeMode} mode`);
+    console.log(`[PAYMENT] Created intent ${paymentIntent.id} for €${(totalCents / 100).toFixed(2)}`);
 
     res.json({
       clientSecret: paymentIntent.client_secret,
@@ -176,21 +175,9 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
   const client = await pool.connect();
 
   try {
-    // Fetch event to determine stripe_mode (if not an additional payment)
-    let stripeMode = 'live'; // default to live
-    if (!isAdditionalPayment && eventId) {
-      const eventResult = await pool.query(
-        'SELECT stripe_mode FROM events WHERE id = $1',
-        [eventId]
-      );
-      if (eventResult.rows[0]) {
-        stripeMode = eventResult.rows[0].stripe_mode || 'test';
-      }
-    }
-
-    // Step 1: Verify payment intent status with Stripe using correct mode
-    console.log('[PAYMENT] Verifying payment intent:', paymentIntentId, `(${stripeMode} mode)`);
-    const paymentIntent = await getPaymentIntent(paymentIntentId, stripeMode);
+    // Step 1: Verify payment intent status with Stripe
+    console.log('[PAYMENT] Verifying payment intent:', paymentIntentId);
+    const paymentIntent = await getPaymentIntent(paymentIntentId);
     console.log('[PAYMENT] Payment intent status:', paymentIntent.status);
 
     if (paymentIntent.status !== 'succeeded') {

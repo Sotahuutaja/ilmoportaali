@@ -1,44 +1,26 @@
 /**
  * StripeProvider - Wraps the app with Stripe Elements context
  * Makes Stripe functionality available to all child components
- * Supports both live and test mode Stripe keys
  */
 
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 
-// Load Stripe keys for both modes
-let stripeLivePromise = null;
-let stripeTestPromise = null;
-let stripePromise = null; // Default to live for backward compatibility
+// Load Stripe or use mock if not configured
+let stripePromise = null;
 
-const publishableKeyLive = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-const publishableKeyTest = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY_TEST;
+const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
-// Load live mode Stripe
-if (publishableKeyLive && publishableKeyLive !== 'pk_test_mock_key') {
-  stripeLivePromise = loadStripe(publishableKeyLive);
-  stripePromise = stripeLivePromise; // Default to live
+if (publishableKey && publishableKey !== 'pk_test_mock_key') {
+  // Real Stripe account configured
+  stripePromise = loadStripe(publishableKey);
 } else {
-  console.log('[STRIPE MOCK] Live mode Stripe not configured.');
-  stripeLivePromise = Promise.resolve(null);
+  // Mock mode - create a dummy promise that resolves to null
+  console.log('[STRIPE MOCK] Running in mock mode. Real Stripe not configured.');
+  stripePromise = Promise.resolve(null);
 }
 
-// Load test mode Stripe
-if (publishableKeyTest && publishableKeyTest !== 'pk_test_mock_key') {
-  console.log('[STRIPE] Test mode key configured');
-  stripeTestPromise = loadStripe(publishableKeyTest);
-} else {
-  console.log('[STRIPE MOCK] Test mode key not configured, will fall back to live mode');
-  stripeTestPromise = null;
-}
-
-// If only test mode is configured, use it as default
-if (!stripeLivePromise && stripeTestPromise) {
-  stripePromise = stripeTestPromise;
-}
-
-export { stripePromise, stripeLivePromise, stripeTestPromise };
+export { stripePromise };
 
 export default function StripeProvider({ children, clientSecret }) {
   // For PaymentElement, we need to pass clientSecret to Elements

@@ -547,21 +547,6 @@ export default function EventDetail() {
           📅 {formatDateTime(event.starts_at)} — {formatDateTime(event.ends_at)}
         </p>
         <p style={{ margin: '1rem 0', whiteSpace: 'pre-wrap' }}>{event.description}</p>
-        {event.stripe_mode && (
-          <div style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
-            <span style={{
-              display: 'inline-block',
-              padding: '0.3rem 0.8rem',
-              borderRadius: '4px',
-              fontSize: '0.8rem',
-              fontWeight: '600',
-              backgroundColor: event.stripe_mode === 'live' ? '#27ae60' : '#f39c12',
-              color: 'white'
-            }}>
-              {event.stripe_mode === 'live' ? 'Live Payments' : 'Test Mode'}
-            </span>
-          </div>
-        )}
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
           {event.registration_count} registered
           {event.capacity ? ` / ${event.capacity} spots` : ''}
