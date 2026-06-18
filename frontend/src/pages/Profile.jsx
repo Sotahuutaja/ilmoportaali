@@ -187,47 +187,68 @@ export default function Profile() {
       </div>
 
       {/* Registered events */}
-      <div className="card">
-        <h3 style={{ marginBottom: '1rem' }}>My registrations</h3>
-        {loading && <p style={{ color: 'var(--text-muted)' }}>Loading...</p>}
-        {!loading && registrations.length === 0 && (
-          <p style={{ color: 'var(--text-muted)' }}>
-            You have not registered for any events. <Link to="/">Browse events</Link>
-          </p>
-        )}
-        {registrations.map(r => (
-          <div key={r.id} style={{ padding: '0.8rem 0', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <strong>{r.title}</strong>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.2rem 0' }}>
-                  📍 {r.location} &nbsp;|&nbsp;
-                  📅 {formatDate(r.starts_at, { day: 'numeric', month: 'long', year: 'numeric' })}
-                </p>
-                {r.team_name && (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Team: {r.team_name}</p>
-                )}
-                {r.products && r.products.length > 0 && (
-                  <div style={{ marginTop: '0.3rem' }}>
-                    {r.products.map((p, i) => (
-                      <span key={i} style={{
-                        display: 'inline-block', marginRight: '0.4rem',
-                        fontSize: '0.8rem', padding: '0.1rem 0.5rem',
-                        borderRadius: '8px', background: 'var(--surface-3)', color: 'var(--text)'
-                      }}>
-                        {p.name} x{p.quantity}
-                      </span>
-                    ))}
-                  </div>
-                )}
+      {(() => {
+        const now = new Date();
+        const upcomingEvents = registrations.filter(r => new Date(r.starts_at) > now);
+        const pastEvents = registrations.filter(r => new Date(r.starts_at) <= now);
+
+        const renderEventList = (events) => (
+          events.map(r => (
+            <div key={r.id} style={{ padding: '0.8rem 0', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <strong>{r.title}</strong>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.2rem 0' }}>
+                    📍 {r.location} &nbsp;|&nbsp;
+                    📅 {formatDate(r.starts_at, { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    Team: {r.team_name || 'None'}
+                  </p>
+                  {r.products && r.products.length > 0 && (
+                    <div style={{ marginTop: '0.3rem' }}>
+                      {r.products.map((p, i) => (
+                        <span key={i} style={{
+                          display: 'inline-block', marginRight: '0.4rem',
+                          fontSize: '0.8rem', padding: '0.1rem 0.5rem',
+                          borderRadius: '8px', background: 'var(--surface-3)', color: 'var(--text)'
+                        }}>
+                          {p.name} x{p.quantity}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Link to={`/events/${r.id}`}>
+                  <button className="btn btn-secondary">View event</button>
+                </Link>
               </div>
-              <Link to={`/events/${r.id}`}>
-                <button className="btn btn-secondary">View event</button>
-              </Link>
             </div>
-          </div>
-        ))}
-      </div>
+          ))
+        );
+
+        return (
+          <>
+            <div className="card">
+              <h3 style={{ marginBottom: '1rem' }}>My upcoming events</h3>
+              {loading && <p style={{ color: 'var(--text-muted)' }}>Loading...</p>}
+              {!loading && upcomingEvents.length === 0 && (
+                <p style={{ color: 'var(--text-muted)' }}>
+                  You have no upcoming events. <Link to="/">Browse events</Link>
+                </p>
+              )}
+              {renderEventList(upcomingEvents)}
+            </div>
+
+            {pastEvents.length > 0 && (
+              <div className="card">
+                <h3 style={{ marginBottom: '1rem' }}>My past events</h3>
+                {renderEventList(pastEvents)}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
