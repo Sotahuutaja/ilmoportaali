@@ -546,7 +546,7 @@ export default function EventDetail() {
           📍 {event.location}<br />
           📅 {formatDateTime(event.starts_at)} — {formatDateTime(event.ends_at)}
         </p>
-        <p style={{ margin: '1rem 0' }}>{event.description}</p>
+        <p style={{ margin: '1rem 0', whiteSpace: 'pre-wrap' }}>{event.description}</p>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
           {event.registration_count} registered
           {event.capacity ? ` / ${event.capacity} spots` : ''}

@@ -11,7 +11,7 @@ function EventCard({ event }) {
         📍 {event.location} &nbsp;|&nbsp;
         📅 {formatDateTime(event.starts_at, { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
       </p>
-      <p style={{ margin: '0.5rem 0' }}>{event.description}</p>
+      <p style={{ margin: '0.5rem 0', whiteSpace: 'pre-wrap' }}>{event.description}</p>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
         {event.registration_count} registered
         {event.capacity ? ` / ${event.capacity} capacity` : ''}
