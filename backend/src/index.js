@@ -11,6 +11,7 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+
 const app = express();
 const port = process.env.PORT || 3000;
 
