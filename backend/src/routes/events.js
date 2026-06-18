@@ -122,6 +122,7 @@ router.put('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (re
 });
 
 // Delete event (creator, co-manager, or admin)
+// Note: All registrations must be cancelled first to ensure refunds are properly issued
 router.delete('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
   const client = await pool.connect();
   try {
@@ -131,12 +132,23 @@ router.delete('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async 
     const existing = await client.query('SELECT * FROM events WHERE id = $1', [req.params.id]);
     if (!existing.rows[0]) return res.status(404).json({ error: 'Event not found' });
 
+    // Check if there are any registrations for this event
+    const registrations = await client.query(
+      'SELECT COUNT(*) as count FROM registrations WHERE event_id = $1',
+      [req.params.id]
+    );
+
+    if (registrations.rows[0].count > 0) {
+      return res.status(409).json({
+        error: 'Cannot delete event with active registrations',
+        message: 'All registrations must be cancelled individually before the event can be deleted. This ensures refunds are properly issued to attendees.',
+        registrationCount: parseInt(registrations.rows[0].count)
+      });
+    }
+
     await client.query('BEGIN');
 
-    // Delete all registrations for this event
-    await client.query('DELETE FROM registrations WHERE event_id = $1', [req.params.id]);
-
-    // Delete the event
+    // Delete the event (registrations are already deleted)
     await client.query('DELETE FROM events WHERE id = $1', [req.params.id]);
 
     await client.query('COMMIT');
