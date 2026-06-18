@@ -556,6 +556,32 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       registrationIds.push(guestRegId);
     }
 
+    // Auto-join teams if they have auto_approve_joins enabled for this event
+    // For captain
+    if (captain.teamId) {
+      const teamInfo = await client.query(
+        'SELECT auto_approve_joins FROM event_teams WHERE event_id = $1 AND team_id = $2',
+        [eventId, captain.teamId]
+      );
+      if (teamInfo.rows[0] && teamInfo.rows[0].auto_approve_joins) {
+        try {
+          await client.query(
+            `INSERT INTO team_members (team_id, user_id, role, status, invited_by)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (team_id, user_id) DO UPDATE SET status = 'approved'`,
+            [captain.teamId, req.user.id, 'member', 'approved', req.user.id]
+          );
+          console.log('[PAYMENT] Captain auto-joined team', captain.teamId);
+        } catch (err) {
+          console.error('[PAYMENT] Failed to auto-join captain to team:', err.message);
+          // Don't fail the payment if team join fails
+        }
+      }
+    }
+
+    // For guests (guests don't have user_id, so we can't auto-join them)
+    // Guests would need captain approval manually or we'd need user accounts for them
+
     // Record payment intent (link to first registration - captain if exists, otherwise first guest)
     const primaryRegId = captainRegId || registrationIds[0];
     await client.query(

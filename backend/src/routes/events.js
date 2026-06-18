@@ -269,4 +269,32 @@ router.delete('/:id/teams/:teamId', requireAuth, async (req, res) => {
   }
 });
 
+// Toggle auto-join setting for a team on an event
+router.patch('/:id/teams/:teamId/auto-join', requireAuth, async (req, res) => {
+  const { auto_approve_joins } = req.body;
+
+  if (auto_approve_joins === undefined) {
+    return res.status(400).json({ error: 'auto_approve_joins is required' });
+  }
+
+  try {
+    const allowed = await canManageEvent(req.user.id, req.user.role, req.params.id, pool);
+    if (!allowed) return res.status(403).json({ error: 'Not authorised' });
+
+    const result = await pool.query(
+      'UPDATE event_teams SET auto_approve_joins = $1 WHERE event_id = $2 AND team_id = $3 RETURNING *',
+      [auto_approve_joins, req.params.id, req.params.teamId]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Team not found for this event' });
+    }
+
+    res.json({ eventTeam: result.rows[0] });
+  } catch (err) {
+    console.error('Failed to update team auto-join setting:', err.message);
+    res.status(500).json({ error: 'Failed to update team settings' });
+  }
+});
+
 module.exports = { router, canManageEvent };

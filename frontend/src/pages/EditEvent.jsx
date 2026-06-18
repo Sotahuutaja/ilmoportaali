@@ -174,6 +174,20 @@ export default function EditEvent() {
     }
   };
 
+  const handleToggleAutoJoin = async (teamId, currentValue) => {
+    try {
+      const res = await api.patch(`/events/${id}/teams/${teamId}/auto-join`, {
+        auto_approve_joins: !currentValue
+      });
+      setEventTeams(eventTeams.map(t =>
+        t.team_id === teamId ? res.data.eventTeam : t
+      ));
+      setTeamMessage(`Auto-join ${!currentValue ? 'enabled' : 'disabled'} for this team.`);
+    } catch (err) {
+      setTeamError(err.response?.data?.error || 'Failed to update team settings');
+    }
+  };
+
   if (loading) return <p>Loading...</p>;
 
   return (
@@ -326,11 +340,22 @@ export default function EditEvent() {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
       }}>
-        <div>
+        <div style={{ flex: 1 }}>
         <strong>{t.name}</strong>
         <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
           {t.member_count} members
         </span>
+        <div style={{ marginTop: '0.25rem', fontSize: '0.85rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+            <input
+              type="checkbox"
+              checked={t.auto_approve_joins || false}
+              onChange={() => handleToggleAutoJoin(t.team_id, t.auto_approve_joins || false)}
+              style={{ margin: 0 }}
+            />
+            Auto-approve team joins
+          </label>
+        </div>
         </div>
         <button className="btn btn-danger" onClick={() => handleRemoveTeam(t.team_id)}>Remove</button>
       </div>
