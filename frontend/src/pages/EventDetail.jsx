@@ -541,7 +541,22 @@ export default function EventDetail() {
   return (
     <div style={{ maxWidth: 640, margin: '2rem auto' }}>
       <div className="card">
-        <h2>{event.title}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <h2 style={{ margin: 0 }}>{event.title}</h2>
+          {event.stripe_mode && (
+            <span style={{
+              fontSize: '0.75rem',
+              padding: '0.25rem 0.6rem',
+              borderRadius: '12px',
+              background: event.stripe_mode === 'test' ? '#ff9800' : '#4caf50',
+              color: 'white',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap'
+            }}>
+              {event.stripe_mode === 'test' ? 'Test Mode' : 'Live Payments'}
+            </span>
+          )}
+        </div>
         <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0' }}>
           📍 {event.location}<br />
           📅 {formatDateTime(event.starts_at)} — {formatDateTime(event.ends_at)}

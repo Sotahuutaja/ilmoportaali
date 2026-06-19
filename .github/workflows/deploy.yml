@@ -160,6 +160,7 @@ jobs:
           tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/frontend:latest
           build-args: |
             VITE_STRIPE_PUBLISHABLE_KEY=${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+            VITE_STRIPE_PUBLISHABLE_KEY_TEST=${{ secrets.STRIPE_PUBLISHABLE_KEY_TEST }}
           no-cache: true
 
       - name: Deploy frontend

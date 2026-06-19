@@ -604,17 +604,27 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
         if (paymentResult.rows[0]) {
           const paymentIntentId = paymentResult.rows[0].stripe_payment_intent_id;
 
-          // Issue refund through Stripe
-          const stripeKey = process.env.STRIPE_SECRET_KEY;
-          const stripeInstance = require('stripe')(stripeKey);
+          // Fetch event to get stripe_mode
+          const eventData = await pool.query(
+            'SELECT stripe_mode FROM events WHERE id = $1',
+            [req.params.eventId]
+          );
+          const stripeMode = eventData.rows[0]?.stripe_mode || 'test';
 
-          await stripeInstance.refunds.create({
-            payment_intent: paymentIntentId,
-            amount: refundAmount
-          });
+          // Issue refund through Stripe using correct mode
+          const { getStripeInstance } = require('../services/stripeService');
+          const stripeInstance = getStripeInstance(stripeMode);
+
+          if (stripeInstance) {
+            await stripeInstance.refunds.create({
+              payment_intent: paymentIntentId,
+              amount: refundAmount
+            });
+          }
 
           const cancellationType = isManagerCancellation ? 'manager cancellation' : 'team captain cancellation';
-          console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${registrationId} (${cancellationType})`);
+          const modeLabel = stripeMode === 'test' ? '(test mode)' : '(live mode)';
+          console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${registrationId} (${cancellationType}) ${modeLabel}`);
         }
       } catch (err) {
         console.error('[REFUND ERROR] Failed to issue refund:', err.message);

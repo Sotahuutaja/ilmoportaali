@@ -1,15 +1,38 @@
 /**
  * Stripe payment service
  * Handles PaymentIntent creation, confirmation, and status checks
- * Uses mock implementation if STRIPE_SECRET_KEY is not configured
+ * Supports both test and live mode with separate Stripe instances
+ * Uses mock implementation if keys are not configured
  */
 
-const stripeKey = process.env.STRIPE_SECRET_KEY;
-let stripe = null;
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripeSecretKeyTest = process.env.STRIPE_SECRET_KEY_TEST;
 
-// Only initialize Stripe if key is configured
-if (stripeKey) {
-  stripe = require('stripe')(stripeKey);
+let stripeLive = null;
+let stripeTest = null;
+
+// Only initialize Stripe instances if keys are configured
+if (stripeSecretKey) {
+  stripeLive = require('stripe')(stripeSecretKey);
+}
+
+if (stripeSecretKeyTest) {
+  stripeTest = require('stripe')(stripeSecretKeyTest);
+}
+
+// For backward compatibility, default to live
+let stripe = stripeLive;
+
+/**
+ * Get the appropriate Stripe instance based on mode
+ * @param {string} mode - 'live' or 'test'
+ * @returns {object} Stripe instance or null if not configured
+ */
+function getStripeInstance(mode = 'live') {
+  if (mode === 'test') {
+    return stripeTest || stripeLive; // Fall back to live if test not configured
+  }
+  return stripeLive || stripeTest; // Fall back to test if live not configured
 }
 
 // In-memory storage for mock payment intents (to persist metadata across calls)
@@ -20,19 +43,23 @@ const mockPaymentIntents = {};
  * @param {number} registrationId - ID of the registration
  * @param {number} amountCents - Amount in cents (e.g., 1500 = €15.00)
  * @param {string} email - Customer email
+ * @param {string} mode - 'live' or 'test' (default: 'live')
  * @returns {object} Payment intent with id and client_secret
  */
-async function createPaymentIntent(registrationId, amountCents, email) {
-  if (!stripe) {
+async function createPaymentIntent(registrationId, amountCents, email, mode = 'live') {
+  const stripeInstance = getStripeInstance(mode);
+
+  if (!stripeInstance) {
     // Mock implementation for development without Stripe account
-    console.log(`[STRIPE MOCK] Creating payment intent for €${(amountCents / 100).toFixed(2)}`);
+    const modeLabel = mode === 'test' ? '[STRIPE TEST MOCK]' : '[STRIPE LIVE MOCK]';
+    console.log(`${modeLabel} Creating payment intent for €${(amountCents / 100).toFixed(2)}`);
     const mockIntent = {
-      id: `pi_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      client_secret: `pi_mock_secret_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `pi_${mode}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      client_secret: `pi_${mode}_secret_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       amount: amountCents,
       currency: 'eur',
       status: 'requires_payment_method',
-      metadata: { registrationId, email }
+      metadata: { registrationId, email, mode }
     };
     // Store in mock map so we can retrieve it later with metadata intact
     mockPaymentIntents[mockIntent.id] = mockIntent;
@@ -41,18 +68,20 @@ async function createPaymentIntent(registrationId, amountCents, email) {
 
   // Real Stripe API call
   try {
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await stripeInstance.paymentIntents.create({
       amount: amountCents,
       currency: 'eur',
       metadata: {
         registrationId: registrationId ? registrationId.toString() : 'pending',
-        email: email
+        email: email,
+        mode: mode
       },
       automatic_payment_methods: { enabled: true },
       receipt_email: email
     });
 
-    console.log(`[STRIPE] Payment intent created: ${paymentIntent.id}`);
+    const modeLabel = mode === 'test' ? '[STRIPE TEST]' : '[STRIPE LIVE]';
+    console.log(`${modeLabel} Payment intent created: ${paymentIntent.id}`);
     return paymentIntent;
   } catch (err) {
     console.error('[STRIPE ERROR] Failed to create payment intent:', err.message);
@@ -63,12 +92,16 @@ async function createPaymentIntent(registrationId, amountCents, email) {
 /**
  * Retrieve a payment intent from Stripe
  * @param {string} paymentIntentId - Stripe PaymentIntent ID
+ * @param {string} mode - 'live' or 'test' (default: 'live')
  * @returns {object} Payment intent details
  */
-async function getPaymentIntent(paymentIntentId) {
-  if (!stripe) {
+async function getPaymentIntent(paymentIntentId, mode = 'live') {
+  const stripeInstance = getStripeInstance(mode);
+
+  if (!stripeInstance) {
     // Mock: retrieve from storage if available, otherwise return basic mock
-    console.log(`[STRIPE MOCK] Retrieving payment intent ${paymentIntentId}`);
+    const modeLabel = mode === 'test' ? '[STRIPE TEST MOCK]' : '[STRIPE LIVE MOCK]';
+    console.log(`${modeLabel} Retrieving payment intent ${paymentIntentId}`);
     const stored = mockPaymentIntents[paymentIntentId];
     if (stored) {
       return {
@@ -89,8 +122,9 @@ async function getPaymentIntent(paymentIntentId) {
   }
 
   try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    console.log(`[STRIPE] Payment intent retrieved: ${paymentIntentId} (${paymentIntent.status})`);
+    const paymentIntent = await stripeInstance.paymentIntents.retrieve(paymentIntentId);
+    const modeLabel = mode === 'test' ? '[STRIPE TEST]' : '[STRIPE LIVE]';
+    console.log(`${modeLabel} Payment intent retrieved: ${paymentIntentId} (${paymentIntent.status})`);
     return paymentIntent;
   } catch (err) {
     console.error('[STRIPE ERROR] Failed to retrieve payment intent:', err.message);
@@ -127,15 +161,18 @@ function constructWebhookEvent(body, sig) {
 
 /**
  * Check if Stripe is configured
- * @returns {boolean} True if Stripe keys are available
+ * @param {string} mode - 'live' or 'test' (default: 'live')
+ * @returns {boolean} True if Stripe key is available for the mode
  */
-function isConfigured() {
-  return !!stripe;
+function isConfigured(mode = 'live') {
+  const stripeInstance = getStripeInstance(mode);
+  return !!stripeInstance;
 }
 
 module.exports = {
   createPaymentIntent,
   getPaymentIntent,
   constructWebhookEvent,
-  isConfigured
+  isConfigured,
+  getStripeInstance
 };

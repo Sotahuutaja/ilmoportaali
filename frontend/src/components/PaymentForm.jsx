@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import { stripePromise } from './StripeProvider';
+import { stripePromise, stripeLivePromise, stripeTestPromise } from './StripeProvider';
 import './PaymentForm.css';
 
 // Inner component that uses Stripe hooks (must be inside Elements provider)
@@ -169,6 +169,7 @@ export default function PaymentForm({
   teamId,
   comments,
   totalAmount,
+  stripeMode,
   onSuccess,
   onError
 }) {
@@ -178,6 +179,16 @@ export default function PaymentForm({
   const [error, setError] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
   const [paymentIntentId, setPaymentIntentId] = useState(null);
+
+  // Select appropriate Stripe promise based on mode
+  const getStripePromise = () => {
+    if (stripeMode === 'test') {
+      return stripeTestPromise || stripeLivePromise || stripePromise;
+    }
+    return stripeLivePromise || stripeTestPromise || stripePromise;
+  };
+
+  const selectedStripePromise = getStripePromise();
 
   const displayAmount = totalAmount ? `€${totalAmount.toFixed(2)}` : null;
 
@@ -275,7 +286,7 @@ export default function PaymentForm({
       </div>
 
       {clientSecret && (
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
+        <Elements stripe={selectedStripePromise} options={{ clientSecret }}>
           <PaymentFormContent
             clientSecret={clientSecret}
             paymentIntentId={paymentIntentId}

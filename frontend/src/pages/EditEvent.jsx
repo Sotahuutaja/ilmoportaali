@@ -14,7 +14,8 @@ export default function EditEvent() {
     title: '', description: '', location: '',
     starts_at: '', ends_at: '', capacity: '',
     allow_individual_registration: true,
-    registration_starts_at: '', registration_ends_at: ''
+    registration_starts_at: '', registration_ends_at: '',
+    stripe_mode: 'test'
   });
   const [products, setProducts] = useState([]);
   const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [] });
@@ -52,7 +53,8 @@ export default function EditEvent() {
       capacity: e.capacity || '',
       allow_individual_registration: e.allow_individual_registration ?? true,
       registration_starts_at: toHelsinki(e.registration_starts_at),
-      registration_ends_at: toHelsinki(e.registration_ends_at)
+      registration_ends_at: toHelsinki(e.registration_ends_at),
+      stripe_mode: e.stripe_mode || 'test'
     });
     setProducts(productsRes.data.products);
     setEventTeams(eventTeamsRes.data.teams);
@@ -72,7 +74,8 @@ export default function EditEvent() {
         starts_at: helsinkiToUTC(form.starts_at),
         ends_at: helsinkiToUTC(form.ends_at),
         registration_starts_at: helsinkiToUTC(form.registration_starts_at),
-        registration_ends_at: helsinkiToUTC(form.registration_ends_at)
+        registration_ends_at: helsinkiToUTC(form.registration_ends_at),
+        stripe_mode: form.stripe_mode
       });
       setMessage('Event updated successfully!');
     } catch (err) {
@@ -225,6 +228,41 @@ export default function EditEvent() {
           <input type="datetime-local" value={form.registration_starts_at} onChange={e => setForm({ ...form, registration_starts_at: e.target.value })} required />
           <label>Registration closes at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_ends_at} onChange={e => setForm({ ...form, registration_ends_at: e.target.value })} required />
+          <label>Payment Mode</label>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, stripe_mode: 'test' })}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                border: '1px solid var(--border)',
+                background: form.stripe_mode === 'test' ? '#ff9800' : 'transparent',
+                color: form.stripe_mode === 'test' ? 'white' : 'var(--text)',
+                cursor: 'pointer',
+                fontWeight: form.stripe_mode === 'test' ? 'bold' : 'normal',
+                transition: 'all 0.2s'
+              }}
+            >
+              Test Mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, stripe_mode: 'live' })}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                border: '1px solid var(--border)',
+                background: form.stripe_mode === 'live' ? '#4caf50' : 'transparent',
+                color: form.stripe_mode === 'live' ? 'white' : 'var(--text)',
+                cursor: 'pointer',
+                fontWeight: form.stripe_mode === 'live' ? 'bold' : 'normal',
+                transition: 'all 0.2s'
+              }}
+            >
+              Live Mode
+            </button>
+          </div>
           <button type="submit" className="btn btn-primary">Save changes</button>
         </form>
       </div>
