@@ -7,6 +7,7 @@ const { requireAuth } = require('../middleware/auth');
 const { rateLimit } = require('../middleware/security');
 const crypto = require('crypto');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email');
+const { logHelpers } = require('../services/logService');
 
 // Rate limit presets for auth endpoints
 const loginLimit = rateLimit({ max: 10, windowMs: 15 * 60 * 1000 });
@@ -55,6 +56,7 @@ router.post('/register', registerLimit, async (req, res) => {
     });
   } catch (err) {
     console.error('Registration failed:', err.message);
+    logHelpers.authError(email, err.code === '23505' ? 'Email already registered' : err.message);
     if (err.code === '23505') {
       return res.status(409).json({ error: 'Email already registered' });
     }
@@ -117,6 +119,7 @@ router.post('/login', loginLimit, async (req, res) => {
     });
   } catch (err) {
     console.error('Login failed:', err.message);
+    logHelpers.authError(email, err.message);
     res.status(500).json({ error: 'Login failed', detail: err.message });
   }
 });

@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import AdminUsers from './pages/AdminUsers';
 import AdminTeams from './pages/AdminTeams';
+import AdminLogs from './pages/AdminLogs';
 import Teams from './pages/Teams';
 import TeamDetail from './pages/TeamDetail';
 import EventRegistrants from './pages/EventRegistrants';
@@ -83,6 +84,7 @@ export default function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/teams" element={<AdminTeams />} />
+        <Route path="/admin/logs" element={<AdminLogs />} />
         <Route path="/teams" element={<Teams />} />
         <Route path="/teams/:id" element={<TeamDetail />} />
         <Route path="/profile" element={<Profile />} />

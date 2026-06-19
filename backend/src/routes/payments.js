@@ -8,6 +8,7 @@ const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentIntent, getPaymentIntent, isConfigured } = require('../services/stripeService');
 const { sendAdditionalPaymentConfirmationEmail } = require('../services/email');
+const { logHelpers } = require('../services/logService');
 
 const router = express.Router();
 
@@ -124,6 +125,7 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('[PAYMENT ERROR] Failed to create payment intent:', err.message);
+    logHelpers.stripeError('create payment intent', err);
     res.status(500).json({ error: 'Failed to create payment' });
   }
 });
@@ -620,6 +622,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     await client.query('COMMIT');
 
     console.log(`[PAYMENT] Confirmed payment ${paymentIntentId}, created ${registrationIds.length} registration(s): ${registrationIds.join(', ')}`);
+    logHelpers.paymentSuccess(paymentIntentId, totalCents);
+    logHelpers.registrationSuccess(registrationIds, eventId);
 
     // Queue confirmation email for sending (async retry pattern)
     // Insert into email_queue so it can be retried if sending fails
@@ -653,6 +657,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     await client.query('ROLLBACK');
     console.error('[PAYMENT ERROR] Failed to confirm payment:', err.message);
     console.error('[PAYMENT ERROR] Full error:', err);
+    logHelpers.paymentError(paymentIntentId, err);
     res.status(500).json({ error: 'Failed to complete registration', detail: err.message });
   } finally {
     client.release();

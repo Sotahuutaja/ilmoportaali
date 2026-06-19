@@ -185,16 +185,22 @@ export default function AdminUsers() {
   };
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-      <Link to="/admin" style={{ marginBottom: '1rem', display: 'inline-block', color: 'var(--accent)', textDecoration: 'none' }}>
-        ← Back to Admin
-      </Link>
+    <div>
+      <div style={{ maxWidth: 1200, margin: '0 auto', paddingBottom: '1rem' }}>
+        <Link to="/admin" style={{ marginBottom: '1rem', display: 'inline-block', color: 'var(--accent)', textDecoration: 'none' }}>
+          ← Back to Admin
+        </Link>
+        <h2 style={{ marginBottom: '1rem' }}>User Management</h2>
+      </div>
 
-      <h2>User Management</h2>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" style={{ marginLeft: '1rem', marginRight: '1rem' }}>{error}</p>}
 
-      <div className="card" style={{ marginBottom: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
+      <div className="card" style={{
+        marginBottom: '1rem',
+        marginLeft: '1rem',
+        marginRight: '1rem'
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
           <div>
             <label>First name</label>
             <input
@@ -271,7 +277,15 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'auto' }}>
+      <div className="card" style={{
+        padding: 0,
+        overflow: 'auto',
+        marginLeft: '1rem',
+        marginRight: '1rem',
+        width: '100vw',
+        marginLeft: 'calc(-50vw + 50%)',
+        marginRight: 'calc(-50vw + 50%)'
+      }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>

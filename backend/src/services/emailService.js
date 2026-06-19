@@ -3,6 +3,7 @@
  */
 
 const nodemailer = require('nodemailer');
+const { logHelpers } = require('./logService');
 
 // Initialize Gmail transporter
 const gmailUser = process.env.GMAIL_USER;
@@ -167,9 +168,11 @@ Ilmoportaali Team
 
     await transporter.sendMail(msg);
     console.log(`[EMAIL] Confirmation email sent to ${userEmail} for registration ${registrationId}`);
+    logHelpers.emailSuccess('registration confirmation', userEmail);
     return true;
   } catch (err) {
     console.error('[EMAIL ERROR] Failed to send confirmation email:', err.message);
+    logHelpers.emailError('registration confirmation', userEmail, err);
     // Don't throw - email failure shouldn't block registration
     return false;
   }
@@ -284,9 +287,11 @@ Ilmoportaali Team
 
     await transporter.sendMail(msg);
     console.log(`[EMAIL] Cancellation email sent to ${userEmail} for registration ${registrationId}`);
+    logHelpers.emailSuccess('registration cancellation', userEmail);
     return true;
   } catch (err) {
     console.error('[EMAIL ERROR] Failed to send cancellation email:', err.message);
+    logHelpers.emailError('registration cancellation', userEmail, err);
     return false;
   }
 }

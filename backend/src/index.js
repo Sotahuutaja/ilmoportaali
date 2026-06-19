@@ -40,6 +40,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/teams', require('./routes/teams'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/webhooks', require('./routes/webhooks'));
+app.use('/api/logs', require('./routes/logs'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Ilmoportaali API' });

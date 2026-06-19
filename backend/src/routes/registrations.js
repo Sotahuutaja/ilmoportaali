@@ -5,6 +5,7 @@ const router = express.Router();
 const { canManageEvent } = require('../utils/eventAccess');
 const stripe = require('../services/stripeService');
 const { sendAdditionalPaymentEmail, sendRefundEmail } = require('../services/email');
+const { logHelpers } = require('../services/logService');
 
 // Helper: calculate total price for a set of products
 async function calculateProductPrice(client, products, eventId) {
@@ -360,9 +361,11 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
         });
 
         console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${registrationId} (user cancellation)`);
+        logHelpers.refundSuccess(registrationId, refundAmount, 'user cancellation');
       }
     } catch (err) {
       console.error('[REFUND ERROR] Failed to issue refund:', err.message);
+      logHelpers.refundError(registrationId, err);
       // Don't fail the cancellation if refund fails - continue with deletion
     }
 
@@ -409,10 +412,12 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
       [req.user.id, req.params.eventId]
     );
 
+    logHelpers.cancellationSuccess(registrationId, req.user.id);
     res.json({ message: 'Registration cancelled' });
   } catch (err) {
     console.error('Failed to cancel registration:', err.message);
     console.error('Full error:', err);
+    logHelpers.cancellationError(registrationId, err);
     res.status(500).json({ error: 'Failed to cancel registration', detail: err.message });
   }
 });
@@ -625,9 +630,11 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
           const cancellationType = isManagerCancellation ? 'manager cancellation' : 'team captain cancellation';
           const modeLabel = stripeMode === 'test' ? '(test mode)' : '(live mode)';
           console.log(`[REFUND] Issued €${(refundAmount / 100).toFixed(2)} refund for registration ${registrationId} (${cancellationType}) ${modeLabel}`);
+          logHelpers.refundSuccess(registrationId, refundAmount, cancellationType);
         }
       } catch (err) {
         console.error('[REFUND ERROR] Failed to issue refund:', err.message);
+        logHelpers.refundError(registrationId, err);
         // Don't fail the cancellation if refund fails - continue with deletion
       }
     }
@@ -675,10 +682,12 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
       [req.params.registrationId, req.params.eventId]
     );
 
+    logHelpers.cancellationSuccess(req.params.registrationId, req.user.id);
     res.json({ message: 'Registration cancelled' });
   } catch (err) {
     console.error('Failed to cancel registration:', err.message);
     console.error('Full error:', err);
+    logHelpers.cancellationError(req.params.registrationId, err);
     res.status(500).json({ error: 'Failed to cancel registration', detail: err.message });
   }
 });

@@ -79,6 +79,34 @@ export default function Admin() {
             </button>
           </div>
         </Link>
+
+        <Link to="/admin/logs" style={{ textDecoration: 'none' }}>
+          <div className="card" style={{
+            padding: '2rem',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            border: '2px solid transparent',
+            height: '100%'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = 'var(--accent)';
+            e.currentTarget.style.background = 'var(--surface-2)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = 'transparent';
+            e.currentTarget.style.background = 'transparent';
+          }}
+          >
+            <h2 style={{ color: 'var(--accent)', marginTop: 0 }}>📋 System Logs</h2>
+            <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0 1.5rem' }}>
+              View and troubleshoot registration, payment, and system errors
+            </p>
+            <button className="btn btn-primary" style={{ width: '100%' }}>
+              View Logs
+            </button>
+          </div>
+        </Link>
       </div>
     </div>
   );
