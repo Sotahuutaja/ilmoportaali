@@ -115,7 +115,7 @@ router.post('/login', loginLimit, async (req, res) => {
 
     // Return only user data, not tokens
     res.json({
-      user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, role: user.role }
+      user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, role: user.role, year_of_birth: user.year_of_birth, gender: user.gender }
     });
   } catch (err) {
     console.error('Login failed:', err.message);
