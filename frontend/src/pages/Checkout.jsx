@@ -37,6 +37,15 @@ export default function Checkout() {
     console.log('[CHECKOUT] URL params:', { redirectStatus, paymentIntentId, clientSecret: !!clientSecret, amountParam, id });
     console.log('[CHECKOUT] localStorage keys:', Object.keys(localStorage));
 
+    // Handle payment failure redirect
+    if (redirectStatus === 'failed') {
+      console.log('[CHECKOUT] Payment failed');
+      setError('❌ Payment failed. Please try again or contact support if the problem persists.');
+      setIsProcessingRedirect(false);
+      setLoading(false);
+      return;
+    }
+
     // Handle additional payment (paymentIntentId from email link)
     if (paymentIntentId && clientSecret && !redirectStatus) {
       console.log('[CHECKOUT] Detected additional payment scenario');
@@ -66,6 +75,12 @@ export default function Checkout() {
         console.log('[CHECKOUT] Additional payment redirect - confirming directly');
         // Set registrationData so render doesn't show "Event not found"
         setRegistrationData({ isAdditionalPayment: true });
+        // Check if it's a failed additional payment
+        if (redirectStatus !== 'succeeded') {
+          setError('❌ Payment failed. Please check your payment method and try again.');
+          setIsProcessingRedirect(false);
+          return;
+        }
         handlePaymentRedirectSuccess(paymentIntentId, { isAdditionalPayment: true });
         return;
       }
@@ -80,16 +95,22 @@ export default function Checkout() {
         try {
           const regData = JSON.parse(saved);
           console.log('[CHECKOUT] Parsed registration data:', regData);
+          // Check if payment actually succeeded before processing
+          if (redirectStatus !== 'succeeded') {
+            setError('❌ Payment failed. Please check your payment method and try again.');
+            setIsProcessingRedirect(false);
+            return;
+          }
           handlePaymentRedirectSuccess(paymentIntentId, regData);
           return;
         } catch (err) {
           console.error('Failed to process payment redirect:', err);
-          setError('Failed to process payment redirect');
+          setError('❌ Failed to process payment. Please contact support if this persists.');
           setIsProcessingRedirect(false);
         }
       } else {
         console.warn('[CHECKOUT] No saved registration data found');
-        setError('Payment redirect detected but no registration data found');
+        setError('❌ Payment redirect detected but registration data was lost. Please try registering again.');
         setIsProcessingRedirect(false);
       }
     }
@@ -373,6 +394,24 @@ export default function Checkout() {
               Back to events
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there's an error message (like payment failed)
+  if (error && !loading && !isProcessingRedirect) {
+    return (
+      <div style={{ maxWidth: 640, margin: '2rem auto' }}>
+        <div className="card">
+          <h2 style={{ color: '#c0392b', marginBottom: '1rem' }}>Payment Status</h2>
+          <p className="error" style={{ fontSize: '1rem', marginBottom: '1.5rem' }}>{error}</p>
+          <button
+            onClick={() => navigate('/')}
+            className="btn btn-primary"
+          >
+            Return to Events
+          </button>
         </div>
       </div>
     );
