@@ -1,4 +1,5 @@
 const express = require('express');
+const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { getLogs, clearLogs, CATEGORIES, LEVELS } = require('../services/logService');
 
@@ -12,7 +13,7 @@ const router = express.Router();
  *   - search: Search in message and details
  *   - limit: Max number of logs to return (default 100, max 500)
  */
-router.get('/', requireAuth, requireRole(undefined, 'admin'), (req, res) => {
+router.get('/', requireAuth, requireRole(pool, 'admin'), (req, res) => {
   try {
     const { category, level, search, limit } = req.query;
 
@@ -49,7 +50,7 @@ router.get('/', requireAuth, requireRole(undefined, 'admin'), (req, res) => {
 /**
  * DELETE /api/logs - Clear all logs (admin only)
  */
-router.delete('/', requireAuth, requireRole(undefined, 'admin'), (req, res) => {
+router.delete('/', requireAuth, requireRole(pool, 'admin'), (req, res) => {
   try {
     clearLogs();
     res.json({ message: 'Logs cleared' });
