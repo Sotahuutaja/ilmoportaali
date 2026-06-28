@@ -42,24 +42,28 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '0.6rem',
               borderRadius: isSelected && fields.length > 0 ? '6px 6px 0 0' : '6px',
-              border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+              border: `2px solid ${isSelected ? 'var(--accent)' : outOfStock ? '#ddd' : 'var(--border)'}`,
               borderBottom: isSelected && fields.length > 0 ? 'none' : undefined,
-              opacity: outOfStock ? 0.5 : 1, cursor: outOfStock ? 'not-allowed' : 'pointer',
-              background: isSelected ? 'var(--surface-3)' : 'var(--surface-2)'
+              opacity: outOfStock ? 0.6 : 1,
+              cursor: outOfStock ? 'not-allowed' : 'pointer',
+              background: outOfStock ? 'var(--surface-1)' : isSelected ? 'var(--surface-3)' : 'var(--surface-2)',
+              position: 'relative'
             }}
               onClick={() => !outOfStock && onToggle(p.id, setSelected)}
             >
-              <div>
-                <strong>{p.name}</strong>
-                {p.description && <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
+              <div style={{ flex: 1 }}>
+                <strong style={{ textDecoration: outOfStock ? 'line-through' : 'none', color: outOfStock ? 'var(--text-muted)' : 'inherit' }}>
+                  {p.name}
+                </strong>
+                {p.description && <span style={{ color: outOfStock ? '#999' : 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem', textDecoration: outOfStock ? 'line-through' : 'none' }}>{p.description}</span>}
                 {p.quantity !== null && p.remaining !== null && p.remaining !== undefined && (
-                  <span style={{ color: p.remaining === 0 ? '#c0392b' : 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
-                    {p.remaining === 0 ? 'Sold out' : `${p.remaining} left`}
+                  <span style={{ color: p.remaining === 0 ? '#c0392b' : 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem', fontWeight: p.remaining === 0 ? 'bold' : 'normal' }}>
+                    {p.remaining === 0 ? '● Sold Out' : `${p.remaining} left`}
                   </span>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <strong>€{effectivePrice.toFixed(2)}</strong>
+                <strong style={{ color: outOfStock ? '#999' : 'inherit' }}>€{effectivePrice.toFixed(2)}</strong>
                 {isSelected && (
                   <input
                     type="number" min="1"

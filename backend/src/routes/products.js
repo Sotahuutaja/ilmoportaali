@@ -8,7 +8,17 @@ const { canManageEvent } = require('../utils/eventAccess');
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.*
+      SELECT p.*,
+        CASE
+          WHEN p.quantity IS NOT NULL THEN
+            p.quantity - COALESCE((
+              SELECT SUM(rp.quantity)
+              FROM registration_products rp
+              JOIN registrations r ON rp.registration_id = r.id
+              WHERE rp.product_id = p.id AND r.event_id = p.event_id
+            ), 0)
+          ELSE NULL
+        END as remaining
       FROM event_products p
       WHERE p.event_id = $1
       ORDER BY p.sort_order ASC, p.name ASC
