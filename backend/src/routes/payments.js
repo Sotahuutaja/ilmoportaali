@@ -42,7 +42,7 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
       }
 
       const product = await pool.query(
-        'SELECT price, fields, quantity FROM event_products WHERE id = $1 AND event_id = $2',
+        'SELECT name, price, fields, quantity FROM event_products WHERE id = $1 AND event_id = $2',
         [product_id, eventId]
       );
 
@@ -72,7 +72,8 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
         const remaining = product.rows[0].quantity - parseInt(used.rows[0].used);
         if (remaining < quantity) {
           return res.status(409).json({
-            error: `Product has insufficient stock`,
+            error: `${product.rows[0].name} has insufficient stock (${remaining} available, ${quantity} requested)`,
+            product: product.rows[0].name,
             requested: quantity,
             remaining: remaining
           });
@@ -478,7 +479,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
         // Validate select fields have values before querying product
         const productInfo = await client.query(
-          'SELECT price, fields, quantity FROM event_products WHERE id = $1',
+          'SELECT name, price, fields, quantity FROM event_products WHERE id = $1',
           [product_id]
         );
 
@@ -507,7 +508,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
           );
           const remaining = product.rows[0].quantity - parseInt(used.rows[0].used);
           if (remaining < quantity) {
-            throw new Error(`Product has insufficient stock (${remaining} remaining, ${quantity} requested)`);
+            throw new Error(`${product.rows[0].name} has insufficient stock (${remaining} available, ${quantity} requested)`);
           }
         }
 

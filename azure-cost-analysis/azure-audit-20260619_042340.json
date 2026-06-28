@@ -1,0 +1,1059 @@
+{
+  "timestamp": "2026-06-19T01:23:28.173607+00:00",
+  "resources": {
+    "groups": [
+      {
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali",
+        "location": "swedencentral",
+        "managedBy": null,
+        "name": "RG_Ilmoportaali",
+        "properties": {
+          "provisioningState": "Succeeded"
+        },
+        "tags": {},
+        "type": "Microsoft.Resources/resourceGroups"
+      }
+    ],
+    "all": [
+      {
+        "changedTime": "2026-05-26T13:05:52.822570+00:00",
+        "createdTime": "2026-05-26T12:55:52.539075+00:00",
+        "extendedLocation": null,
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.ContainerRegistry/registries/ilmoportaaliregistry",
+        "identity": null,
+        "kind": null,
+        "location": "swedencentral",
+        "managedBy": null,
+        "name": "ilmoportaaliregistry",
+        "plan": null,
+        "properties": null,
+        "provisioningState": "Succeeded",
+        "resourceGroup": "RG_Ilmoportaali",
+        "sku": {
+          "capacity": null,
+          "family": null,
+          "model": null,
+          "name": "Basic",
+          "size": null,
+          "tier": "Basic"
+        },
+        "systemData": {
+          "createdAt": "2026-05-26T12:55:52.5519301Z",
+          "createdBy": "ville@sotahuuto.fi",
+          "createdByType": "User",
+          "lastModifiedAt": "2026-05-26T12:55:52.5519301Z",
+          "lastModifiedBy": "ville@sotahuuto.fi",
+          "lastModifiedByType": "User"
+        },
+        "tags": {},
+        "type": "Microsoft.ContainerRegistry/registries"
+      },
+      {
+        "changedTime": "2026-05-26T13:21:42.503470+00:00",
+        "createdTime": "2026-05-26T13:11:19.690073+00:00",
+        "extendedLocation": null,
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.OperationalInsights/workspaces/workspace-lmoportaalirp0I",
+        "identity": null,
+        "kind": null,
+        "location": "swedencentral",
+        "managedBy": null,
+        "name": "workspace-lmoportaalirp0I",
+        "plan": null,
+        "properties": null,
+        "provisioningState": "Succeeded",
+        "resourceGroup": "RG_Ilmoportaali",
+        "sku": null,
+        "tags": null,
+        "type": "Microsoft.OperationalInsights/workspaces"
+      },
+      {
+        "changedTime": "2026-05-26T13:23:49.991338+00:00",
+        "createdTime": "2026-05-26T13:11:53.178819+00:00",
+        "extendedLocation": null,
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/managedEnvironments/ilmoportaali-env",
+        "identity": null,
+        "kind": null,
+        "location": "swedencentral",
+        "managedBy": null,
+        "name": "ilmoportaali-env",
+        "plan": null,
+        "properties": null,
+        "provisioningState": "Succeeded",
+        "resourceGroup": "RG_Ilmoportaali",
+        "sku": null,
+        "systemData": {
+          "createdAt": "2026-05-26T13:11:53.1901677Z",
+          "createdBy": "ville@sotahuuto.fi",
+          "createdByType": "User",
+          "lastModifiedAt": "2026-05-26T13:11:53.1901677Z",
+          "lastModifiedBy": "ville@sotahuuto.fi",
+          "lastModifiedByType": "User"
+        },
+        "tags": null,
+        "type": "Microsoft.App/managedEnvironments"
+      },
+      {
+        "changedTime": "2026-05-30T12:36:08.493371+00:00",
+        "createdTime": "2026-05-26T13:14:35.223330+00:00",
+        "extendedLocation": null,
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_ilmoportaali/providers/Microsoft.App/containerApps/ilmoportaali-app",
+        "identity": {
+          "principalId": null,
+          "tenantId": null,
+          "type": "None",
+          "userAssignedIdentities": null
+        },
+        "kind": null,
+        "location": "swedencentral",
+        "managedBy": null,
+        "name": "ilmoportaali-app",
+        "plan": null,
+        "properties": null,
+        "provisioningState": "Succeeded",
+        "resourceGroup": "RG_ilmoportaali",
+        "sku": null,
+        "systemData": {
+          "createdAt": "2026-05-26T13:14:35.2333284Z",
+          "createdBy": "ville@sotahuuto.fi",
+          "createdByType": "User",
+          "lastModifiedAt": "2026-05-30T12:26:40.3157159Z",
+          "lastModifiedBy": "ville@sotahuuto.fi",
+          "lastModifiedByType": "User"
+        },
+        "tags": null,
+        "type": "Microsoft.App/containerApps"
+      },
+      {
+        "changedTime": "2026-05-30T12:21:36.800897+00:00",
+        "createdTime": "2026-05-26T13:25:06.189396+00:00",
+        "extendedLocation": null,
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_ilmoportaali/providers/Microsoft.DBforPostgreSQL/flexibleServers/ilmoportaali-db",
+        "identity": null,
+        "kind": null,
+        "location": "swedencentral",
+        "managedBy": null,
+        "name": "ilmoportaali-db",
+        "plan": null,
+        "properties": null,
+        "provisioningState": "Succeeded",
+        "resourceGroup": "RG_ilmoportaali",
+        "sku": {
+          "capacity": null,
+          "family": null,
+          "model": null,
+          "name": "Standard_B1ms",
+          "size": null,
+          "tier": "Burstable"
+        },
+        "systemData": {
+          "createdAt": "2026-05-26T13:25:22.8298192Z"
+        },
+        "tags": null,
+        "type": "Microsoft.DBforPostgreSQL/flexibleServers"
+      },
+      {
+        "changedTime": "2026-05-26T16:52:31.380113+00:00",
+        "createdTime": "2026-05-26T16:42:14.307679+00:00",
+        "extendedLocation": null,
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/containerApps/ilmoportaali-frontend",
+        "identity": {
+          "principalId": null,
+          "tenantId": null,
+          "type": "None",
+          "userAssignedIdentities": null
+        },
+        "kind": null,
+        "location": "swedencentral",
+        "managedBy": null,
+        "name": "ilmoportaali-frontend",
+        "plan": null,
+        "properties": null,
+        "provisioningState": "Succeeded",
+        "resourceGroup": "RG_Ilmoportaali",
+        "sku": null,
+        "systemData": {
+          "createdAt": "2026-05-26T16:42:14.3137014Z",
+          "createdBy": "ville@sotahuuto.fi",
+          "createdByType": "User",
+          "lastModifiedAt": "2026-05-26T16:42:14.3137014Z",
+          "lastModifiedBy": "ville@sotahuuto.fi",
+          "lastModifiedByType": "User"
+        },
+        "tags": null,
+        "type": "Microsoft.App/containerApps"
+      },
+      {
+        "changedTime": "2026-06-17T14:08:06.451175+00:00",
+        "createdTime": "2026-06-17T13:53:15.157584+00:00",
+        "extendedLocation": null,
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/managedEnvironments/ilmoportaali-env/managedCertificates/ilmoportaali.boffaus.fi-ilmoport-260617135316",
+        "identity": null,
+        "kind": null,
+        "location": "swedencentral",
+        "managedBy": null,
+        "name": "ilmoportaali-env/ilmoportaali.boffaus.fi-ilmoport-260617135316",
+        "plan": null,
+        "properties": null,
+        "provisioningState": "Succeeded",
+        "resourceGroup": "RG_Ilmoportaali",
+        "sku": null,
+        "systemData": {
+          "createdAt": "2026-06-17T13:53:15.167476Z",
+          "createdBy": "ville@sotahuuto.fi",
+          "createdByType": "User",
+          "lastModifiedAt": "2026-06-17T13:53:15.167476Z",
+          "lastModifiedBy": "ville@sotahuuto.fi",
+          "lastModifiedByType": "User"
+        },
+        "tags": null,
+        "type": "Microsoft.App/managedEnvironments/managedCertificates"
+      }
+    ],
+    "containerApps": [
+      {
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/containerapps/ilmoportaali-app",
+        "identity": {
+          "type": "None"
+        },
+        "location": "Sweden Central",
+        "name": "ilmoportaali-app",
+        "properties": {
+          "configuration": {
+            "activeRevisionsMode": "Single",
+            "dapr": null,
+            "identitySettings": [],
+            "ingress": {
+              "additionalPortMappings": null,
+              "allowInsecure": false,
+              "clientCertificateMode": null,
+              "corsPolicy": null,
+              "customDomains": null,
+              "exposedPort": 0,
+              "external": true,
+              "fqdn": "ilmoportaali-app.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io",
+              "ipSecurityRestrictions": null,
+              "stickySessions": null,
+              "targetPort": 3000,
+              "traffic": [
+                {
+                  "latestRevision": true,
+                  "weight": 100
+                }
+              ],
+              "transport": "Auto"
+            },
+            "maxInactiveRevisions": 100,
+            "registries": [
+              {
+                "identity": "",
+                "passwordSecretRef": "ilmoportaaliregistryazurecrio-ilmoportaaliregistry",
+                "server": "ilmoportaaliregistry.azurecr.io",
+                "username": "ilmoportaaliregistry"
+              }
+            ],
+            "runtime": null,
+            "secrets": [
+              {
+                "name": "stripe-secret-key-test"
+              },
+              {
+                "name": "database-url"
+              },
+              {
+                "name": "gmail-from-email"
+              },
+              {
+                "name": "gmail-password"
+              },
+              {
+                "name": "gmail-user"
+              },
+              {
+                "name": "ilmoportaaliregistryazurecrio-ilmoportaaliregistry"
+              },
+              {
+                "name": "jwt-secret"
+              },
+              {
+                "name": "stripe-secret-key"
+              }
+            ],
+            "service": null
+          },
+          "customDomainVerificationId": "139E6093374EE0A10F8720AFB9377DE0613FEFDE4CF0F9C48905ADC6E0AD3D28",
+          "delegatedIdentities": [],
+          "environmentId": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/managedEnvironments/ilmoportaali-env",
+          "eventStreamEndpoint": "https://swedencentral.azurecontainerapps.dev/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/containerApps/ilmoportaali-app/eventstream",
+          "latestReadyRevisionName": "ilmoportaali-app--20260619010323",
+          "latestRevisionFqdn": "ilmoportaali-app--20260619010323.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io",
+          "latestRevisionName": "ilmoportaali-app--20260619010323",
+          "managedEnvironmentId": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/managedEnvironments/ilmoportaali-env",
+          "outboundIpAddresses": [
+            "20.240.28.167",
+            "20.240.28.184",
+            "20.240.28.187",
+            "20.240.29.51",
+            "74.241.193.90",
+            "74.241.192.157",
+            "74.241.192.45",
+            "74.241.193.154",
+            "74.241.192.111",
+            "74.241.193.34",
+            "9.223.20.105",
+            "135.116.6.186",
+            "9.223.21.30",
+            "9.223.218.210",
+            "135.116.14.134",
+            "9.223.143.243",
+            "9.223.9.149",
+            "74.241.137.85",
+            "74.241.139.161",
+            "74.241.138.64",
+            "74.241.136.237",
+            "9.223.21.119",
+            "9.223.10.153",
+            "9.223.225.145",
+            "9.223.220.233",
+            "74.241.136.44",
+            "9.223.87.134",
+            "74.241.139.29",
+            "9.223.20.250",
+            "9.223.20.145",
+            "4.165.209.240",
+            "135.116.226.238",
+            "4.166.9.251",
+            "4.165.176.240",
+            "20.240.79.13",
+            "135.116.227.160",
+            "9.223.50.170",
+            "4.166.25.29",
+            "4.165.76.107",
+            "4.165.203.7",
+            "9.223.233.171",
+            "20.240.79.105",
+            "4.166.25.27",
+            "4.165.180.97",
+            "4.165.212.33",
+            "4.165.50.168",
+            "4.165.76.100",
+            "135.116.32.9",
+            "135.116.224.222",
+            "4.165.204.10",
+            "135.116.225.242",
+            "4.165.52.62",
+            "4.165.212.49",
+            "4.223.240.101",
+            "4.166.8.216",
+            "4.165.203.152",
+            "4.223.241.8",
+            "4.165.203.27",
+            "4.166.9.244",
+            "4.165.212.15",
+            "135.116.226.162",
+            "4.165.179.11",
+            "4.165.210.180",
+            "9.223.255.200",
+            "4.225.212.26",
+            "4.225.244.218",
+            "9.223.253.65",
+            "4.166.25.22",
+            "9.223.252.224",
+            "4.165.119.118",
+            "9.223.247.5",
+            "135.116.34.25",
+            "9.223.53.31",
+            "4.165.119.145",
+            "4.225.246.106",
+            "4.165.209.248",
+            "4.225.133.229",
+            "4.165.119.191",
+            "4.165.117.222",
+            "4.165.118.233",
+            "20.240.38.142",
+            "20.240.38.235",
+            "20.240.37.255",
+            "20.240.37.231",
+            "74.241.204.139",
+            "74.241.204.246",
+            "74.241.202.17",
+            "74.241.200.59",
+            "74.241.205.78",
+            "74.241.203.192",
+            "9.223.237.26",
+            "9.223.246.165",
+            "74.241.209.91",
+            "74.241.211.241",
+            "9.223.245.238",
+            "135.116.14.86",
+            "9.223.173.128",
+            "9.223.237.22",
+            "4.225.86.27",
+            "9.223.75.69",
+            "9.223.245.208",
+            "9.223.237.31",
+            "9.223.45.114",
+            "9.223.24.231",
+            "74.241.210.170",
+            "9.223.246.185",
+            "9.223.16.144",
+            "135.116.37.178",
+            "9.223.247.36",
+            "9.223.18.163",
+            "135.116.250.110",
+            "4.165.173.7",
+            "74.241.157.194",
+            "4.165.26.163",
+            "74.241.159.212",
+            "74.241.159.77",
+            "135.116.178.176",
+            "4.166.117.48",
+            "4.165.176.183",
+            "20.240.12.17",
+            "4.165.172.120",
+            "20.240.2.251",
+            "135.116.254.221",
+            "9.223.172.88",
+            "4.225.116.74",
+            "20.91.175.40",
+            "4.166.117.45",
+            "20.91.175.8",
+            "9.223.253.183",
+            "4.225.88.53",
+            "4.165.25.144",
+            "135.116.182.186",
+            "20.240.12.16",
+            "4.165.81.3",
+            "20.240.3.209",
+            "20.91.174.21",
+            "4.165.170.230",
+            "135.116.251.75",
+            "20.240.6.65",
+            "9.223.253.233",
+            "20.240.9.76",
+            "20.240.3.208",
+            "4.165.86.101",
+            "4.165.176.35",
+            "20.240.12.18",
+            "4.165.27.189",
+            "4.165.28.127",
+            "4.225.140.87",
+            "74.241.193.222",
+            "135.225.8.157",
+            "4.165.27.88",
+            "4.165.27.58",
+            "4.165.26.200",
+            "20.240.12.19",
+            "4.165.171.165",
+            "4.225.140.68",
+            "9.223.171.36",
+            "74.241.157.195",
+            "135.116.237.150",
+            "4.225.140.86",
+            "4.223.49.153"
+          ],
+          "provisioningState": "Succeeded",
+          "runningStatus": "Running",
+          "template": {
+            "containers": [
+              {
+                "args": [],
+                "command": [],
+                "env": [
+                  {
+                    "name": "DATABASE_URL",
+                    "secretRef": "database-url",
+                    "value": ""
+                  },
+                  {
+                    "name": "JWT_SECRET",
+                    "secretRef": "jwt-secret",
+                    "value": ""
+                  },
+                  {
+                    "name": "APP_URL",
+                    "value": "https://ilmoportaali-frontend.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io"
+                  },
+                  {
+                    "name": "STRIPE_SECRET_KEY",
+                    "secretRef": "stripe-secret-key",
+                    "value": ""
+                  },
+                  {
+                    "name": "GMAIL_USER",
+                    "secretRef": "gmail-user",
+                    "value": ""
+                  },
+                  {
+                    "name": "GMAIL_PASSWORD",
+                    "secretRef": "gmail-password",
+                    "value": ""
+                  },
+                  {
+                    "name": "GMAIL_FROM_EMAIL",
+                    "secretRef": "gmail-from-email",
+                    "value": ""
+                  },
+                  {
+                    "name": "STRIPE_SECRET_KEY_TEST",
+                    "secretRef": "stripe-secret-key-test",
+                    "value": ""
+                  }
+                ],
+                "image": "ilmoportaaliregistry.azurecr.io/backend:latest",
+                "name": "ilmoportaali-app",
+                "probes": [
+                  {
+                    "failureThreshold": 3,
+                    "initialDelaySeconds": 0,
+                    "periodSeconds": 10,
+                    "successThreshold": 1,
+                    "tcpSocket": {
+                      "port": 3000
+                    },
+                    "timeoutSeconds": 5,
+                    "type": "Liveness"
+                  },
+                  {
+                    "failureThreshold": 48,
+                    "initialDelaySeconds": 0,
+                    "periodSeconds": 5,
+                    "successThreshold": 1,
+                    "tcpSocket": {
+                      "port": 3000
+                    },
+                    "timeoutSeconds": 5,
+                    "type": "Readiness"
+                  },
+                  {
+                    "failureThreshold": 240,
+                    "initialDelaySeconds": 1,
+                    "periodSeconds": 1,
+                    "successThreshold": 1,
+                    "tcpSocket": {
+                      "port": 3000
+                    },
+                    "timeoutSeconds": 3,
+                    "type": "Startup"
+                  }
+                ],
+                "resources": {
+                  "cpu": 0.5,
+                  "ephemeralStorage": "2Gi",
+                  "memory": "1Gi"
+                }
+              }
+            ],
+            "initContainers": null,
+            "revisionSuffix": "20260619010323",
+            "scale": {
+              "cooldownPeriod": 300,
+              "maxReplicas": 2,
+              "minReplicas": 1,
+              "pollingInterval": 30,
+              "rules": [
+                {
+                  "http": {
+                    "metadata": {
+                      "concurrentRequests": "10"
+                    }
+                  },
+                  "name": "http-scaler"
+                }
+              ]
+            },
+            "serviceBinds": null,
+            "terminationGracePeriodSeconds": null,
+            "volumes": []
+          },
+          "workloadProfileName": "Consumption"
+        },
+        "resourceGroup": "RG_Ilmoportaali",
+        "systemData": {
+          "createdAt": "2026-05-26T13:14:35.2333284",
+          "createdBy": "ville@sotahuuto.fi",
+          "createdByType": "User",
+          "lastModifiedAt": "2026-06-19T01:03:27.3349747",
+          "lastModifiedBy": "4eb2bb9c-a38f-4325-a37f-511165f58a38",
+          "lastModifiedByType": "Application"
+        },
+        "type": "Microsoft.App/containerApps"
+      },
+      {
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/containerapps/ilmoportaali-frontend",
+        "identity": {
+          "type": "None"
+        },
+        "location": "Sweden Central",
+        "name": "ilmoportaali-frontend",
+        "properties": {
+          "configuration": {
+            "activeRevisionsMode": "Single",
+            "dapr": null,
+            "identitySettings": [],
+            "ingress": {
+              "additionalPortMappings": null,
+              "allowInsecure": false,
+              "clientCertificateMode": null,
+              "corsPolicy": null,
+              "customDomains": [
+                {
+                  "bindingType": "SniEnabled",
+                  "certificateId": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/managedEnvironments/ilmoportaali-env/managedCertificates/ilmoportaali.boffaus.fi-ilmoport-260617135316",
+                  "name": "ilmoportaali.boffaus.fi"
+                }
+              ],
+              "exposedPort": 0,
+              "external": true,
+              "fqdn": "ilmoportaali-frontend.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io",
+              "ipSecurityRestrictions": null,
+              "stickySessions": null,
+              "targetPort": 80,
+              "traffic": [
+                {
+                  "latestRevision": true,
+                  "weight": 100
+                }
+              ],
+              "transport": "Auto"
+            },
+            "maxInactiveRevisions": 100,
+            "registries": [
+              {
+                "identity": "",
+                "passwordSecretRef": "ilmoportaaliregistryazurecrio-ilmoportaaliregistry",
+                "server": "ilmoportaaliregistry.azurecr.io",
+                "username": "ilmoportaaliregistry"
+              }
+            ],
+            "runtime": null,
+            "secrets": [
+              {
+                "name": "ilmoportaaliregistryazurecrio-ilmoportaaliregistry"
+              }
+            ],
+            "service": null
+          },
+          "customDomainVerificationId": "139E6093374EE0A10F8720AFB9377DE0613FEFDE4CF0F9C48905ADC6E0AD3D28",
+          "delegatedIdentities": [],
+          "environmentId": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/managedEnvironments/ilmoportaali-env",
+          "eventStreamEndpoint": "https://swedencentral.azurecontainerapps.dev/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/containerApps/ilmoportaali-frontend/eventstream",
+          "latestReadyRevisionName": "ilmoportaali-frontend--20260619005245",
+          "latestRevisionFqdn": "ilmoportaali-frontend--20260619005245.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io",
+          "latestRevisionName": "ilmoportaali-frontend--20260619005245",
+          "managedEnvironmentId": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/managedEnvironments/ilmoportaali-env",
+          "outboundIpAddresses": [
+            "20.240.28.167",
+            "20.240.28.184",
+            "20.240.28.187",
+            "20.240.29.51",
+            "74.241.193.90",
+            "74.241.192.157",
+            "74.241.192.45",
+            "74.241.193.154",
+            "74.241.192.111",
+            "74.241.193.34",
+            "9.223.20.105",
+            "135.116.6.186",
+            "9.223.21.30",
+            "9.223.218.210",
+            "135.116.14.134",
+            "9.223.143.243",
+            "9.223.9.149",
+            "74.241.137.85",
+            "74.241.139.161",
+            "74.241.138.64",
+            "74.241.136.237",
+            "9.223.21.119",
+            "9.223.10.153",
+            "9.223.225.145",
+            "9.223.220.233",
+            "74.241.136.44",
+            "9.223.87.134",
+            "74.241.139.29",
+            "9.223.20.250",
+            "9.223.20.145",
+            "4.165.209.240",
+            "135.116.226.238",
+            "4.166.9.251",
+            "4.165.176.240",
+            "20.240.79.13",
+            "135.116.227.160",
+            "9.223.50.170",
+            "4.166.25.29",
+            "4.165.76.107",
+            "4.165.203.7",
+            "9.223.233.171",
+            "20.240.79.105",
+            "4.166.25.27",
+            "4.165.180.97",
+            "4.165.212.33",
+            "4.165.50.168",
+            "4.165.76.100",
+            "135.116.32.9",
+            "135.116.224.222",
+            "4.165.204.10",
+            "135.116.225.242",
+            "4.165.52.62",
+            "4.165.212.49",
+            "4.223.240.101",
+            "4.166.8.216",
+            "4.165.203.152",
+            "4.223.241.8",
+            "4.165.203.27",
+            "4.166.9.244",
+            "4.165.212.15",
+            "135.116.226.162",
+            "4.165.179.11",
+            "4.165.210.180",
+            "9.223.255.200",
+            "4.225.212.26",
+            "4.225.244.218",
+            "9.223.253.65",
+            "4.166.25.22",
+            "9.223.252.224",
+            "4.165.119.118",
+            "9.223.247.5",
+            "135.116.34.25",
+            "9.223.53.31",
+            "4.165.119.145",
+            "4.225.246.106",
+            "4.165.209.248",
+            "4.225.133.229",
+            "4.165.119.191",
+            "4.165.117.222",
+            "4.165.118.233",
+            "20.240.38.142",
+            "20.240.38.235",
+            "20.240.37.255",
+            "20.240.37.231",
+            "74.241.204.139",
+            "74.241.204.246",
+            "74.241.202.17",
+            "74.241.200.59",
+            "74.241.205.78",
+            "74.241.203.192",
+            "9.223.237.26",
+            "9.223.246.165",
+            "74.241.209.91",
+            "74.241.211.241",
+            "9.223.245.238",
+            "135.116.14.86",
+            "9.223.173.128",
+            "9.223.237.22",
+            "4.225.86.27",
+            "9.223.75.69",
+            "9.223.245.208",
+            "9.223.237.31",
+            "9.223.45.114",
+            "9.223.24.231",
+            "74.241.210.170",
+            "9.223.246.185",
+            "9.223.16.144",
+            "135.116.37.178",
+            "9.223.247.36",
+            "9.223.18.163",
+            "135.116.250.110",
+            "4.165.173.7",
+            "74.241.157.194",
+            "4.165.26.163",
+            "74.241.159.212",
+            "74.241.159.77",
+            "135.116.178.176",
+            "4.166.117.48",
+            "4.165.176.183",
+            "20.240.12.17",
+            "4.165.172.120",
+            "20.240.2.251",
+            "135.116.254.221",
+            "9.223.172.88",
+            "4.225.116.74",
+            "20.91.175.40",
+            "4.166.117.45",
+            "20.91.175.8",
+            "9.223.253.183",
+            "4.225.88.53",
+            "4.165.25.144",
+            "135.116.182.186",
+            "20.240.12.16",
+            "4.165.81.3",
+            "20.240.3.209",
+            "20.91.174.21",
+            "4.165.170.230",
+            "135.116.251.75",
+            "20.240.6.65",
+            "9.223.253.233",
+            "20.240.9.76",
+            "20.240.3.208",
+            "4.165.86.101",
+            "4.165.176.35",
+            "20.240.12.18",
+            "4.165.27.189",
+            "4.165.28.127",
+            "4.225.140.87",
+            "74.241.193.222",
+            "135.225.8.157",
+            "4.165.27.88",
+            "4.165.27.58",
+            "4.165.26.200",
+            "20.240.12.19",
+            "4.165.171.165",
+            "4.225.140.68",
+            "9.223.171.36",
+            "74.241.157.195",
+            "135.116.237.150",
+            "4.225.140.86",
+            "4.223.49.153"
+          ],
+          "provisioningState": "Succeeded",
+          "runningStatus": "Running",
+          "template": {
+            "containers": [
+              {
+                "args": [],
+                "command": [],
+                "image": "ilmoportaaliregistry.azurecr.io/frontend:latest",
+                "name": "ilmoportaali-frontend",
+                "probes": [
+                  {
+                    "failureThreshold": 3,
+                    "initialDelaySeconds": 0,
+                    "periodSeconds": 10,
+                    "successThreshold": 1,
+                    "tcpSocket": {
+                      "port": 80
+                    },
+                    "timeoutSeconds": 5,
+                    "type": "Liveness"
+                  },
+                  {
+                    "failureThreshold": 48,
+                    "initialDelaySeconds": 0,
+                    "periodSeconds": 5,
+                    "successThreshold": 1,
+                    "tcpSocket": {
+                      "port": 80
+                    },
+                    "timeoutSeconds": 5,
+                    "type": "Readiness"
+                  },
+                  {
+                    "failureThreshold": 240,
+                    "initialDelaySeconds": 1,
+                    "periodSeconds": 1,
+                    "successThreshold": 1,
+                    "tcpSocket": {
+                      "port": 80
+                    },
+                    "timeoutSeconds": 3,
+                    "type": "Startup"
+                  }
+                ],
+                "resources": {
+                  "cpu": 0.5,
+                  "ephemeralStorage": "2Gi",
+                  "memory": "1Gi"
+                }
+              }
+            ],
+            "initContainers": null,
+            "revisionSuffix": "20260619005245",
+            "scale": {
+              "cooldownPeriod": 300,
+              "maxReplicas": 2,
+              "minReplicas": 1,
+              "pollingInterval": 30,
+              "rules": [
+                {
+                  "http": {
+                    "metadata": {
+                      "concurrentRequests": "10"
+                    }
+                  },
+                  "name": "http-scaler"
+                }
+              ]
+            },
+            "serviceBinds": null,
+            "terminationGracePeriodSeconds": null,
+            "volumes": []
+          },
+          "workloadProfileName": "Consumption"
+        },
+        "resourceGroup": "RG_Ilmoportaali",
+        "systemData": {
+          "createdAt": "2026-05-26T16:42:14.3137014",
+          "createdBy": "ville@sotahuuto.fi",
+          "createdByType": "User",
+          "lastModifiedAt": "2026-06-19T00:52:48.5141474",
+          "lastModifiedBy": "4eb2bb9c-a38f-4325-a37f-511165f58a38",
+          "lastModifiedByType": "Application"
+        },
+        "type": "Microsoft.App/containerApps"
+      }
+    ],
+    "containerEnvs": [
+      {
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/providers/Microsoft.App/managedEnvironments/ilmoportaali-env",
+        "location": "Sweden Central",
+        "name": "ilmoportaali-env",
+        "properties": {
+          "appInsightsConfiguration": null,
+          "appLogsConfiguration": {
+            "destination": "log-analytics",
+            "logAnalyticsConfiguration": {
+              "customerId": "21341411-48e8-4ed5-948c-285d6987c81e",
+              "sharedKey": null
+            }
+          },
+          "customDomainConfiguration": {
+            "certificateKeyVaultProperties": null,
+            "certificatePassword": null,
+            "certificateValue": null,
+            "customDomainVerificationId": "139E6093374EE0A10F8720AFB9377DE0613FEFDE4CF0F9C48905ADC6E0AD3D28",
+            "dnsSuffix": null,
+            "expirationDate": null,
+            "subjectName": null,
+            "thumbprint": null
+          },
+          "daprAIConnectionString": null,
+          "daprAIInstrumentationKey": null,
+          "daprConfiguration": {
+            "version": "1.16.4-msft.7"
+          },
+          "defaultDomain": "graysand-8ea0ea6e.swedencentral.azurecontainerapps.io",
+          "eventStreamEndpoint": "https://swedencentral.azurecontainerapps.dev/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_Ilmoportaali/managedEnvironments/ilmoportaali-env/eventstream",
+          "infrastructureResourceGroup": null,
+          "ingressConfiguration": null,
+          "kedaConfiguration": {
+            "version": "2.18.1"
+          },
+          "openTelemetryConfiguration": null,
+          "peerAuthentication": {
+            "mtls": {
+              "enabled": false
+            }
+          },
+          "peerTrafficConfiguration": {
+            "encryption": {
+              "enabled": false
+            }
+          },
+          "provisioningState": "Succeeded",
+          "publicNetworkAccess": "Enabled",
+          "staticIp": "20.91.173.106",
+          "vnetConfiguration": null,
+          "workloadProfiles": [
+            {
+              "enableFips": false,
+              "name": "Consumption",
+              "workloadProfileType": "Consumption"
+            }
+          ],
+          "zoneRedundant": false
+        },
+        "resourceGroup": "RG_Ilmoportaali",
+        "systemData": {
+          "createdAt": "2026-05-26T13:11:53.1901677",
+          "createdBy": "ville@sotahuuto.fi",
+          "createdByType": "User",
+          "lastModifiedAt": "2026-05-26T13:11:53.1901677",
+          "lastModifiedBy": "ville@sotahuuto.fi",
+          "lastModifiedByType": "User"
+        },
+        "type": "Microsoft.App/managedEnvironments"
+      }
+    ],
+    "postgresFlexible": [
+      {
+        "administratorLogin": "appuser",
+        "administratorLoginPassword": null,
+        "authConfig": {
+          "activeDirectoryAuth": "Disabled",
+          "passwordAuth": "Enabled",
+          "tenantId": null
+        },
+        "availabilityZone": "1",
+        "backup": {
+          "backupRetentionDays": 7,
+          "earliestRestoreDate": "2026-06-12T13:39:26.492319+00:00",
+          "geoRedundantBackup": "Disabled"
+        },
+        "cluster": null,
+        "createMode": null,
+        "dataEncryption": {
+          "geoBackupEncryptionKeyStatus": null,
+          "geoBackupKeyUri": null,
+          "geoBackupUserAssignedIdentityId": null,
+          "primaryEncryptionKeyStatus": null,
+          "primaryKeyUri": null,
+          "primaryUserAssignedIdentityId": null,
+          "type": "SystemManaged"
+        },
+        "fullyQualifiedDomainName": "ilmoportaali-db.postgres.database.azure.com",
+        "highAvailability": {
+          "mode": "Disabled",
+          "standbyAvailabilityZone": null,
+          "state": "NotEnabled"
+        },
+        "id": "/subscriptions/1ba25926-9098-42f7-b10a-d75c75444214/resourceGroups/RG_ilmoportaali/providers/Microsoft.DBforPostgreSQL/flexibleServers/ilmoportaali-db",
+        "identity": null,
+        "location": "Sweden Central",
+        "maintenanceWindow": {
+          "customWindow": "Disabled",
+          "dayOfWeek": 0,
+          "startHour": 0,
+          "startMinute": 0
+        },
+        "minorVersion": "13",
+        "name": "ilmoportaali-db",
+        "network": {
+          "delegatedSubnetResourceId": null,
+          "privateDnsZoneArmResourceId": null,
+          "publicNetworkAccess": "Enabled"
+        },
+        "pointInTimeUtc": null,
+        "privateEndpointConnections": [],
+        "replica": {
+          "capacity": 5,
+          "promoteMode": null,
+          "promoteOption": null,
+          "replicationState": null,
+          "role": "Primary"
+        },
+        "replicaCapacity": 5,
+        "replicationRole": "Primary",
+        "resourceGroup": "RG_ilmoportaali",
+        "sku": {
+          "name": "Standard_B1ms",
+          "tier": "Burstable"
+        },
+        "sourceServerResourceId": null,
+        "state": "Ready",
+        "storage": {
+          "autoGrow": "Disabled",
+          "iops": 120,
+          "storageSizeGb": 32,
+          "throughput": null,
+          "tier": "P4",
+          "type": ""
+        },
+        "systemData": {
+          "createdAt": "2026-05-26T13:25:22.829819+00:00",
+          "createdBy": null,
+          "createdByType": null,
+          "lastModifiedAt": null,
+          "lastModifiedBy": null,
+          "lastModifiedByType": null
+        },
+        "tags": null,
+        "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+        "version": "16"
+      }
+    ]
+  },
+  "subscription": {
+    "id": "1ba25926-9098-42f7-b10a-d75c75444214",
+    "name": "Azure subscription 1",
+    "tenantId": "d15e8c27-df7e-42ee-b805-bc4a898d34f7"
+  }
+}

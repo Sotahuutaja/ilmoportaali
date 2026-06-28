@@ -52,9 +52,10 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
               <div>
                 <strong>{p.name}</strong>
                 {p.description && <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{p.description}</span>}
-                {outOfStock && <span style={{ color: '#c0392b', marginLeft: '0.5rem', fontSize: '0.85rem' }}>Sold out</span>}
-                {p.quantity !== null && !outOfStock && (
-                  <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{p.remaining} left</span>
+                {p.quantity !== null && p.remaining !== null && p.remaining !== undefined && (
+                  <span style={{ color: p.remaining === 0 ? '#c0392b' : 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+                    {p.remaining === 0 ? 'Sold out' : `${p.remaining} left`}
+                  </span>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
