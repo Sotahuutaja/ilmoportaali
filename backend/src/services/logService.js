@@ -1,10 +1,9 @@
 /**
  * Log Service - Captures relevant logs for admin troubleshooting
- * Maintains an in-memory circular buffer of recent logs
+ * Persists logs to PostgreSQL database
  */
 
-const MAX_LOGS = 500; // Keep last 500 logs in memory
-const logs = [];
+const pool = require('../db');
 
 // Log levels
 const LEVELS = {
@@ -28,140 +27,173 @@ const CATEGORIES = {
 };
 
 /**
- * Add a log entry
+ * Add a log entry to the database
  */
-function addLog(category, level, message, details = {}) {
-  const entry = {
-    timestamp: new Date().toISOString(),
-    category,
-    level,
-    message,
-    details,
-    id: Date.now() + Math.random() // Simple unique ID
-  };
-
-  logs.unshift(entry); // Add to front
-
-  // Keep buffer size limited
-  if (logs.length > MAX_LOGS) {
-    logs.pop();
-  }
-
-  return entry;
-}
-
-/**
- * Get logs with optional filtering
- */
-function getLogs(options = {}) {
-  let filtered = [...logs];
-
-  // Filter by category
-  if (options.category) {
-    filtered = filtered.filter(log => log.category === options.category);
-  }
-
-  // Filter by level
-  if (options.level) {
-    filtered = filtered.filter(log => log.level === options.level);
-  }
-
-  // Filter by search term in message
-  if (options.search) {
-    const searchLower = options.search.toLowerCase();
-    filtered = filtered.filter(log =>
-      log.message.toLowerCase().includes(searchLower) ||
-      JSON.stringify(log.details).toLowerCase().includes(searchLower)
+async function addLog(category, level, message, details = {}) {
+  try {
+    const result = await pool.query(
+      `INSERT INTO admin_logs (timestamp, category, level, message, details)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, timestamp, category, level, message, details`,
+      [new Date().toISOString(), category, level, message, JSON.stringify(details)]
     );
+    return result.rows[0];
+  } catch (err) {
+    console.error('[LOG ERROR] Failed to write log to database:', err.message);
+    // Don't throw - we don't want logging failures to break the app
+    return null;
   }
-
-  // Limit results
-  const limit = options.limit || 100;
-  return filtered.slice(0, limit);
 }
 
 /**
- * Clear all logs
+ * Get logs from database with optional filtering
  */
-function clearLogs() {
-  logs.length = 0;
+async function getLogs(options = {}) {
+  try {
+    let query = 'SELECT id, timestamp, category, level, message, details FROM admin_logs WHERE 1=1';
+    const params = [];
+    let paramCount = 1;
+
+    // Filter by category
+    if (options.category) {
+      query += ` AND category = $${paramCount}`;
+      params.push(options.category);
+      paramCount++;
+    }
+
+    // Filter by level
+    if (options.level) {
+      query += ` AND level = $${paramCount}`;
+      params.push(options.level);
+      paramCount++;
+    }
+
+    // Filter by search term in message or details
+    if (options.search) {
+      query += ` AND (message ILIKE $${paramCount} OR details::text ILIKE $${paramCount})`;
+      params.push(`%${options.search}%`);
+      paramCount++;
+    }
+
+    // Order by timestamp descending (newest first)
+    query += ' ORDER BY timestamp DESC';
+
+    // Limit results
+    const limit = Math.min(options.limit || 100, 500);
+    query += ` LIMIT ${limit}`;
+
+    const result = await pool.query(query, params);
+
+    // Parse details JSON if it's a string
+    return result.rows.map(log => ({
+      ...log,
+      details: typeof log.details === 'string' ? JSON.parse(log.details) : log.details
+    }));
+  } catch (err) {
+    console.error('[LOG ERROR] Failed to fetch logs from database:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Clear all logs from database
+ */
+async function clearLogs() {
+  try {
+    await pool.query('DELETE FROM admin_logs');
+  } catch (err) {
+    console.error('[LOG ERROR] Failed to clear logs from database:', err.message);
+  }
 }
 
 /**
  * Log helper functions for common scenarios
+ * Calls are fire-and-forget to avoid blocking requests
  */
 const logHelpers = {
-  registrationError: (userId, eventId, error) =>
+  registrationError: (userId, eventId, error) => {
     addLog(CATEGORIES.REGISTRATION, LEVELS.ERROR,
       `Registration failed for user ${userId} on event ${eventId}`,
-      { error: error.message, userId, eventId }
-    ),
+      { error: error.message || error, userId, eventId }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  registrationSuccess: (registrationIds, eventId) =>
+  registrationSuccess: (registrationIds, eventId) => {
     addLog(CATEGORIES.REGISTRATION, LEVELS.SUCCESS,
       `Successfully created ${registrationIds.length} registration(s) for event ${eventId}`,
       { registrationIds, eventId }
-    ),
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  paymentError: (paymentIntentId, error) =>
+  paymentError: (paymentIntentId, error) => {
     addLog(CATEGORIES.PAYMENT, LEVELS.ERROR,
       `Payment failed for intent ${paymentIntentId}`,
-      { error: error.message, paymentIntentId }
-    ),
+      { error: error.message || error, paymentIntentId }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  paymentSuccess: (paymentIntentId, amount) =>
+  paymentSuccess: (paymentIntentId, amount) => {
     addLog(CATEGORIES.PAYMENT, LEVELS.SUCCESS,
       `Payment confirmed: ${paymentIntentId} for €${(amount / 100).toFixed(2)}`,
       { paymentIntentId, amount }
-    ),
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  refundError: (registrationId, error) =>
+  refundError: (registrationId, error) => {
     addLog(CATEGORIES.REFUND, LEVELS.ERROR,
       `Refund failed for registration ${registrationId}`,
-      { error: error.message, registrationId }
-    ),
+      { error: error.message || error, registrationId }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  refundSuccess: (registrationId, amount, reason) =>
+  refundSuccess: (registrationId, amount, reason) => {
     addLog(CATEGORIES.REFUND, LEVELS.SUCCESS,
       `Refund issued for registration ${registrationId}: €${(amount / 100).toFixed(2)} (${reason})`,
       { registrationId, amount, reason }
-    ),
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  cancellationError: (registrationId, error) =>
+  cancellationError: (registrationId, error) => {
     addLog(CATEGORIES.CANCELLATION, LEVELS.ERROR,
       `Registration cancellation failed for registration ${registrationId}`,
-      { error: error.message, registrationId }
-    ),
+      { error: error.message || error, registrationId }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  cancellationSuccess: (registrationId, userId) =>
+  cancellationSuccess: (registrationId, userId) => {
     addLog(CATEGORIES.CANCELLATION, LEVELS.SUCCESS,
       `Registration ${registrationId} cancelled by user ${userId}`,
       { registrationId, userId }
-    ),
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  emailError: (type, email, error) =>
+  emailError: (type, email, error) => {
     addLog(CATEGORIES.EMAIL, LEVELS.ERROR,
       `Failed to send ${type} email to ${email}`,
-      { error: error.message, email, type }
-    ),
+      { error: error.message || error, email, type }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  emailSuccess: (type, email) =>
+  emailSuccess: (type, email) => {
     addLog(CATEGORIES.EMAIL, LEVELS.SUCCESS,
       `${type} email sent to ${email}`,
       { email, type }
-    ),
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  authError: (email, reason) =>
+  authError: (email, reason) => {
     addLog(CATEGORIES.AUTH, LEVELS.ERROR,
       `Auth failed for ${email}: ${reason}`,
       { email, reason }
-    ),
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
 
-  stripeError: (operation, error) =>
+  stripeError: (operation, error) => {
     addLog(CATEGORIES.STRIPE, LEVELS.ERROR,
       `Stripe ${operation} failed`,
-      { error: error.message, operation }
-    )
+      { error: error.message || error, operation }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  }
 };
 
 module.exports = {

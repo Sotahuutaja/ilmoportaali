@@ -3,6 +3,7 @@ const pool = require('./db');
 const { securityHeaders, cors } = require('./middleware/security');
 const { initDb } = require('./initDb');
 const { initPaymentSchema } = require('./initPaymentSchema');
+const { initLogs } = require('./initLogs');
 const { processPendingEmails } = require('./services/emailWorker');
 
 // Fail fast if critical environment variables are missing
@@ -83,6 +84,14 @@ app.listen(port, async () => {
     await initPaymentSchema();
   } catch (err) {
     console.error('Payment schema initialization failed (non-blocking):', err.message);
+    // Don't crash the server, just log the error
+  }
+
+  // Initialize logs table in background
+  try {
+    await initLogs();
+  } catch (err) {
+    console.error('Logs table initialization failed (non-blocking):', err.message);
     // Don't crash the server, just log the error
   }
 

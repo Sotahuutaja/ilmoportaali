@@ -13,7 +13,7 @@ const router = express.Router();
  *   - search: Search in message and details
  *   - limit: Max number of logs to return (default 100, max 500)
  */
-router.get('/', requireAuth, requireRole(pool, 'admin'), (req, res) => {
+router.get('/', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
   try {
     const { category, level, search, limit } = req.query;
 
@@ -28,7 +28,7 @@ router.get('/', requireAuth, requireRole(pool, 'admin'), (req, res) => {
     }
 
     // Get logs with filters
-    const logs = getLogs({
+    const logs = await getLogs({
       category,
       level,
       search,
@@ -50,9 +50,9 @@ router.get('/', requireAuth, requireRole(pool, 'admin'), (req, res) => {
 /**
  * DELETE /api/logs - Clear all logs (admin only)
  */
-router.delete('/', requireAuth, requireRole(pool, 'admin'), (req, res) => {
+router.delete('/', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
   try {
-    clearLogs();
+    await clearLogs();
     res.json({ message: 'Logs cleared' });
   } catch (err) {
     console.error('Failed to clear logs:', err.message);
