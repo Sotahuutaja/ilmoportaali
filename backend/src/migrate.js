@@ -113,6 +113,9 @@ async function migrate() {
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS year_of_birth INTEGER;
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS gender TEXT;
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS registered_by INTEGER REFERENCES users(id);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_email TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_change_token TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_change_token_expires TIMESTAMPTZ;
   `);
 
   console.log('Migration complete');

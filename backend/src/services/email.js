@@ -67,6 +67,22 @@ async function sendPasswordResetEmail(email, token) {
   });
 }
 
+async function sendEmailChangeVerificationEmail(newEmail, token) {
+  const link = `${APP_URL}/verify-email-change?token=${token}`;
+  await sendEmail({
+    to: newEmail,
+    subject: 'Verify your new email address',
+    html: `
+      <h2>Verify your new email</h2>
+      <p>You requested to change your email address on your Ilmoportaali account. Click the link below to verify your new email:</p>
+      <p><a href="${link}" style="background:#1a1a2e;color:white;padding:10px 20px;text-decoration:none;border-radius:6px;">Verify email</a></p>
+      <p>Or copy this link: ${link}</p>
+      <p>This link expires in 24 hours.</p>
+      <p>If you did not request this change, you can ignore this email. Your current email address will remain unchanged.</p>
+    `
+  });
+}
+
 async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret, paymentIntentId, userFirstName = null, userLastName = null, products = []) {
   const checkoutLink = `${APP_URL}/events/checkout?paymentIntentId=${paymentIntentId}&clientSecret=${paymentIntentClientSecret}&amount=${additionalAmount}`;
   const userName = (userFirstName || userLastName)
@@ -283,4 +299,4 @@ async function sendAdditionalPaymentConfirmationEmail(email, eventTitle, amountP
   });
 }
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendAdditionalPaymentEmail, sendRefundEmail, sendAdditionalPaymentConfirmationEmail };
+module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeVerificationEmail, sendAdditionalPaymentEmail, sendRefundEmail, sendAdditionalPaymentConfirmationEmail };

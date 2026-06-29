@@ -6,7 +6,7 @@ const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { rateLimit } = require('../middleware/security');
 const crypto = require('crypto');
-const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email');
+const { sendVerificationEmail, sendPasswordResetEmail, sendEmailChangeVerificationEmail } = require('../services/email');
 const { logHelpers } = require('../services/logService');
 
 // Rate limit presets for auth endpoints
@@ -152,6 +152,35 @@ router.get('/verify-email', async (req, res) => {
   }
 });
 
+// Verify email change
+router.get('/verify-email-change', async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) return res.status(400).json({ error: 'Token is required' });
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email_change_token = $1 AND email_change_token_expires > NOW()',
+      [token]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(400).json({ error: 'Invalid or expired verification token' });
+    }
+
+    // Update email and clear pending email and token
+    await pool.query(
+      'UPDATE users SET email = pending_email, pending_email = NULL, email_change_token = NULL, email_change_token_expires = NULL WHERE id = $1',
+      [result.rows[0].id]
+    );
+
+    res.json({ message: 'Email changed successfully.' });
+  } catch (err) {
+    console.error('Email change verification failed:', err.message);
+    res.status(500).json({ error: 'Email change verification failed' });
+  }
+});
+
 // Resend verification email
 router.post('/resend-verification', emailLimit, async (req, res) => {
   const { email } = req.body;
@@ -212,13 +241,34 @@ router.put('/profile', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Gender must be Male, Female or Other' });
     }
 
+    // Check if email is being changed
+    let emailChangeToken = null;
+    let emailVerificationNeeded = false;
+    if (email) {
+      const currentUser = await pool.query('SELECT email FROM users WHERE id = $1', [req.user.id]);
+      if (currentUser.rows[0] && email !== currentUser.rows[0].email) {
+        // Email is changing - require verification
+        emailChangeToken = crypto.randomBytes(32).toString('hex');
+        const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        // Store pending email and token
+        await pool.query(
+          'UPDATE users SET pending_email = $1, email_change_token = $2, email_change_token_expires = $3 WHERE id = $4',
+          [email, emailChangeToken, tokenExpires, req.user.id]
+        );
+
+        emailVerificationNeeded = true;
+      }
+    }
+
     const updates = [];
     const values = [];
     let i = 1;
 
     if (first_name) { updates.push(`first_name = $${i++}`); values.push(first_name); }
     if (last_name) { updates.push(`last_name = $${i++}`); values.push(last_name); }
-    if (email) { updates.push(`email = $${i++}`); values.push(email); }
+    // Don't update email if it's being changed (requires verification)
+    if (email && !emailVerificationNeeded) { updates.push(`email = $${i++}`); values.push(email); }
     if (password) {
       const hashed = await bcrypt.hash(password, 12);
       updates.push(`password = $${i++}`);
@@ -227,15 +277,33 @@ router.put('/profile', requireAuth, async (req, res) => {
     if (year_of_birth) { updates.push(`year_of_birth = $${i++}`); values.push(year_of_birth); }
     if (gender) { updates.push(`gender = $${i++}`); values.push(gender); }
 
-    if (updates.length === 0) {
+    if (updates.length === 0 && !emailVerificationNeeded) {
       return res.status(400).json({ error: 'Nothing to update' });
     }
 
-    values.push(req.user.id);
+    // If there are other updates besides email, apply them
+    if (updates.length > 0) {
+      values.push(req.user.id);
+      await pool.query(
+        `UPDATE users SET ${updates.join(', ')} WHERE id = $${i}`,
+        values
+      );
+    }
+
+    // Fetch updated user
     const result = await pool.query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} RETURNING id, email, first_name, last_name, role, year_of_birth, gender`,
-      values
+      'SELECT id, email, first_name, last_name, role, year_of_birth, gender FROM users WHERE id = $1',
+      [req.user.id]
     );
+
+    // If email verification was initiated, send verification email
+    if (emailVerificationNeeded) {
+      await sendEmailChangeVerificationEmail(email, emailChangeToken);
+      return res.json({
+        user: result.rows[0],
+        message: 'A verification email has been sent to your new email address. Please click the link in that email to confirm the change.'
+      });
+    }
 
     res.json({ user: result.rows[0] });
   } catch (err) {
