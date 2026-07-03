@@ -1067,4 +1067,204 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
   }
 });
 
+// Resend additional payment link (admin or event creator)
+router.post('/:eventId/registrations/:registrationId/resend-payment-link', requireAuth, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const event = await client.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
+    if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
+
+    const reg = await client.query('SELECT * FROM registrations WHERE id = $1', [req.params.registrationId]);
+    if (!reg.rows[0]) return res.status(404).json({ error: 'Registration not found' });
+
+    // Check authorisation — only admin, event creator, or co-manager can resend payment links
+    const canManage = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
+    if (!canManage) {
+      return res.status(403).json({ error: 'Not authorised to resend payment links' });
+    }
+
+    // Check if registration has pending additional payment
+    if (reg.rows[0].payment_status !== 'additional_payment_pending') {
+      return res.status(400).json({ error: 'This registration does not have a pending additional payment' });
+    }
+
+    // Get user email
+    let userEmail;
+    let userFirstName;
+    let userLastName;
+    if (reg.rows[0].is_guest) {
+      userEmail = reg.rows[0].guest_email;
+      userFirstName = reg.rows[0].guest_first_name || '';
+      userLastName = reg.rows[0].guest_last_name || '';
+      if (!userEmail && reg.rows[0].registered_by) {
+        const captainResult = await client.query('SELECT email FROM users WHERE id = $1', [reg.rows[0].registered_by]);
+        userEmail = captainResult.rows[0]?.email;
+      }
+    } else {
+      const userResult = await client.query('SELECT email, first_name, last_name FROM users WHERE id = $1', [reg.rows[0].user_id]);
+      userEmail = userResult.rows[0]?.email;
+      userFirstName = userResult.rows[0]?.first_name || '';
+      userLastName = userResult.rows[0]?.last_name || '';
+    }
+
+    if (!userEmail) {
+      return res.status(400).json({ error: 'Cannot resend: user email is missing' });
+    }
+
+    // Calculate current registration total
+    const currentTotalResult = await client.query(`
+      SELECT COALESCE(SUM(ep.price * rp.quantity), 0) as total_cents
+      FROM registration_products rp
+      JOIN event_products ep ON rp.product_id = ep.id
+      WHERE rp.registration_id = $1
+    `, [req.params.registrationId]);
+
+    const currentTotalCents = Math.round(parseFloat(currentTotalResult.rows[0].total_cents) * 100);
+
+    // Check if there's an existing unpaid payment intent
+    let paymentIntentId;
+    let clientSecret;
+    let paymentAmountCents = currentTotalCents;
+
+    const existingIntentResult = await client.query(
+      'SELECT stripe_payment_intent_id, amount_cents FROM payment_intents WHERE registration_id = $1 AND status != $2 ORDER BY created_at DESC LIMIT 1',
+      [req.params.registrationId, 'succeeded']
+    );
+
+    if (existingIntentResult.rows[0]) {
+      // Use existing pending payment intent
+      paymentIntentId = existingIntentResult.rows[0].stripe_payment_intent_id;
+      paymentAmountCents = existingIntentResult.rows[0].amount_cents;
+
+      // For existing intents, we need to fetch the clientSecret from Stripe or create a new one
+      // For now, we'll create a new intent to ensure it's fresh
+      try {
+        const newPaymentIntent = await stripe.createPaymentIntent(
+          req.params.registrationId,
+          paymentAmountCents,
+          userEmail,
+          event.rows[0].stripe_mode || 'test'
+        );
+        paymentIntentId = newPaymentIntent.id;
+        clientSecret = newPaymentIntent.client_secret;
+
+        // Update or insert the payment intent record
+        await client.query(
+          `INSERT INTO payment_intents (stripe_payment_intent_id, registration_id, amount_cents, currency, status)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (stripe_payment_intent_id) DO UPDATE SET status = $5`,
+          [paymentIntentId, req.params.registrationId, paymentAmountCents, 'eur', newPaymentIntent.status]
+        );
+      } catch (err) {
+        console.error('[PAYMENT ERROR] Failed to create new payment intent:', err.message);
+        return res.status(500).json({ error: 'Failed to create payment intent' });
+      }
+    } else {
+      // Create new payment intent
+      try {
+        const newPaymentIntent = await stripe.createPaymentIntent(
+          req.params.registrationId,
+          paymentAmountCents,
+          userEmail,
+          event.rows[0].stripe_mode || 'test'
+        );
+        paymentIntentId = newPaymentIntent.id;
+        clientSecret = newPaymentIntent.client_secret;
+
+        await client.query(
+          'INSERT INTO payment_intents (stripe_payment_intent_id, registration_id, amount_cents, currency, status) VALUES ($1, $2, $3, $4, $5)',
+          [paymentIntentId, req.params.registrationId, paymentAmountCents, 'eur', newPaymentIntent.status]
+        );
+      } catch (err) {
+        console.error('[PAYMENT ERROR] Failed to create payment intent:', err.message);
+        return res.status(500).json({ error: 'Failed to create payment intent' });
+      }
+    }
+
+    // Fetch products for email
+    const productsResult = await client.query(
+      `SELECT ep.name, ep.price, ep.fields, rp.quantity, rp.field_values
+       FROM registration_products rp
+       JOIN event_products ep ON rp.product_id = ep.id
+       WHERE rp.registration_id = $1`,
+      [req.params.registrationId]
+    );
+
+    const productsForEmail = productsResult.rows.map(p => {
+      let price = parseFloat(p.price);
+      let fieldValues = p.field_values || {};
+      if (typeof fieldValues === 'string') {
+        try {
+          fieldValues = JSON.parse(fieldValues);
+        } catch (e) {
+          fieldValues = {};
+        }
+      }
+
+      const fields = p.fields || [];
+      for (const field of fields) {
+        if (field.type === 'select') {
+          const selectedValue = fieldValues[field.id];
+          if (selectedValue && field.options) {
+            const option = field.options.find(opt => {
+              const optVal = typeof opt === 'string' ? opt : opt.value;
+              return optVal === selectedValue;
+            });
+            if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
+              price = parseFloat(option.price);
+              break;
+            }
+          }
+        }
+      }
+
+      const transformedFieldValues = {};
+      for (const [fieldId, fieldValue] of Object.entries(fieldValues)) {
+        const field = fields.find(f => f.id === fieldId);
+        if (field) {
+          transformedFieldValues[field.label || field.name || fieldId] = fieldValue;
+        } else {
+          transformedFieldValues[fieldId] = fieldValue;
+        }
+      }
+
+      return {
+        name: p.name,
+        price: price,
+        quantity: p.quantity,
+        field_values: transformedFieldValues
+      };
+    });
+
+    // Send email with payment link
+    try {
+      await sendAdditionalPaymentEmail(
+        userEmail,
+        event.rows[0].title,
+        paymentAmountCents,
+        clientSecret,
+        paymentIntentId,
+        userFirstName,
+        userLastName,
+        productsForEmail
+      );
+      console.log(`[EMAIL] Resent additional payment link to ${userEmail} for registration ${req.params.registrationId}`);
+    } catch (err) {
+      console.error('[EMAIL ERROR] Failed to send resend email:', err.message);
+      return res.status(500).json({ error: 'Payment intent created but failed to send email' });
+    }
+
+    res.json({
+      message: 'Payment link resent successfully',
+      email: userEmail,
+      amount: (paymentAmountCents / 100).toFixed(2)
+    });
+  } catch (err) {
+    console.error('[REGISTRATIONS] Failed to resend payment link:', err.message);
+    res.status(500).json({ error: 'Failed to resend payment link' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

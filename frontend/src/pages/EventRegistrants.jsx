@@ -446,7 +446,17 @@ export default function EventRegistrants() {
       setError(err.response?.data?.error || 'Failed to update registration');
     }
   };
-  
+
+  const handleResendPaymentLink = async (registrationId, name) => {
+    try {
+      const res = await api.post(`/registrations/${id}/registrations/${registrationId}/resend-payment-link`);
+      setMessage(`Payment link resent to ${res.data.email}`);
+      setError('');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to resend payment link');
+    }
+  };
+
   // Helper to calculate product price with field option overrides
   const getProductPrice = (product) => {
     let price = parseFloat(product.price);
@@ -689,9 +699,14 @@ export default function EventRegistrants() {
                     })}
                   </td>
                   <td style={{ padding: '0.6rem 0.8rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {(user.role === 'admin' || event?.is_owner) && (
-              <button className="btn btn-secondary" onClick={() => setEditingReg(r)}>Edit</button>
+              <>
+                <button className="btn btn-secondary" onClick={() => setEditingReg(r)}>Edit</button>
+                {r.payment_status === 'additional_payment_pending' && (
+                  <button className="btn btn-secondary" onClick={() => handleResendPaymentLink(r.id, name)}>Resend Payment</button>
+                )}
+              </>
             )}
             <button className="btn btn-danger" onClick={() => handleCancel(r.id, name)}>Cancel</button>
             </div>
