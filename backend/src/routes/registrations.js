@@ -1111,15 +1111,8 @@ router.post('/:eventId/registrations/:registrationId/resend-payment-link', requi
       return res.status(400).json({ error: 'Cannot resend: user email is missing' });
     }
 
-    // Calculate current registration total
-    const currentTotalResult = await client.query(`
-      SELECT COALESCE(SUM(ep.price * rp.quantity), 0) as total_cents
-      FROM registration_products rp
-      JOIN event_products ep ON rp.product_id = ep.id
-      WHERE rp.registration_id = $1
-    `, [req.params.registrationId]);
-
-    const currentTotalCents = Math.round(parseFloat(currentTotalResult.rows[0].total_cents) * 100);
+    // Calculate current registration total (properly accounting for field_values price overrides)
+    const currentTotalCents = await getRegistrationPrice(client, req.params.registrationId);
 
     // Check if there's an existing unpaid payment intent
     let paymentIntentId;
