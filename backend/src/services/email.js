@@ -83,8 +83,8 @@ async function sendEmailChangeVerificationEmail(newEmail, token) {
   });
 }
 
-async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret, paymentIntentId, userFirstName = null, userLastName = null, products = []) {
-  const checkoutLink = `${APP_URL}/events/checkout?paymentIntentId=${encodeURIComponent(paymentIntentId)}&clientSecret=${encodeURIComponent(paymentIntentClientSecret)}&amount=${additionalAmount}`;
+async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, paymentIntentClientSecret, paymentIntentId, userFirstName = null, userLastName = null, products = [], stripeMode = 'test') {
+  const checkoutLink = `${APP_URL}/events/checkout?paymentIntentId=${encodeURIComponent(paymentIntentId)}&clientSecret=${encodeURIComponent(paymentIntentClientSecret)}&amount=${additionalAmount}&stripeMode=${stripeMode}`;
   const userName = (userFirstName || userLastName)
     ? `${userFirstName || ''} ${userLastName || ''}`.trim()
     : null;

@@ -33,8 +33,9 @@ export default function Checkout() {
     const paymentIntentId = searchParams.get('paymentIntentId') || searchParams.get('payment_intent');
     const clientSecret = searchParams.get('clientSecret');
     const amountParam = searchParams.get('amount'); // Amount in cents from email link
+    const stripeModeParam = searchParams.get('stripeMode'); // Stripe mode from email link
 
-    console.log('[CHECKOUT] URL params:', { redirectStatus, paymentIntentId, clientSecret: !!clientSecret, amountParam, id });
+    console.log('[CHECKOUT] URL params:', { redirectStatus, paymentIntentId, clientSecret: !!clientSecret, amountParam, stripeModeParam, id });
     console.log('[CHECKOUT] localStorage keys:', Object.keys(localStorage));
 
     // Handle payment failure redirect
@@ -54,7 +55,8 @@ export default function Checkout() {
         isAdditionalPayment: true,
         paymentIntentId: paymentIntentId,
         clientSecret: clientSecret,
-        amount: amountParam ? parseInt(amountParam) : null
+        amount: amountParam ? parseInt(amountParam) : null,
+        stripeMode: stripeModeParam || 'test'
       });
       setLoading(false);
       return;
@@ -603,7 +605,7 @@ export default function Checkout() {
                   teamId={teamId}
                   comments={comments}
                   totalAmount={totalAmount}
-                  stripeMode={event?.stripe_mode || 'test'}
+                  stripeMode={registrationData?.stripeMode || event?.stripe_mode || 'test'}
                   onSuccess={handlePaymentSuccess}
                   onError={handlePaymentError}
                 />

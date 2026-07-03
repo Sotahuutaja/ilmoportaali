@@ -992,7 +992,8 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
                 newPaymentIntent.id,
                 userFirstName,
                 userLastName,
-                productsForEmail
+                productsForEmail,
+                event.rows[0].stripe_mode || 'test'
               );
               console.log(`[EMAIL] Sent additional payment notification to ${userEmail}`);
             } catch (err) {
@@ -1239,7 +1240,8 @@ router.post('/:eventId/registrations/:registrationId/resend-payment-link', requi
         paymentIntentId,
         userFirstName,
         userLastName,
-        productsForEmail
+        productsForEmail,
+        event.rows[0].stripe_mode || 'test'
       );
       console.log(`[EMAIL] Resent additional payment link to ${userEmail} for registration ${req.params.registrationId}`);
     } catch (err) {
