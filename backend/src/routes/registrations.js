@@ -1015,7 +1015,7 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
       SELECT
         r.id, r.user_id, r.event_id, r.team_id, r.is_guest, r.guest_first_name, r.guest_last_name, r.guest_email,
         r.comments, r.payment_status, r.created_at, r.registered_by,
-        u.first_name, u.last_name, u.email as user_email,
+        u.first_name, u.last_name, u.email as user_email, u.year_of_birth, u.gender,
         t.name as team_name,
         json_agg(json_build_object(
           'product_id', rp.product_id,
@@ -1031,7 +1031,7 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
       LEFT JOIN registration_products rp ON r.id = rp.registration_id
       LEFT JOIN event_products ep ON rp.product_id = ep.id
       WHERE r.id = $1
-      GROUP BY r.id, u.first_name, u.last_name, u.email, t.name
+      GROUP BY r.id, u.first_name, u.last_name, u.email, u.year_of_birth, u.gender, t.name
     `, [req.params.registrationId]);
 
     // Calculate total price of updated registration for response

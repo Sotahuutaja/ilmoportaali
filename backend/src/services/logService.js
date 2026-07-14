@@ -85,13 +85,106 @@ async function getLogs(options = {}) {
     const result = await pool.query(query, params);
 
     // Parse details JSON if it's a string
-    return result.rows.map(log => ({
+    const logs = result.rows.map(log => ({
       ...log,
       details: typeof log.details === 'string' ? JSON.parse(log.details) : log.details
     }));
+
+    // Enhance logs with human-readable names for IDs
+    await enrichLogsWithNames(logs);
+
+    return logs;
   } catch (err) {
     console.error('[LOG ERROR] Failed to fetch logs from database:', err.message);
     return [];
+  }
+}
+
+/**
+ * Enhance logs with human-readable names (users, events) instead of just IDs
+ */
+async function enrichLogsWithNames(logs) {
+  try {
+    // Collect all unique IDs from all logs
+    const userIds = new Set();
+    const eventIds = new Set();
+    const registrationIds = new Set();
+
+    logs.forEach(log => {
+      const details = log.details || {};
+      if (details.userId) userIds.add(details.userId);
+      if (details.eventId) eventIds.add(details.eventId);
+      if (details.registrationId) registrationIds.add(details.registrationId);
+      // Also check in arrays
+      if (Array.isArray(details.registrationIds)) details.registrationIds.forEach(id => registrationIds.add(id));
+    });
+
+    // Bulk fetch user names
+    const userMap = {};
+    if (userIds.size > 0) {
+      const userResult = await pool.query(
+        `SELECT id, first_name, last_name, email FROM users WHERE id = ANY($1)`,
+        [Array.from(userIds)]
+      );
+      userResult.rows.forEach(user => {
+        userMap[user.id] = `${user.first_name} ${user.last_name}` || user.email;
+      });
+    }
+
+    // Bulk fetch event titles
+    const eventMap = {};
+    if (eventIds.size > 0) {
+      const eventResult = await pool.query(
+        `SELECT id, title FROM events WHERE id = ANY($1)`,
+        [Array.from(eventIds)]
+      );
+      eventResult.rows.forEach(event => {
+        eventMap[event.id] = event.title;
+      });
+    }
+
+    // Bulk fetch registration info for user/event context
+    const registrationMap = {};
+    if (registrationIds.size > 0) {
+      const regResult = await pool.query(
+        `SELECT r.id, r.user_id, r.is_guest, r.guest_first_name, r.guest_last_name, r.event_id, e.title
+         FROM registrations r
+         LEFT JOIN events e ON r.event_id = e.id
+         WHERE r.id = ANY($1)`,
+        [Array.from(registrationIds)]
+      );
+      regResult.rows.forEach(reg => {
+        const regName = reg.is_guest
+          ? `${reg.guest_first_name} ${reg.guest_last_name}`
+          : (userMap[reg.user_id] || 'Unknown user');
+        registrationMap[reg.id] = { name: regName, eventTitle: reg.title };
+      });
+    }
+
+    // Enhance each log with readable names
+    logs.forEach(log => {
+      const details = log.details || {};
+
+      // Add readable user name
+      if (details.userId && userMap[details.userId]) {
+        details.userName = userMap[details.userId];
+      }
+
+      // Add readable event title
+      if (details.eventId && eventMap[details.eventId]) {
+        details.eventTitle = eventMap[details.eventId];
+      }
+
+      // Add readable registration info
+      if (details.registrationId && registrationMap[details.registrationId]) {
+        const reg = registrationMap[details.registrationId];
+        details.registrationName = reg.name;
+        if (reg.eventTitle) details.eventTitle = reg.eventTitle;
+      }
+    });
+  } catch (err) {
+    console.error('[LOG ERROR] Failed to enrich logs with names:', err.message);
+    // Don't throw - we still want to return the logs even if enrichment fails
   }
 }
 

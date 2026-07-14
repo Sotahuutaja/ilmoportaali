@@ -109,6 +109,9 @@ function PaymentFormContent({
 
       const expectedAmount = Math.round(totalAmount * 100);
 
+      console.log('[PAYMENT-FORM] Confirming payment with payload:', { paymentIntentId, eventId, registrations: payloadData, expectedAmount });
+      console.log('[PAYMENT-FORM] registrationData state:', registrationData);
+
       const response = await fetch('/api/payments/confirm-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

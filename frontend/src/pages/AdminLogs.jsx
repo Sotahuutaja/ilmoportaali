@@ -95,6 +95,59 @@ export default function AdminLogs() {
     return date.toLocaleDateString('fi-FI');
   };
 
+  const formatDetails = (details) => {
+    if (!details || Object.keys(details).length === 0) return null;
+
+    // Map of field names to display labels
+    const fieldLabels = {
+      userId: 'User ID',
+      userName: 'User',
+      eventId: 'Event ID',
+      eventTitle: 'Event',
+      registrationId: 'Registration ID',
+      registrationName: 'Registration',
+      registrationIds: 'Registration IDs',
+      paymentIntentId: 'Payment Intent ID',
+      amount: 'Amount',
+      error: 'Error',
+      email: 'Email',
+      reason: 'Reason',
+      type: 'Type',
+      operation: 'Operation'
+    };
+
+    // Fields to skip if we have a readable alternative
+    const skipIfExists = {
+      'userId': 'userName',
+      'eventId': 'eventTitle',
+      'registrationId': 'registrationName'
+    };
+
+    return Object.entries(details)
+      .filter(([key]) => {
+        // Skip fields if we have a readable version
+        const skipField = skipIfExists[key];
+        if (skipField && details[skipField]) return false;
+        return true;
+      })
+      .map(([key, value]) => {
+        const label = fieldLabels[key] || key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim();
+        let displayValue = value;
+
+        // Format amounts in cents
+        if (key === 'amount' && typeof value === 'number') {
+          displayValue = `€${(value / 100).toFixed(2)}`;
+        }
+
+        // Format arrays nicely
+        if (Array.isArray(value)) {
+          displayValue = value.join(', ');
+        }
+
+        return { label, value: displayValue };
+      });
+  };
+
   if (!user || user.role !== 'admin') return null;
 
   return (
@@ -226,20 +279,37 @@ export default function AdminLogs() {
                       {log.message}
                     </div>
                     {Object.keys(log.details).length > 0 && (
-                      <details style={{ marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                        <summary style={{ cursor: 'pointer', marginBottom: '0.5rem' }}>
+                      <details style={{ marginTop: '0.5rem' }}>
+                        <summary style={{ cursor: 'pointer', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                           Details
                         </summary>
-                        <pre style={{
+                        <div style={{
                           background: 'var(--surface-2)',
                           padding: '0.75rem',
                           borderRadius: '4px',
-                          overflow: 'auto',
-                          fontSize: '0.8rem',
-                          maxHeight: '200px'
+                          fontSize: '0.85rem'
                         }}>
-                          {JSON.stringify(log.details, null, 2)}
-                        </pre>
+                          {formatDetails(log.details)?.length > 0 ? (
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                              <tbody>
+                                {formatDetails(log.details).map(({ label, value }, idx) => (
+                                  <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                    <td style={{ padding: '0.5rem 0.75rem 0.5rem 0', fontWeight: 600, color: 'var(--text-muted)', width: '150px', verticalAlign: 'top' }}>
+                                      {label}:
+                                    </td>
+                                    <td style={{ padding: '0.5rem 0', color: 'var(--text)' }}>
+                                      <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>
+                                        {value}
+                                      </code>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          ) : (
+                            <p style={{ margin: 0, color: 'var(--text-muted)' }}>No details</p>
+                          )}
+                        </div>
                       </details>
                     )}
                   </div>
