@@ -262,6 +262,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
         await client.query('COMMIT');
 
         console.log('[PAYMENT] Additional payment confirmed for registration', registrationId);
+        logHelpers.additionalPaymentConfirmed(registrationId, existingPayment.rows[0].amount_cents);
 
         // Send confirmation email with product summary
         try {

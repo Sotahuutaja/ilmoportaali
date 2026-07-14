@@ -457,6 +457,24 @@ export default function EventRegistrants() {
     }
   };
 
+  const handleMarkAsPaid = async (registrationId, name) => {
+    const notes = prompt(`Mark payment as received for ${name}?\n\nOptionally enter proof/notes (e.g., "MobilePay transfer received"):`);
+    if (notes === null) return; // User cancelled
+
+    try {
+      const res = await api.patch(`/registrations/${id}/registrations/${registrationId}/payment-status`, {
+        payment_status: 'paid',
+        notes: notes || null
+      });
+      // Update the registration in the list
+      setRegistrations(registrations.map(r => r.id === registrationId ? { ...r, payment_status: 'paid' } : r));
+      setMessage(`Payment status updated to paid for ${name}`);
+      setError('');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update payment status');
+    }
+  };
+
   // Helper to calculate product price with field option overrides
   const getProductPrice = (product) => {
     let price = parseFloat(product.price);
@@ -704,7 +722,13 @@ export default function EventRegistrants() {
               <>
                 <button className="btn btn-secondary" onClick={() => setEditingReg(r)}>Edit</button>
                 {r.payment_status === 'additional_payment_pending' && (
-                  <button className="btn btn-secondary" onClick={() => handleResendPaymentLink(r.id, name)}>Resend Payment</button>
+                  <>
+                    <button className="btn btn-secondary" onClick={() => handleResendPaymentLink(r.id, name)}>Resend Payment</button>
+                    <button className="btn btn-success" onClick={() => handleMarkAsPaid(r.id, name)}>Mark as Paid</button>
+                  </>
+                )}
+                {r.payment_status && r.payment_status !== 'paid' && r.payment_status !== 'additional_payment_pending' && (
+                  <button className="btn btn-success" onClick={() => handleMarkAsPaid(r.id, name)}>Mark as Paid</button>
                 )}
               </>
             )}

@@ -1262,4 +1262,52 @@ router.post('/:eventId/registrations/:registrationId/resend-payment-link', requi
   }
 });
 
+// Update registration payment status (admin or event manager only)
+router.patch('/:eventId/registrations/:registrationId/payment-status', requireAuth, async (req, res) => {
+  const { payment_status, notes } = req.body;
+
+  try {
+    const event = await pool.query('SELECT * FROM events WHERE id = $1', [req.params.eventId]);
+    if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
+
+    const reg = await pool.query('SELECT * FROM registrations WHERE id = $1', [req.params.registrationId]);
+    if (!reg.rows[0]) return res.status(404).json({ error: 'Registration not found' });
+
+    // Check authorisation — only admin, event creator, or co-manager can update payment status
+    const canManage = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
+    if (!canManage) {
+      return res.status(403).json({ error: 'Not authorised to update payment status' });
+    }
+
+    // Validate payment_status
+    const validStatuses = ['pending', 'paid', 'additional_payment_pending'];
+    if (!validStatuses.includes(payment_status)) {
+      return res.status(400).json({ error: `Invalid payment status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    const oldStatus = reg.rows[0].payment_status;
+
+    // Update payment status
+    await pool.query(
+      'UPDATE registrations SET payment_status = $1 WHERE id = $2',
+      [payment_status, req.params.registrationId]
+    );
+
+    // Log the status change
+    logHelpers.paymentStatusUpdated(req.params.registrationId, oldStatus, payment_status, req.user.id, notes);
+
+    console.log(`[PAYMENT] Payment status updated for registration ${req.params.registrationId}: ${oldStatus} → ${payment_status} (by user ${req.user.id})`);
+
+    res.json({
+      message: `Payment status updated to ${payment_status}`,
+      registrationId: req.params.registrationId,
+      oldStatus,
+      newStatus: payment_status
+    });
+  } catch (err) {
+    console.error('Failed to update payment status:', err.message);
+    res.status(500).json({ error: 'Failed to update payment status' });
+  }
+});
+
 module.exports = router;

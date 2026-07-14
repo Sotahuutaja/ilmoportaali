@@ -286,6 +286,20 @@ const logHelpers = {
       `Stripe ${operation} failed`,
       { error: error.message || error, operation }
     ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  paymentStatusUpdated: (registrationId, oldStatus, newStatus, adminUserId, notes) => {
+    addLog(CATEGORIES.PAYMENT, LEVELS.INFO,
+      `Payment status updated for registration ${registrationId}: ${oldStatus} → ${newStatus}`,
+      { registrationId, oldStatus, newStatus, adminUserId, notes }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  additionalPaymentConfirmed: (registrationId, amountCents) => {
+    addLog(CATEGORIES.PAYMENT, LEVELS.SUCCESS,
+      `Additional payment confirmed for registration ${registrationId}: €${(amountCents / 100).toFixed(2)}`,
+      { registrationId, amount: amountCents }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
   }
 };
 

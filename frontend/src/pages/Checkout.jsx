@@ -69,20 +69,21 @@ export default function Checkout() {
     }
 
     if (redirectStatus && paymentIntentId) {
-      console.log('[CHECKOUT] Detected payment redirect');
+      console.log('[CHECKOUT] Detected payment redirect:', { redirectStatus, paymentIntentId, hasClientSecret: !!clientSecret });
       setIsProcessingRedirect(true);
 
       // For additional payments, confirm directly without needing stored registration data
       if (clientSecret) {
         console.log('[CHECKOUT] Additional payment redirect - confirming directly');
-        // Set registrationData so render doesn't show "Event not found"
-        setRegistrationData({ isAdditionalPayment: true });
         // Check if it's a failed additional payment
         if (redirectStatus !== 'succeeded') {
+          console.log('[CHECKOUT] Additional payment failed with status:', redirectStatus);
           setError('❌ Payment failed. Please check your payment method and try again.');
           setIsProcessingRedirect(false);
+          setLoading(false);
           return;
         }
+        console.log('[CHECKOUT] Additional payment succeeded, calling handlePaymentRedirectSuccess');
         handlePaymentRedirectSuccess(paymentIntentId, { isAdditionalPayment: true });
         return;
       }
@@ -201,6 +202,7 @@ export default function Checkout() {
     // For asynchronous payments, Stripe will send webhooks when payment completes
     // We'll attempt to confirm, but payment might still be processing
     console.log('[CHECKOUT] Processing payment redirect for intent:', paymentIntentId);
+    console.log('[CHECKOUT] registrationData:', registrationData);
     setError('');
 
     try {
@@ -211,8 +213,15 @@ export default function Checkout() {
         registrations: registrationData
       };
 
-      // For normal registrations, include eventId and calculate expected amount
-      if (!registrationData?.isAdditionalPayment) {
+      // For additional payments, include the amount from URL
+      if (registrationData?.isAdditionalPayment) {
+        const amountParam = searchParams.get('amount');
+        if (amountParam) {
+          confirmPayload.expectedAmount = parseInt(amountParam);
+          console.log('[CHECKOUT] Additional payment amount from URL:', amountParam);
+        }
+      } else {
+        // For normal registrations, include eventId and calculate expected amount
         // Determine total amount from stored registration data
         let totalAmount = 0;
 
