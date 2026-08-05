@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
           ELSE NULL
         END as remaining
       FROM event_products p
-      WHERE p.event_id = $1
+      WHERE p.event_id = $1 AND p.deleted_at IS NULL
       ORDER BY p.sort_order ASC, p.name ASC
     `, [req.params.eventId]);
 
@@ -49,6 +49,7 @@ router.get('/', async (req, res) => {
                       FROM registration_products rp
                       JOIN registrations r ON rp.registration_id = r.id
                       WHERE rp.product_id = $1 AND r.event_id = $2
+                      AND (SELECT deleted_at FROM event_products WHERE id = $1) IS NULL
                     `, [product.id, req.params.eventId]);
 
                     console.log(`[PRODUCTS-DEBUG] All registrations for product ${product.id}: ${JSON.stringify(allRegistrations.rows)}`);
@@ -71,6 +72,7 @@ router.get('/', async (req, res) => {
                           OR rp.field_values::text LIKE $4
                           OR rp.field_values::text LIKE $5
                         )
+                        AND (SELECT deleted_at FROM event_products WHERE id = $1) IS NULL
                     `, [product.id, req.params.eventId, ...likePatterns]);
 
                     const used = parseInt(countResult.rows[0]?.count || 0);
@@ -152,7 +154,7 @@ router.put('/reorder', requireAuth, requireRole(pool, 'creator', 'admin'), async
     await client.query('BEGIN');
     for (let i = 0; i < order.length; i++) {
       await client.query(
-        'UPDATE event_products SET sort_order = $1 WHERE id = $2 AND event_id = $3',
+        'UPDATE event_products SET sort_order = $1 WHERE id = $2 AND event_id = $3 AND deleted_at IS NULL',
         [i, order[i], req.params.eventId]
       );
     }
@@ -177,7 +179,7 @@ router.put('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), as
 
     const result = await pool.query(`
       UPDATE event_products SET name=$1, description=$2, price=$3, quantity=$4, fields=$5
-      WHERE id=$6 AND event_id=$7 RETURNING *
+      WHERE id=$6 AND event_id=$7 AND deleted_at IS NULL RETURNING *
     `, [name, description, price, quantity || null, JSON.stringify(fields), req.params.productId, req.params.eventId]);
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Product not found' });
@@ -202,13 +204,28 @@ router.put('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), as
   }
 });
 
-// Delete product
+// Delete product (soft delete - preserves order history)
 router.delete('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
   try {
     const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
     if (!allowed) return res.status(403).json({ error: 'Not authorised' });
 
-    await pool.query('DELETE FROM event_products WHERE id=$1 AND event_id=$2', [req.params.productId, req.params.eventId]);
+    // Soft delete: set deleted_at timestamp instead of hard delete
+    const result = await pool.query(
+      'UPDATE event_products SET deleted_at = NOW() WHERE id=$1 AND event_id=$2 RETURNING *',
+      [req.params.productId, req.params.eventId]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const product = result.rows[0];
+
+    // Log the deletion
+    const { logHelpers } = require('../services/logService');
+    logHelpers.productDeleted(req.params.productId, product.name, req.user.id);
+
     res.json({ message: 'Product deleted' });
   } catch (err) {
     console.error('Failed to delete product:', err.message);
@@ -216,5 +233,27 @@ router.delete('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'),
   }
 });
 
+
+// Restore deleted product (admin or event creator only)
+router.patch('/:productId/restore', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
+  try {
+    const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
+    if (!allowed) return res.status(403).json({ error: 'Not authorised' });
+
+    const result = await pool.query(
+      'UPDATE event_products SET deleted_at = NULL WHERE id=$1 AND event_id=$2 RETURNING *',
+      [req.params.productId, req.params.eventId]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    res.json({ product: result.rows[0], message: 'Product restored' });
+  } catch (err) {
+    console.error('Failed to restore product:', err.message);
+    res.status(500).json({ error: 'Failed to restore product' });
+  }
+});
 
 module.exports = router;

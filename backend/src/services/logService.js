@@ -300,6 +300,13 @@ const logHelpers = {
       `Additional payment confirmed for registration ${registrationId}: €${(amountCents / 100).toFixed(2)}`,
       { registrationId, amount: amountCents }
     ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  productDeleted: (productId, productName, adminUserId) => {
+    addLog(CATEGORIES.OTHER, LEVELS.WARNING,
+      `Product deleted (soft delete): ${productName} (preserves order history)`,
+      { productId, productName, adminUserId }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
   }
 };
 

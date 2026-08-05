@@ -4,6 +4,7 @@ const { securityHeaders, cors } = require('./middleware/security');
 const { initDb } = require('./initDb');
 const { initPaymentSchema } = require('./initPaymentSchema');
 const { initLogs } = require('./initLogs');
+const { runMigrations } = require('./runMigrations');
 const { processPendingEmails } = require('./services/emailWorker');
 
 // Fail fast if critical environment variables are missing
@@ -70,6 +71,14 @@ app.use((err, req, res, next) => {
 
 app.listen(port, async () => {
   console.log(`Server running on port ${port}`);
+
+  // Run database migrations
+  try {
+    await runMigrations();
+  } catch (err) {
+    console.error('Database migrations failed (non-blocking):', err.message);
+    // Don't crash the server, just log the error
+  }
 
   // Initialize database indexes in background
   try {
