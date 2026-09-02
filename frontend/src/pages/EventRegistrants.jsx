@@ -503,22 +503,42 @@ export default function EventRegistrants() {
   };
 
   const exportRegistrantsCSV = () => {
-  const headers = ['First name', 'Last name', 'Email', 'Age', 'Team', 'Products', 'Total price', 'Payment Status', 'Type', 'Registered', 'Comments'];
+  // Get all unique products across all registrations
+  const allProducts = [];
+  const productMap = {};
+  registrations.forEach(r => {
+    if (r.products) {
+      r.products.forEach(p => {
+        if (!productMap[p.product_id]) {
+          productMap[p.product_id] = p.name;
+          allProducts.push({ id: p.product_id, name: p.name });
+        }
+      });
+    }
+  });
+  // Sort products by name for consistent column order
+  allProducts.sort((a, b) => a.name.localeCompare(b.name));
+
+  // Create headers with product columns
+  const headers = ['First name', 'Last name', 'Email', 'Age', 'Team', ...allProducts.map(p => p.name), 'Total price', 'Payment Status', 'Type', 'Registered', 'Comments'];
   const rows = registrations.map(r => {
     const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
     const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
     const email = r.email_for_export || (r.is_guest ? r.guest_email : r.user_email);
     const age = r.is_guest ? getAge(r.guest_year_of_birth) : getAge(r.year_of_birth);
     const team = r.team_name || '';
-    const products = r.products
-      ? r.products.map(p => {
-          const fieldParts = Object.entries(p.field_values || {}).map(([fid, val]) => {
-            const fieldDef = (p.fields || []).find(f => f.id === fid);
-            return `${fieldDef?.label || fid}: ${val}`;
-          });
-          return `${p.name} x${p.quantity}${fieldParts.length ? ` (${fieldParts.join(', ')})` : ''}`;
-        }).join('; ')
-      : '';
+
+    // Create a map of product quantities for this registration
+    const productQuantities = {};
+    if (r.products) {
+      r.products.forEach(p => {
+        productQuantities[p.product_id] = p.quantity;
+      });
+    }
+
+    // Add quantity for each product column (0 if not purchased)
+    const productCells = allProducts.map(p => productQuantities[p.id] || 0);
+
     const totalPrice = r.products
       ? r.products.reduce((sum, p) => sum + getProductPrice(p) * p.quantity, 0).toFixed(2)
       : '0.00';
@@ -529,7 +549,7 @@ export default function EventRegistrants() {
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
     const comments = r.comments || '';
-    return [firstName, lastName, email, age, team, products, totalPrice, paymentStatus, type, registered, comments];
+    return [firstName, lastName, email, age, team, ...productCells, totalPrice, paymentStatus, type, registered, comments];
   });
 
   const csv = [headers, ...rows]
