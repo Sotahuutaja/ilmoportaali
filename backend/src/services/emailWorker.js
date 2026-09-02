@@ -186,12 +186,12 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
   const registration = regResult.rows[0];
   const eventId = registration.event_id;
 
-  // Fetch all registration products
+  // Fetch all registration products (exclude soft-deleted)
   const productsResult = await pool.query(
     `SELECT rp.*, ep.name, ep.price, ep.fields
      FROM registration_products rp
      JOIN event_products ep ON rp.product_id = ep.id
-     WHERE rp.registration_id = $1`,
+     WHERE rp.registration_id = $1 AND rp.deleted_at IS NULL`,
     [registrationId]
   );
 
@@ -248,13 +248,13 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
     };
   });
 
-  // Fetch related guest registrations
+  // Fetch related guest registrations (exclude soft-deleted products)
   const guestsResult = await pool.query(
     `SELECT r.*,
             (SELECT json_agg(json_build_object('product_id', rp.product_id, 'quantity', rp.quantity, 'field_values', rp.field_values, 'name', ep.name, 'price', ep.price))
              FROM registration_products rp
              JOIN event_products ep ON rp.product_id = ep.id
-             WHERE rp.registration_id = r.id) as products
+             WHERE rp.registration_id = r.id AND rp.deleted_at IS NULL) as products
      FROM registrations r
      WHERE r.event_id = $1 AND r.is_guest = true AND r.registered_by = $2`,
     [eventId, registration.user_id]
@@ -371,12 +371,12 @@ async function sendCancellationEmailFromQueue(registrationId, recipientEmail) {
 
   const invoice = invoiceResult.rows[0];
 
-  // Fetch registration products
+  // Fetch registration products (exclude soft-deleted)
   const productsResult = await pool.query(
     `SELECT rp.*, ep.name, ep.price
      FROM registration_products rp
      JOIN event_products ep ON rp.product_id = ep.id
-     WHERE rp.registration_id = $1`,
+     WHERE rp.registration_id = $1 AND rp.deleted_at IS NULL`,
     [registrationId]
   );
 

@@ -66,7 +66,7 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
       // Validate available quantity for products with stock limits
       if (product.rows[0].quantity !== null) {
         const used = await pool.query(
-          'SELECT COALESCE(SUM(quantity), 0) as used FROM registration_products WHERE product_id = $1',
+          'SELECT COALESCE(SUM(quantity), 0) as used FROM registration_products WHERE product_id = $1 AND deleted_at IS NULL',
           [product_id]
         );
         const remaining = product.rows[0].quantity - parseInt(used.rows[0].used);
@@ -285,9 +285,9 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
               userEmail = userResult.rows[0]?.email;
             }
 
-            // Get products for this registration with prices and fields
+            // Get products for this registration with prices and fields (exclude soft-deleted)
             const productsResult = await pool.query(
-              'SELECT ep.name, ep.price, ep.fields, rp.quantity, rp.field_values FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1',
+              'SELECT ep.name, ep.price, ep.fields, rp.quantity, rp.field_values FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1 AND rp.deleted_at IS NULL',
               [registrationId]
             );
 
@@ -504,7 +504,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
         // Validate available quantity for products with stock limits
         if (product.rows[0].quantity !== null) {
           const used = await client.query(
-            'SELECT COALESCE(SUM(quantity), 0) as used FROM registration_products WHERE product_id = $1',
+            'SELECT COALESCE(SUM(quantity), 0) as used FROM registration_products WHERE product_id = $1 AND deleted_at IS NULL',
             [product_id]
           );
           const remaining = product.rows[0].quantity - parseInt(used.rows[0].used);

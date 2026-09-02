@@ -41,13 +41,13 @@ async function calculateProductPrice(client, products, eventId) {
   return totalCents;
 }
 
-// Helper: get current total price of a registration
+// Helper: get current total price of a registration (excludes soft-deleted products)
 async function getRegistrationPrice(client, registrationId) {
   const result = await client.query(`
     SELECT rp.product_id, rp.quantity, rp.field_values, ep.price, ep.fields, ep.event_id
     FROM registration_products rp
     JOIN event_products ep ON rp.product_id = ep.id
-    WHERE rp.registration_id = $1
+    WHERE rp.registration_id = $1 AND rp.deleted_at IS NULL
   `, [registrationId]);
 
   let totalCents = 0;
@@ -78,7 +78,7 @@ async function getRegistrationPrice(client, registrationId) {
 }
 
 // Helper: validate and reserve products
-async function insertProducts(client, registrationId, products, eventId) {
+async function insertProducts(client, registrationId, products, eventId, modificationReason = null) {
   for (const { product_id, quantity = 1, field_values = {} } of products) {
     const product = await client.query(
       'SELECT * FROM event_products WHERE id = $1 AND event_id = $2',
@@ -88,7 +88,7 @@ async function insertProducts(client, registrationId, products, eventId) {
 
     if (product.rows[0].quantity !== null) {
       const used = await client.query(
-        'SELECT COALESCE(SUM(quantity), 0) as used FROM registration_products WHERE product_id = $1',
+        'SELECT COALESCE(SUM(quantity), 0) as used FROM registration_products WHERE product_id = $1 AND deleted_at IS NULL',
         [product_id]
       );
       const remaining = product.rows[0].quantity - parseInt(used.rows[0].used);
@@ -103,9 +103,13 @@ async function insertProducts(client, registrationId, products, eventId) {
       }
     }
 
+    // Capture product snapshot at time of insert
+    const productPrice = parseFloat(product.rows[0].price);
     await client.query(
-      'INSERT INTO registration_products (registration_id, product_id, quantity, field_values) VALUES ($1, $2, $3, $4)',
-      [registrationId, product_id, quantity, JSON.stringify(field_values)]
+      `INSERT INTO registration_products
+       (registration_id, product_id, quantity, field_values, product_name, product_price, snapshot_at, created_at, modification_reason)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)`,
+      [registrationId, product_id, quantity, JSON.stringify(field_values), product.rows[0].name, productPrice, modificationReason]
     );
   }
 }
@@ -168,7 +172,7 @@ router.post('/:eventId', requireAuth, async (req, res) => {
     );
 
     if (products.length > 0) {
-      await insertProducts(client, reg.rows[0].id, products, req.params.eventId);
+      await insertProducts(client, reg.rows[0].id, products, req.params.eventId, 'initial_purchase');
     }
 
     await client.query('COMMIT');
@@ -245,7 +249,7 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
     `, [req.params.eventId, team_id, guest_first_name, guest_last_name, guest_email, comments || null, req.user.id]);
 
     if (products.length > 0) {
-      await insertProducts(client, reg.rows[0].id, products, req.params.eventId);
+      await insertProducts(client, reg.rows[0].id, products, req.params.eventId, 'initial_purchase');
     }
 
     await client.query('COMMIT');
@@ -445,7 +449,7 @@ router.get('/:eventId', requireAuth, async (req, res) => {
     const result = await pool.query(`
       SELECT
         r.*,
-        u.first_name, u.last_name, u.email as user_email, u.year_of_birth,
+        u.first_name, u.last_name, u.email as user_email, u.year_of_birth, u.gender,
         t.name as team_name,
         COALESCE(u.email, reg_by.email) as email_for_export,
         json_agg(json_build_object(
@@ -453,17 +457,21 @@ router.get('/:eventId', requireAuth, async (req, res) => {
           'name', ep.name,
           'quantity', rp.quantity,
           'price', ep.price,
+          'product_name', rp.product_name,
+          'product_price', rp.product_price,
+          'snapshot_at', rp.snapshot_at,
           'field_values', rp.field_values,
-          'fields', ep.fields
+          'fields', ep.fields,
+          'modification_reason', rp.modification_reason
         )) FILTER (WHERE rp.id IS NOT NULL) as products
       FROM registrations r
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN teams t ON r.team_id = t.id
       LEFT JOIN users reg_by ON r.registered_by = reg_by.id
-      LEFT JOIN registration_products rp ON r.id = rp.registration_id
+      LEFT JOIN registration_products rp ON r.id = rp.registration_id AND rp.deleted_at IS NULL
       LEFT JOIN event_products ep ON rp.product_id = ep.id
       WHERE r.event_id = $1
-      GROUP BY r.id, u.first_name, u.last_name, u.email, u.year_of_birth, t.name, reg_by.email
+      GROUP BY r.id, u.first_name, u.last_name, u.email, u.year_of_birth, u.gender, t.name, reg_by.email
       ORDER BY r.created_at ASC
     `, [req.params.eventId]);
 
@@ -523,7 +531,7 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
        LEFT JOIN users u ON r.user_id = u.id
        LEFT JOIN users rb ON r.registered_by = rb.id
        JOIN events e ON r.event_id = e.id
-       LEFT JOIN registration_products rp ON r.id = rp.registration_id
+       LEFT JOIN registration_products rp ON r.id = rp.registration_id AND rp.deleted_at IS NULL
        LEFT JOIN event_products ep ON rp.product_id = ep.id
        WHERE r.id = $1 AND r.event_id = $2`,
       [req.params.registrationId, req.params.eventId]
@@ -805,22 +813,25 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
 
     // Update products with payment reconciliation
     if (products !== undefined) {
-      // Fetch old products before deleting them (for refund email)
+      // Fetch old products before soft-deleting them (for refund email and audit trail)
       const oldProductsResult = await client.query(
-        'SELECT rp.product_id, rp.quantity, rp.field_values, ep.name FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1',
+        'SELECT rp.product_id, rp.quantity, rp.field_values, ep.name FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1 AND rp.deleted_at IS NULL',
         [req.params.registrationId]
       );
       const oldProducts = oldProductsResult.rows;
 
-      // Calculate old total before deleting products
+      // Calculate old total before soft-deleting products
       const oldTotalCents = await getRegistrationPrice(client, req.params.registrationId);
 
-      // Delete old products
-      await client.query('DELETE FROM registration_products WHERE registration_id = $1', [req.params.registrationId]);
+      // Soft-delete old products (preserve audit trail)
+      await client.query(
+        'UPDATE registration_products SET deleted_at = NOW(), modification_reason = $1 WHERE registration_id = $2 AND deleted_at IS NULL',
+        ['admin_product_update', req.params.registrationId]
+      );
 
-      // Insert new products
+      // Insert new products with snapshot
       if (products.length > 0) {
-        await insertProducts(client, req.params.registrationId, products, req.params.eventId);
+        await insertProducts(client, req.params.registrationId, products, req.params.eventId, 'initial_purchase');
       }
 
       // Calculate new total

@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
               SELECT SUM(rp.quantity)
               FROM registration_products rp
               JOIN registrations r ON rp.registration_id = r.id
-              WHERE rp.product_id = p.id AND r.event_id = p.event_id
+              WHERE rp.product_id = p.id AND r.event_id = p.event_id AND rp.deleted_at IS NULL
             ), 0)
           ELSE NULL
         END as remaining
@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
                       SELECT rp.field_values
                       FROM registration_products rp
                       JOIN registrations r ON rp.registration_id = r.id
-                      WHERE rp.product_id = $1 AND r.event_id = $2
+                      WHERE rp.product_id = $1 AND r.event_id = $2 AND rp.deleted_at IS NULL
                       AND (SELECT deleted_at FROM event_products WHERE id = $1) IS NULL
                     `, [product.id, req.params.eventId]);
 
@@ -67,6 +67,7 @@ router.get('/', async (req, res) => {
                       JOIN registrations r ON rp.registration_id = r.id
                       WHERE rp.product_id = $1
                         AND r.event_id = $2
+                        AND rp.deleted_at IS NULL
                         AND (
                           rp.field_values::text LIKE $3
                           OR rp.field_values::text LIKE $4
@@ -191,7 +192,7 @@ router.put('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), as
           SELECT COALESCE(SUM(rp.quantity), 0)
           FROM registration_products rp
           JOIN registrations r ON rp.registration_id = r.id
-          WHERE rp.product_id = p.id AND r.event_id = p.event_id
+          WHERE rp.product_id = p.id AND r.event_id = p.event_id AND rp.deleted_at IS NULL
         ), p.quantity) as remaining
       FROM event_products p
       WHERE p.id = $1 AND p.event_id = $2
