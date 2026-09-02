@@ -18,7 +18,7 @@ export default function EditEvent() {
     stripe_mode: 'test'
   });
   const [products, setProducts] = useState([]);
-  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [] });
+  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [], available_from: '', available_until: '' });
   const [editingProduct, setEditingProduct] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -88,14 +88,17 @@ export default function EditEvent() {
     setProductError(''); setProductMessage('');
     try {
       const res = await api.post(`/events/${id}/products`, {
-        ...productForm,
+        name: productForm.name,
+        description: productForm.description,
         price: parseFloat(productForm.price) || 0,
         quantity: productForm.quantity ? parseInt(productForm.quantity) : null,
-        fields: productForm.fields
+        fields: productForm.fields,
+        available_from: productForm.available_from ? new Date(productForm.available_from).toISOString() : null,
+        available_until: productForm.available_until ? new Date(productForm.available_until).toISOString() : null
       });
       setProducts([...products, res.data.product]);
       setProductMessage('Product added!');
-      setProductForm({ name: '', description: '', price: '', quantity: '', fields: [] });
+      setProductForm({ name: '', description: '', price: '', quantity: '', fields: [], available_from: '', available_until: '' });
     } catch (err) {
       setProductError(err.response?.data?.error || 'Failed to add product');
     }
@@ -110,7 +113,9 @@ export default function EditEvent() {
         description: editingProduct.description,
         price: parseFloat(editingProduct.price) || 0,
         quantity: editingProduct.quantity ? parseInt(editingProduct.quantity) : null,
-        fields: editingProduct.fields || []
+        fields: editingProduct.fields || [],
+        available_from: editingProduct.available_from ? new Date(editingProduct.available_from).toISOString() : null,
+        available_until: editingProduct.available_until ? new Date(editingProduct.available_until).toISOString() : null
       });
       setProducts(products.map(p => p.id === editingProduct.id ? res.data.product : p));
       setProductMessage('Product updated!');
@@ -308,6 +313,14 @@ export default function EditEvent() {
                     <label style={{ fontSize: '0.8rem' }}>Quantity limit</label>
                     <input type="number" min="1" value={editingProduct.quantity || ''} onChange={e => setEditingProduct({ ...editingProduct, quantity: e.target.value })} style={{ marginBottom: 0 }} />
                   </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem' }}>Available from</label>
+                    <input type="datetime-local" value={editingProduct.available_from ? new Date(editingProduct.available_from).toISOString().slice(0, 16) : ''} onChange={e => setEditingProduct({ ...editingProduct, available_from: e.target.value })} style={{ marginBottom: 0 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem' }}>Available until</label>
+                    <input type="datetime-local" value={editingProduct.available_until ? new Date(editingProduct.available_until).toISOString().slice(0, 16) : ''} onChange={e => setEditingProduct({ ...editingProduct, available_until: e.target.value })} style={{ marginBottom: 0 }} />
+                  </div>
                 </div>
                 <ProductFieldEditor
                   fields={editingProduct.fields || []}
@@ -327,6 +340,14 @@ export default function EditEvent() {
                 <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
                   {p.quantity !== null ? `${p.remaining ?? p.quantity} / ${p.quantity} left` : 'Unlimited'}
                 </span>
+                {(p.available_from || p.available_until) && (
+                  <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '3px', background: p.is_available ? '#e8f5e9' : '#ffebee', color: p.is_available ? '#2e7d32' : '#c62828' }}>
+                    {p.available_from && <span>From {new Date(p.available_from).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
+                    {p.available_from && p.available_until && <span> → </span>}
+                    {p.available_until && <span>To {new Date(p.available_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
+                    {p.is_available === false && <span> (Expired)</span>}
+                  </span>
+                )}
                 {p.fields && p.fields.length > 0 && (
                   <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                     · {p.fields.map(f => `${f.label} (${f.type === 'select' ? f.options.join(', ') : 'text'})`).join(' · ')}
@@ -357,6 +378,10 @@ export default function EditEvent() {
           <input type="number" step="0.01" min="0" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required />
           <label>Quantity limit (leave blank for unlimited)</label>
           <input type="number" min="1" value={productForm.quantity} onChange={e => setProductForm({ ...productForm, quantity: e.target.value })} />
+          <label>Available from (optional)</label>
+          <input type="datetime-local" value={productForm.available_from} onChange={e => setProductForm({ ...productForm, available_from: e.target.value })} />
+          <label>Available until (optional)</label>
+          <input type="datetime-local" value={productForm.available_until} onChange={e => setProductForm({ ...productForm, available_until: e.target.value })} />
           <ProductFieldEditor
             fields={productForm.fields}
             onChange={fields => setProductForm({ ...productForm, fields })}
