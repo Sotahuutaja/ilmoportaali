@@ -18,7 +18,12 @@ router.get('/', async (req, res) => {
               WHERE rp.product_id = p.id AND r.event_id = p.event_id AND rp.deleted_at IS NULL
             ), 0)
           ELSE NULL
-        END as remaining
+        END as remaining,
+        CASE
+          WHEN p.available_from IS NOT NULL AND NOW() < p.available_from THEN false
+          WHEN p.available_until IS NOT NULL AND NOW() > p.available_until THEN false
+          ELSE true
+        END as is_available
       FROM event_products p
       WHERE p.event_id = $1 AND p.deleted_at IS NULL
       ORDER BY p.sort_order ASC, p.name ASC
@@ -121,7 +126,7 @@ router.get('/', async (req, res) => {
 
 // Create product (creator who owns event, or admin)
 router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
-  const { name, description, price, quantity, fields = [] } = req.body;
+  const { name, description, price, quantity, fields = [], available_from, available_until } = req.body;
   if (!name) return res.status(400).json({ error: 'Product name is required' });
 
   try {
@@ -132,8 +137,8 @@ router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req,
     if (!allowed) return res.status(403).json({ error: 'Not authorised to manage this event' });
 
     const result = await pool.query(
-      'INSERT INTO event_products (event_id, name, description, price, quantity, fields) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [req.params.eventId, name, description, price || 0, quantity || null, JSON.stringify(fields)]
+      'INSERT INTO event_products (event_id, name, description, price, quantity, fields, available_from, available_until) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [req.params.eventId, name, description, price || 0, quantity || null, JSON.stringify(fields), available_from || null, available_until || null]
     );
     res.status(201).json({ product: result.rows[0] });
   } catch (err) {
@@ -172,20 +177,20 @@ router.put('/reorder', requireAuth, requireRole(pool, 'creator', 'admin'), async
 
 // Update product
 router.put('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
-  const { name, description, price, quantity, fields = [] } = req.body;
+  const { name, description, price, quantity, fields = [], available_from, available_until } = req.body;
 
   try {
     const allowed = await canManageEvent(req.user.id, req.user.role, req.params.eventId, pool);
     if (!allowed) return res.status(403).json({ error: 'Not authorised' });
 
     const result = await pool.query(`
-      UPDATE event_products SET name=$1, description=$2, price=$3, quantity=$4, fields=$5
-      WHERE id=$6 AND event_id=$7 AND deleted_at IS NULL RETURNING *
-    `, [name, description, price, quantity || null, JSON.stringify(fields), req.params.productId, req.params.eventId]);
+      UPDATE event_products SET name=$1, description=$2, price=$3, quantity=$4, fields=$5, available_from=$6, available_until=$7
+      WHERE id=$8 AND event_id=$9 AND deleted_at IS NULL RETURNING *
+    `, [name, description, price, quantity || null, JSON.stringify(fields), available_from || null, available_until || null, req.params.productId, req.params.eventId]);
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Product not found' });
 
-    // Fetch the product with remaining quantity calculated
+    // Fetch the product with remaining quantity and availability calculated
     const withRemaining = await pool.query(`
       SELECT p.*,
         COALESCE(p.quantity - (
@@ -193,7 +198,12 @@ router.put('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), as
           FROM registration_products rp
           JOIN registrations r ON rp.registration_id = r.id
           WHERE rp.product_id = p.id AND r.event_id = p.event_id AND rp.deleted_at IS NULL
-        ), p.quantity) as remaining
+        ), p.quantity) as remaining,
+        CASE
+          WHEN p.available_from IS NOT NULL AND NOW() < p.available_from THEN false
+          WHEN p.available_until IS NOT NULL AND NOW() > p.available_until THEN false
+          ELSE true
+        END as is_available
       FROM event_products p
       WHERE p.id = $1 AND p.event_id = $2
     `, [req.params.productId, req.params.eventId]);

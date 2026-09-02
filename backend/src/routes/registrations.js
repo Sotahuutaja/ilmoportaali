@@ -86,6 +86,16 @@ async function insertProducts(client, registrationId, products, eventId, modific
     );
     if (!product.rows[0]) throw new Error(`Product ${product_id} not found`);
 
+    const now = new Date();
+
+    // Check product availability window
+    if (product.rows[0].available_from && now < new Date(product.rows[0].available_from)) {
+      throw new Error(`Product "${product.rows[0].name}" is not yet available for purchase`);
+    }
+    if (product.rows[0].available_until && now > new Date(product.rows[0].available_until)) {
+      throw new Error(`Product "${product.rows[0].name}" is no longer available for purchase`);
+    }
+
     if (product.rows[0].quantity !== null) {
       const used = await client.query(
         'SELECT COALESCE(SUM(quantity), 0) as used FROM registration_products WHERE product_id = $1 AND deleted_at IS NULL',

@@ -42,12 +42,25 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
       }
 
       const product = await pool.query(
-        'SELECT name, price, fields, quantity FROM event_products WHERE id = $1 AND event_id = $2',
+        'SELECT name, price, fields, quantity, available_from, available_until FROM event_products WHERE id = $1 AND event_id = $2',
         [product_id, eventId]
       );
 
       if (!product.rows[0]) {
         return res.status(400).json({ error: `Product ${product_id} not found` });
+      }
+
+      // Check product availability window
+      const now = new Date();
+      if (product.rows[0].available_from && now < new Date(product.rows[0].available_from)) {
+        return res.status(409).json({
+          error: `${product.rows[0].name} is not yet available for purchase`
+        });
+      }
+      if (product.rows[0].available_until && now > new Date(product.rows[0].available_until)) {
+        return res.status(409).json({
+          error: `${product.rows[0].name} is no longer available for purchase`
+        });
       }
 
       // Validate that select fields have values selected
@@ -480,12 +493,21 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
         // Validate select fields have values before querying product
         const productInfo = await client.query(
-          'SELECT name, price, fields, quantity FROM event_products WHERE id = $1',
+          'SELECT name, price, fields, quantity, available_from, available_until FROM event_products WHERE id = $1',
           [product_id]
         );
 
         if (!productInfo.rows[0]) {
           throw new Error(`Product ${product_id} not found`);
+        }
+
+        // Check product availability window
+        const now = new Date();
+        if (productInfo.rows[0].available_from && now < new Date(productInfo.rows[0].available_from)) {
+          throw new Error(`${productInfo.rows[0].name} is not yet available for purchase`);
+        }
+        if (productInfo.rows[0].available_until && now > new Date(productInfo.rows[0].available_until)) {
+          throw new Error(`${productInfo.rows[0].name} is no longer available for purchase`);
         }
 
         // Validate that select fields have values selected
