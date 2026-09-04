@@ -93,8 +93,8 @@ export default function EditEvent() {
         price: parseFloat(productForm.price) || 0,
         quantity: productForm.quantity ? parseInt(productForm.quantity) : null,
         fields: productForm.fields,
-        available_from: productForm.available_from ? new Date(productForm.available_from).toISOString() : null,
-        available_until: productForm.available_until ? new Date(productForm.available_until).toISOString() : null,
+        available_from: productForm.available_from ? helsinkiToUTC(productForm.available_from) : null,
+        available_until: productForm.available_until ? helsinkiToUTC(productForm.available_until) : null,
         is_identifying: !!productForm.is_identifying
       });
       setProducts([...products, res.data.product]);
@@ -115,8 +115,8 @@ export default function EditEvent() {
         price: parseFloat(editingProduct.price) || 0,
         quantity: editingProduct.quantity ? parseInt(editingProduct.quantity) : null,
         fields: editingProduct.fields || [],
-        available_from: editingProduct.available_from ? new Date(editingProduct.available_from).toISOString() : null,
-        available_until: editingProduct.available_until ? new Date(editingProduct.available_until).toISOString() : null,
+        available_from: editingProduct.available_from ? helsinkiToUTC(editingProduct.available_from) : null,
+        available_until: editingProduct.available_until ? helsinkiToUTC(editingProduct.available_until) : null,
         is_identifying: !!editingProduct.is_identifying
       });
       setProducts(products.map(p => p.id === editingProduct.id ? res.data.product : p));
@@ -316,12 +316,12 @@ export default function EditEvent() {
                     <input type="number" min="1" value={editingProduct.quantity || ''} onChange={e => setEditingProduct({ ...editingProduct, quantity: e.target.value })} style={{ marginBottom: 0 }} />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8rem' }}>Available from</label>
-                    <input type="datetime-local" value={editingProduct.available_from ? new Date(editingProduct.available_from).toISOString().slice(0, 16) : ''} onChange={e => setEditingProduct({ ...editingProduct, available_from: e.target.value })} style={{ marginBottom: 0 }} />
+                    <label style={{ fontSize: '0.8rem' }}>Available from <span style={{ color: 'var(--text-muted)', fontWeight: 'normal' }}>(Finnish time, EET/EEST)</span></label>
+                    <input type="datetime-local" value={editingProduct.available_from || ''} onChange={e => setEditingProduct({ ...editingProduct, available_from: e.target.value })} style={{ marginBottom: 0 }} />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8rem' }}>Available until</label>
-                    <input type="datetime-local" value={editingProduct.available_until ? new Date(editingProduct.available_until).toISOString().slice(0, 16) : ''} onChange={e => setEditingProduct({ ...editingProduct, available_until: e.target.value })} style={{ marginBottom: 0 }} />
+                    <label style={{ fontSize: '0.8rem' }}>Available until <span style={{ color: 'var(--text-muted)', fontWeight: 'normal' }}>(Finnish time, EET/EEST)</span></label>
+                    <input type="datetime-local" value={editingProduct.available_until || ''} onChange={e => setEditingProduct({ ...editingProduct, available_until: e.target.value })} style={{ marginBottom: 0 }} />
                   </div>
                 </div>
                 <label style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem' }}>
@@ -361,9 +361,9 @@ export default function EditEvent() {
                 )}
                 {(p.available_from || p.available_until) && (
                   <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '3px', background: p.is_available ? '#e8f5e9' : '#ffebee', color: p.is_available ? '#2e7d32' : '#c62828' }}>
-                    {p.available_from && <span>From {new Date(p.available_from).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
+                    {p.available_from && <span>From {new Date(p.available_from).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Helsinki' })}</span>}
                     {p.available_from && p.available_until && <span> → </span>}
-                    {p.available_until && <span>To {new Date(p.available_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
+                    {p.available_until && <span>To {new Date(p.available_until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Helsinki' })}</span>}
                     {p.is_available === false && <span> (Expired)</span>}
                   </span>
                 )}
@@ -376,7 +376,7 @@ export default function EditEvent() {
             )}
             {editingProduct?.id !== p.id && (
               <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                <button className="btn btn-secondary" onClick={() => setEditingProduct({ ...p })}>Edit</button>
+                <button className="btn btn-secondary" onClick={() => setEditingProduct({ ...p, available_from: toHelsinki(p.available_from), available_until: toHelsinki(p.available_until) })}>Edit</button>
                 <button className="btn btn-danger" onClick={() => handleDeleteProduct(p.id)}>Delete</button>
               </div>
             )}
@@ -397,9 +397,9 @@ export default function EditEvent() {
           <input type="number" step="0.01" min="0" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} required />
           <label>Quantity limit (leave blank for unlimited)</label>
           <input type="number" min="1" value={productForm.quantity} onChange={e => setProductForm({ ...productForm, quantity: e.target.value })} />
-          <label>Available from (optional)</label>
+          <label>Available from (optional) <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={productForm.available_from} onChange={e => setProductForm({ ...productForm, available_from: e.target.value })} />
-          <label>Available until (optional)</label>
+          <label>Available until (optional) <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={productForm.available_until} onChange={e => setProductForm({ ...productForm, available_until: e.target.value })} />
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <input
