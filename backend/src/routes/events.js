@@ -10,11 +10,13 @@ router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT e.*, u.name as creator_name,
-        COUNT(r.id)::integer as registration_count
+        (SELECT COUNT(DISTINCT r.id)::integer
+         FROM registrations r
+         JOIN registration_products rp ON rp.registration_id = r.id AND rp.deleted_at IS NULL
+         JOIN event_products ep ON ep.id = rp.product_id AND ep.is_identifying = TRUE
+         WHERE r.event_id = e.id) as registration_count
       FROM events e
       LEFT JOIN users u ON e.creator_id = u.id
-      LEFT JOIN registrations r ON e.id = r.event_id
-      GROUP BY e.id, u.name
       ORDER BY e.starts_at ASC
     `);
     res.json({ events: result.rows });
@@ -29,7 +31,11 @@ router.get('/manageable', requireAuth, requireRole(pool, 'creator', 'admin'), as
   try {
     const result = await pool.query(`
       SELECT DISTINCT ON (e.id) e.*, u.first_name, u.last_name,
-        (SELECT COUNT(*)::integer FROM registrations WHERE event_id = e.id) as registration_count,
+        (SELECT COUNT(DISTINCT r.id)::integer
+         FROM registrations r
+         JOIN registration_products rp ON rp.registration_id = r.id AND rp.deleted_at IS NULL
+         JOIN event_products ep ON ep.id = rp.product_id AND ep.is_identifying = TRUE
+         WHERE r.event_id = e.id) as registration_count,
         CASE WHEN e.creator_id = $1 THEN true ELSE false END as is_owner
       FROM events e
       LEFT JOIN users u ON e.creator_id = u.id
@@ -49,12 +55,14 @@ router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT e.*, u.name as creator_name,
-        COUNT(r.id)::integer as registration_count
+        (SELECT COUNT(DISTINCT r.id)::integer
+         FROM registrations r
+         JOIN registration_products rp ON rp.registration_id = r.id AND rp.deleted_at IS NULL
+         JOIN event_products ep ON ep.id = rp.product_id AND ep.is_identifying = TRUE
+         WHERE r.event_id = e.id) as registration_count
       FROM events e
       LEFT JOIN users u ON e.creator_id = u.id
-      LEFT JOIN registrations r ON e.id = r.event_id
       WHERE e.id = $1
-      GROUP BY e.id, u.name
     `, [req.params.id]);
 
     if (!result.rows[0]) {

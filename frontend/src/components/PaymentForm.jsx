@@ -84,7 +84,11 @@ function PaymentFormContent({
         throw new Error(result.error.message);
       }
 
-      if (result.paymentIntent.status === 'succeeded') {
+      // With manual capture, a successfully confirmed card authorization resolves with
+      // status 'requires_capture' rather than 'succeeded' — the money isn't taken until
+      // our backend captures it after the registration is saved. Per Stripe's docs, a
+      // successful (non-redirect) confirmPayment() always resolves with one or the other.
+      if (result.paymentIntent.status === 'succeeded' || result.paymentIntent.status === 'requires_capture') {
         await confirmPaymentRegistration(paymentIntentId);
       } else {
         throw new Error(`Payment status: ${result.paymentIntent.status}`);

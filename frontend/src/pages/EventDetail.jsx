@@ -84,7 +84,7 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <strong style={{ color: outOfStock ? '#999' : 'inherit' }}>€{effectivePrice.toFixed(2)}</strong>
-                {isSelected && (
+                {isSelected && !p.is_identifying && (
                   <input
                     type="number" min="1"
                     max={p.quantity !== null ? p.remaining : undefined}

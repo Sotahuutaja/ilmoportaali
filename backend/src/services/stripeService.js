@@ -58,7 +58,7 @@ async function createPaymentIntent(registrationId, amountCents, email, mode = 'l
       client_secret: `pi_${mode}_secret_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       amount: amountCents,
       currency: 'eur',
-      status: 'requires_payment_method',
+      status: 'requires_capture',
       metadata: { registrationId, email, mode }
     };
     // Store in mock map so we can retrieve it later with metadata intact
@@ -77,7 +77,17 @@ async function createPaymentIntent(registrationId, amountCents, email, mode = 'l
         mode: mode
       },
       automatic_payment_methods: { enabled: true },
-      receipt_email: email
+      receipt_email: email,
+      // Manual capture, scoped to cards only: a card is authorized (funds held) when the
+      // customer confirms, but not actually charged until we explicitly capture it once
+      // the registration has been fully validated and saved (see capturePaymentIntent()).
+      // Other payment methods (e.g. MobilePay, iDEAL) settle instantly and many of them
+      // don't support delayed capture at all, so they're left on Stripe's normal automatic
+      // capture — for those, confirm-payment falls back to the refund-on-failure safety
+      // net (see refundPaymentIntent()) instead of capture-after-validation.
+      payment_method_options: {
+        card: { capture_method: 'manual' }
+      }
     });
 
     const modeLabel = mode === 'test' ? '[STRIPE TEST]' : '[STRIPE LIVE]';
@@ -106,7 +116,7 @@ async function getPaymentIntent(paymentIntentId, mode = 'live') {
     if (stored) {
       return {
         id: paymentIntentId,
-        status: 'succeeded',
+        status: stored.status,
         amount: stored.amount,
         currency: 'eur',
         metadata: stored.metadata
@@ -114,7 +124,7 @@ async function getPaymentIntent(paymentIntentId, mode = 'live') {
     }
     return {
       id: paymentIntentId,
-      status: 'succeeded',
+      status: 'requires_capture',
       amount: 0,
       currency: 'eur',
       metadata: {}
@@ -128,6 +138,109 @@ async function getPaymentIntent(paymentIntentId, mode = 'live') {
     return paymentIntent;
   } catch (err) {
     console.error('[STRIPE ERROR] Failed to retrieve payment intent:', err.message);
+    throw err;
+  }
+}
+
+/**
+ * Capture a previously-authorized (manual capture) payment intent — this is the step
+ * that actually takes the customer's money. Call this only once the registration it
+ * pays for has been fully validated and is ready to be saved, so a payment is never
+ * captured without a corresponding registration succeeding alongside it.
+ * @param {string} paymentIntentId - Stripe PaymentIntent ID
+ * @param {string} mode - 'live' or 'test' (default: 'live')
+ * @returns {object} The captured payment intent
+ */
+async function capturePaymentIntent(paymentIntentId, mode = 'live') {
+  const stripeInstance = getStripeInstance(mode);
+
+  if (!stripeInstance) {
+    const modeLabel = mode === 'test' ? '[STRIPE TEST MOCK]' : '[STRIPE LIVE MOCK]';
+    console.log(`${modeLabel} Capturing payment intent ${paymentIntentId}`);
+    const stored = mockPaymentIntents[paymentIntentId];
+    if (stored) {
+      stored.status = 'succeeded';
+      return { id: paymentIntentId, status: 'succeeded', amount: stored.amount, currency: 'eur', metadata: stored.metadata };
+    }
+    return { id: paymentIntentId, status: 'succeeded', amount: 0, currency: 'eur', metadata: {} };
+  }
+
+  try {
+    const paymentIntent = await stripeInstance.paymentIntents.capture(paymentIntentId);
+    const modeLabel = mode === 'test' ? '[STRIPE TEST]' : '[STRIPE LIVE]';
+    console.log(`${modeLabel} Payment intent captured: ${paymentIntentId} (${paymentIntent.status})`);
+    return paymentIntent;
+  } catch (err) {
+    console.error('[STRIPE ERROR] Failed to capture payment intent:', err.message);
+    throw err;
+  }
+}
+
+/**
+ * Cancel a previously-authorized (manual capture) payment intent that we've decided not
+ * to capture — e.g. registration validation failed after the card was authorized but
+ * before we took any money. This releases the hold on the customer's card; no funds
+ * are ever taken, so no refund is needed.
+ * @param {string} paymentIntentId - Stripe PaymentIntent ID
+ * @param {string} mode - 'live' or 'test' (default: 'live')
+ * @returns {object} The canceled payment intent
+ */
+async function cancelPaymentIntent(paymentIntentId, mode = 'live') {
+  const stripeInstance = getStripeInstance(mode);
+
+  if (!stripeInstance) {
+    const modeLabel = mode === 'test' ? '[STRIPE TEST MOCK]' : '[STRIPE LIVE MOCK]';
+    console.log(`${modeLabel} Canceling payment intent ${paymentIntentId}`);
+    const stored = mockPaymentIntents[paymentIntentId];
+    if (stored) {
+      stored.status = 'canceled';
+      return { id: paymentIntentId, status: 'canceled', amount: stored.amount, currency: 'eur', metadata: stored.metadata };
+    }
+    return { id: paymentIntentId, status: 'canceled', amount: 0, currency: 'eur', metadata: {} };
+  }
+
+  try {
+    const paymentIntent = await stripeInstance.paymentIntents.cancel(paymentIntentId);
+    const modeLabel = mode === 'test' ? '[STRIPE TEST]' : '[STRIPE LIVE]';
+    console.log(`${modeLabel} Payment intent canceled: ${paymentIntentId} (${paymentIntent.status})`);
+    return paymentIntent;
+  } catch (err) {
+    console.error('[STRIPE ERROR] Failed to cancel payment intent:', err.message);
+    throw err;
+  }
+}
+
+/**
+ * Refund a payment intent that was already captured — the safety net for payment methods
+ * that settle (auto-capture) immediately, such as MobilePay or iDEAL, which don't support
+ * holding funds via manual capture. Used when a registration fails validation or fails to
+ * save AFTER the customer's money has already been taken, so they're never simply left
+ * charged with nothing to show for it.
+ * @param {string} paymentIntentId - Stripe PaymentIntent ID
+ * @param {string} mode - 'live' or 'test' (default: 'live')
+ * @returns {object} The refund object
+ */
+async function refundPaymentIntent(paymentIntentId, mode = 'live') {
+  const stripeInstance = getStripeInstance(mode);
+
+  if (!stripeInstance) {
+    const modeLabel = mode === 'test' ? '[STRIPE TEST MOCK]' : '[STRIPE LIVE MOCK]';
+    console.log(`${modeLabel} Refunding payment intent ${paymentIntentId}`);
+    const stored = mockPaymentIntents[paymentIntentId];
+    if (stored) {
+      stored.status = 'refunded';
+      return { id: `re_mock_${Date.now()}`, payment_intent: paymentIntentId, status: 'succeeded', amount: stored.amount };
+    }
+    return { id: `re_mock_${Date.now()}`, payment_intent: paymentIntentId, status: 'succeeded', amount: 0 };
+  }
+
+  try {
+    const refund = await stripeInstance.refunds.create({ payment_intent: paymentIntentId });
+    const modeLabel = mode === 'test' ? '[STRIPE TEST]' : '[STRIPE LIVE]';
+    console.log(`${modeLabel} Payment intent refunded: ${paymentIntentId} (refund ${refund.id}, status ${refund.status})`);
+    return refund;
+  } catch (err) {
+    console.error('[STRIPE ERROR] Failed to refund payment intent:', err.message);
     throw err;
   }
 }
@@ -172,6 +285,9 @@ function isConfigured(mode = 'live') {
 module.exports = {
   createPaymentIntent,
   getPaymentIntent,
+  capturePaymentIntent,
+  cancelPaymentIntent,
+  refundPaymentIntent,
   constructWebhookEvent,
   isConfigured,
   getStripeInstance

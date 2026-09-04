@@ -6,6 +6,7 @@ const { canManageEvent } = require('../utils/eventAccess');
 const stripe = require('../services/stripeService');
 const { sendAdditionalPaymentEmail, sendRefundEmail } = require('../services/email');
 const { logHelpers } = require('../services/logService');
+const { validateIdentifyingProducts, countIdentifyingRegistrations } = require('../utils/identifyingProducts');
 
 // Helper: calculate total price for a set of products
 async function calculateProductPrice(client, products, eventId) {
@@ -75,33 +76,6 @@ async function getRegistrationPrice(client, registrationId) {
     totalCents += Math.round(price * 100) * row.quantity;
   }
   return totalCents;
-}
-
-// Helper: sum the quantity of "identifying" products (e.g. event tickets) in a product
-// selection, and reject if more than one is being claimed. Returns the summed quantity so
-// callers can also use it to decide whether a registration should count toward capacity.
-async function validateIdentifyingProducts(client, products, eventId) {
-  if (!products || products.length === 0) return 0;
-
-  const productIds = products.map(p => p.product_id);
-  const result = await client.query(
-    'SELECT id FROM event_products WHERE id = ANY($1) AND event_id = $2 AND is_identifying = TRUE',
-    [productIds, eventId]
-  );
-  const identifyingIds = new Set(result.rows.map(r => r.id));
-
-  let identifyingQuantity = 0;
-  for (const { product_id, quantity = 1 } of products) {
-    if (identifyingIds.has(product_id)) {
-      identifyingQuantity += quantity;
-    }
-  }
-
-  if (identifyingQuantity > 1) {
-    throw new Error('Only one ticket-type product can be selected per registration');
-  }
-
-  return identifyingQuantity;
 }
 
 // Helper: validate and reserve products
@@ -177,13 +151,8 @@ router.post('/:eventId', requireAuth, async (req, res) => {
       // capacity slot — merch-only registrations (t-shirt/catering with no ticket) don't.
       const identifyingQuantity = await validateIdentifyingProducts(client, products, req.params.eventId);
       if (identifyingQuantity > 0) {
-        const count = await client.query(`
-          SELECT COUNT(DISTINCT r.id) FROM registrations r
-          JOIN registration_products rp ON rp.registration_id = r.id AND rp.deleted_at IS NULL
-          JOIN event_products ep ON ep.id = rp.product_id AND ep.is_identifying = TRUE
-          WHERE r.event_id = $1
-        `, [req.params.eventId]);
-        if (parseInt(count.rows[0].count) >= event.rows[0].capacity) {
+        const count = await countIdentifyingRegistrations(client, req.params.eventId);
+        if (count >= event.rows[0].capacity) {
           return res.status(409).json({ error: 'Event is full' });
         }
       }
@@ -280,13 +249,8 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
       // capacity slot — merch-only registrations (t-shirt/catering with no ticket) don't.
       const identifyingQuantity = await validateIdentifyingProducts(client, products, req.params.eventId);
       if (identifyingQuantity > 0) {
-        const count = await client.query(`
-          SELECT COUNT(DISTINCT r.id) FROM registrations r
-          JOIN registration_products rp ON rp.registration_id = r.id AND rp.deleted_at IS NULL
-          JOIN event_products ep ON ep.id = rp.product_id AND ep.is_identifying = TRUE
-          WHERE r.event_id = $1
-        `, [req.params.eventId]);
-        if (parseInt(count.rows[0].count) >= event.rows[0].capacity) {
+        const count = await countIdentifyingRegistrations(client, req.params.eventId);
+        if (count >= event.rows[0].capacity) {
           return res.status(409).json({ error: 'Event is full' });
         }
       }

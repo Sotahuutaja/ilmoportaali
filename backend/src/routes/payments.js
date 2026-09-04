@@ -6,7 +6,8 @@
 const express = require('express');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
-const { createPaymentIntent, getPaymentIntent, isConfigured } = require('../services/stripeService');
+const { createPaymentIntent, getPaymentIntent, capturePaymentIntent, cancelPaymentIntent, refundPaymentIntent, isConfigured } = require('../services/stripeService');
+const { validateIdentifyingProducts, countIdentifyingRegistrations } = require('../utils/identifyingProducts');
 const { sendAdditionalPaymentConfirmationEmail } = require('../services/email');
 const { logHelpers } = require('../services/logService');
 
@@ -190,10 +191,19 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
   }
 
   const client = await pool.connect();
+  // Hoisted so the outer catch can still see them if something fails before/after they're set —
+  // `captured` tracks whether we've actually taken the customer's money yet, so a failure can
+  // release the card authorization instead of leaving them charged with nothing to show for it.
+  let stripeMode = 'live'; // default to live
+  // Tracks whether the customer's money has actually been taken — either because a
+  // payment method that doesn't support manual capture (e.g. MobilePay, iDEAL) settled
+  // automatically, or because we deliberately captured a held card authorization below.
+  // A failure while this is true is refunded; a failure while it's false just releases
+  // the card authorization hold, since no money moved in the first place.
+  let moneyCaptured = false;
 
   try {
     // Fetch event to determine stripe_mode (if not an additional payment)
-    let stripeMode = 'live'; // default to live
     if (!isAdditionalPayment && eventId) {
       const eventResult = await pool.query(
         'SELECT stripe_mode FROM events WHERE id = $1',
@@ -209,11 +219,19 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     const paymentIntent = await getPaymentIntent(paymentIntentId, stripeMode);
     console.log('[PAYMENT] Payment intent status:', paymentIntent.status);
 
-    if (paymentIntent.status !== 'succeeded') {
+    if (paymentIntent.status !== 'requires_capture' && paymentIntent.status !== 'succeeded') {
       return res.status(400).json({
         error: 'Payment not successful',
         status: paymentIntent.status
       });
+    }
+
+    // A payment method that doesn't support manual capture (e.g. MobilePay, iDEAL) will
+    // already show 'succeeded' here — the money is already taken, before we've validated
+    // anything. Track that now so a later validation failure triggers a refund rather than
+    // an attempted cancel (which would fail — there's no authorization left to release).
+    if (paymentIntent.status === 'succeeded') {
+      moneyCaptured = true;
     }
 
     // Verify that the authenticated user owns this payment intent
@@ -252,6 +270,15 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       await client.query('BEGIN');
 
       try {
+        // Capture the held funds now, before recording anything as paid — if this fails,
+        // the catch block below rolls back and nothing gets marked paid. (If this payment
+        // method already auto-captured, moneyCaptured is already true and there's nothing
+        // to capture here.)
+        if (paymentIntent.status === 'requires_capture') {
+          await capturePaymentIntent(paymentIntentId, stripeMode);
+          moneyCaptured = true;
+        }
+
         // Update payment status to paid
         await client.query(
           'UPDATE registrations SET payment_status = $1 WHERE id = $2',
@@ -402,6 +429,17 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     const registrationIds = [];
     let totalCents = 0;
 
+    // Lock the event row for the duration of this transaction. Without this, two people
+    // finishing checkout for the same event at nearly the same moment could both read the
+    // same "spots remaining" count and both be let through, overshooting capacity — this
+    // makes the capacity check below (Step 5) atomic with the registrations it's counting,
+    // the same way the FOR UPDATE below already prevents a captain double-registration race.
+    const eventForCapacity = await client.query(
+      'SELECT capacity FROM events WHERE id = $1 FOR UPDATE',
+      [eventId]
+    );
+    const eventCapacity = eventForCapacity.rows[0]?.capacity;
+
     // Check if captain is already registered for this event
     // Use FOR UPDATE to lock the row and prevent race conditions with concurrent payments
     const existingCaptainReg = await client.query(
@@ -478,6 +516,10 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
       const regId = regResult.rows[0].id;
       const productsToAdd = isGuest ? guestData.products : captain.products;
+
+      // Reject if this registrant is claiming more than one identifying (ticket-type)
+      // product — mirrors the same rule enforced for free/admin registrations.
+      await validateIdentifyingProducts(client, productsToAdd, eventId);
 
       // Add products to registration
       for (const { product_id, quantity, field_values } of productsToAdd) {
@@ -621,12 +663,39 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     // For guests (guests don't have user_id, so we can't auto-join them)
     // Guests would need captain approval manually or we'd need user accounts for them
 
+    // Step 5: Enforce event capacity. Registrations/products created above are staged but
+    // not yet committed, so this count already includes them (same transaction). Combined
+    // with the FOR UPDATE lock on the event row above, this makes "count, then decide" safe
+    // against concurrent checkouts for the same event.
+    if (eventCapacity) {
+      const identifyingCount = await countIdentifyingRegistrations(client, eventId);
+      if (identifyingCount > eventCapacity) {
+        throw new Error('Event is full');
+      }
+    }
+
+    // Every registration and product row above has been validated and staged, but not yet
+    // committed. Only now do we actually take the customer's money — if this fails, the
+    // catch block below rolls back the transaction, so no registration is left behind for
+    // a payment that didn't go through.
+    let capturedStatus = paymentIntent.status;
+    if (paymentIntent.status === 'requires_capture') {
+      const capturedIntent = await capturePaymentIntent(paymentIntentId, stripeMode);
+      capturedStatus = capturedIntent.status;
+      if (capturedStatus !== 'succeeded') {
+        throw new Error(`Payment could not be captured (status: ${capturedStatus})`);
+      }
+      moneyCaptured = true;
+    }
+    // (If this payment method already auto-captured, moneyCaptured was already set to
+    // true back at Step 1, before any of the validation above ran.)
+
     // Record payment intent (link to first registration - captain if exists, otherwise first guest)
     const primaryRegId = captainRegId || registrationIds[0];
     await client.query(
       `INSERT INTO payment_intents (stripe_payment_intent_id, registration_id, amount_cents, status)
        VALUES ($1, $2, $3, $4)`,
-      [paymentIntentId, primaryRegId, totalCents, paymentIntent.status]
+      [paymentIntentId, primaryRegId, totalCents, capturedStatus]
     );
 
     // Create invoice
@@ -682,7 +751,36 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
     console.error('[PAYMENT ERROR] Failed to confirm payment:', err.message);
     console.error('[PAYMENT ERROR] Full error:', err);
     logHelpers.paymentError(paymentIntentId, err);
-    res.status(500).json({ error: 'Failed to complete registration', detail: err.message });
+
+    let paymentNote = '';
+    if (paymentIntentId) {
+      if (moneyCaptured) {
+        // Money was already taken — either a payment method that auto-captures (e.g.
+        // MobilePay, iDEAL) settled before we could validate anything, or we ourselves
+        // captured a held card authorization and something failed right after. Either
+        // way, the customer must not be left charged with no registration: refund it.
+        try {
+          await refundPaymentIntent(paymentIntentId, stripeMode);
+          paymentNote = ' You were charged, but this has been automatically refunded — it may take a few days to appear on your statement.';
+          logHelpers.paymentError(paymentIntentId, new Error('Auto-refunded after registration failure'));
+        } catch (refundErr) {
+          // This is the one case that genuinely needs a human: money was taken, our
+          // refund attempt itself failed, and there's no registration to show for it.
+          console.error('[PAYMENT ERROR] CRITICAL: failed to auto-refund after registration failure:', refundErr.message);
+          paymentNote = ' You were charged and the registration could not be completed. Please contact the event organizers for a refund.';
+        }
+      } else {
+        // Card authorized but never captured — release the hold, nothing was ever charged.
+        try {
+          await cancelPaymentIntent(paymentIntentId, stripeMode);
+        } catch (cancelErr) {
+          console.error('[PAYMENT ERROR] Failed to release payment authorization:', cancelErr.message);
+        }
+        paymentNote = ' Your payment method has not been charged.';
+      }
+    }
+
+    res.status(500).json({ error: `Failed to complete registration: ${err.message}${paymentNote}`, detail: err.message });
   } finally {
     client.release();
   }
