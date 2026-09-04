@@ -294,7 +294,7 @@ export default function Checkout() {
   const formatFieldValues = (fieldValues, productId) => {
     if (!fieldValues || Object.keys(fieldValues).length === 0) return '';
     return Object.entries(fieldValues)
-      .map(([fieldId, value]) => `${getFieldLabel(fieldId)}: ${value}`)
+      .map(([fieldId, value]) => `${getFieldLabel(fieldId)}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join(', ');
   };
 

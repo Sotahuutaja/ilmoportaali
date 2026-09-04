@@ -110,7 +110,7 @@ async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, p
             <tr style="border-bottom: 1px solid #eee;">
               <td style="padding: 0.5rem; color: #333;">
                 ${p.name}
-                ${p.field_values && Object.keys(p.field_values).length > 0 ? `<br/><span style="font-size: 0.85rem; color: #999;">${Object.entries(p.field_values).map(([key, val]) => `${key}: ${val}`).join(', ')}</span>` : ''}
+                ${p.field_values && Object.keys(p.field_values).length > 0 ? `<br/><span style="font-size: 0.85rem; color: #999;">${Object.entries(p.field_values).map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`).join(', ')}</span>` : ''}
               </td>
               <td style="padding: 0.5rem; text-align: center; color: #666;">${p.quantity}</td>
               <td style="padding: 0.5rem; text-align: right; color: #333;">€${(p.price * p.quantity).toFixed(2)}</td>
@@ -255,7 +255,7 @@ async function sendAdditionalPaymentConfirmationEmail(email, eventTitle, amountP
             <tr style="border-bottom: 1px solid #eee;">
               <td style="padding: 0.5rem; color: #333;">
                 ${p.name}
-                ${p.field_values && Object.keys(p.field_values).length > 0 ? `<br/><span style="font-size: 0.85rem; color: #999;">${Object.entries(p.field_values).map(([key, val]) => `${key}: ${val}`).join(', ')}</span>` : ''}
+                ${p.field_values && Object.keys(p.field_values).length > 0 ? `<br/><span style="font-size: 0.85rem; color: #999;">${Object.entries(p.field_values).map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`).join(', ')}</span>` : ''}
               </td>
               <td style="padding: 0.5rem; text-align: center; color: #666;">${p.quantity}</td>
               <td style="padding: 0.5rem; text-align: right; color: #333;">€${(p.price * p.quantity).toFixed(2)}</td>

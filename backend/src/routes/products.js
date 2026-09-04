@@ -89,6 +89,32 @@ router.get('/', async (req, res) => {
                   return optionCopy;
                 })
               );
+            } else if (field.type === 'checkbox' && field.options && Array.isArray(field.options)) {
+              // Same idea as the 'select' branch above, but a checkbox field can have several
+              // options selected on the same registration at once, so stock is counted per
+              // option via JSONB array containment rather than a single scalar match.
+              fieldCopy.options = await Promise.all(
+                field.options.map(async (option) => {
+                  const optionCopy = typeof option === 'string' ? option : { ...option };
+
+                  if (optionCopy && typeof optionCopy === 'object' && optionCopy.quantity !== null && optionCopy.quantity !== undefined) {
+                    const countResult = await pool.query(`
+                      SELECT COUNT(*)::integer as count
+                      FROM registration_products rp
+                      JOIN registrations r ON rp.registration_id = r.id
+                      WHERE rp.product_id = $1
+                        AND r.event_id = $2
+                        AND rp.deleted_at IS NULL
+                        AND rp.field_values -> $3 ? $4
+                    `, [product.id, req.params.eventId, field.id, optionCopy.value]);
+
+                    const used = countResult.rows[0]?.count || 0;
+                    optionCopy.remaining = optionCopy.quantity - used;
+                  }
+
+                  return optionCopy;
+                })
+              );
             }
 
             return fieldCopy;

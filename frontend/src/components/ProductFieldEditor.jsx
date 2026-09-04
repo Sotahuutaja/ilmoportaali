@@ -1,5 +1,8 @@
 // ProductFieldEditor — lets event creators define custom fields on a product.
-// A field can be free text or a select (dropdown with predefined options).
+// A field can be free text, a select (dropdown with predefined options), or a checkbox
+// list (choose between minSelect and maxSelect of the listed options). Checkbox options
+// never carry a price — selecting more of them doesn't change the product's price, only
+// dropdown options do that.
 //
 // Props:
 //   fields      — array of field objects (the current state)
@@ -74,24 +77,32 @@ export default function ProductFieldEditor({ fields = [], onChange }) {
               <label style={{ fontSize: '0.72rem' }}>Type</label>
               <select
                 value={field.type}
-                onChange={e => update(i, { type: e.target.value, options: e.target.value === 'select' ? [''] : [] })}
+                onChange={e => {
+                  const type = e.target.value;
+                  const patch = { type, options: (type === 'select' || type === 'checkbox') ? [''] : [] };
+                  if (type === 'checkbox') { patch.minSelect = 1; patch.maxSelect = 1; }
+                  update(i, patch);
+                }}
                 style={{ marginBottom: 0 }}
               >
                 <option value="text">Free text</option>
                 <option value="select">Dropdown</option>
+                <option value="checkbox">Checkbox list</option>
               </select>
             </div>
-            <div style={{ paddingTop: '1.4rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', textTransform: 'none', letterSpacing: 0, cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={field.required}
-                  onChange={e => update(i, { required: e.target.checked })}
-                  style={{ width: 'auto', margin: 0 }}
-                />
-                Required
-              </label>
-            </div>
+            {field.type !== 'checkbox' && (
+              <div style={{ paddingTop: '1.4rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', textTransform: 'none', letterSpacing: 0, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={field.required}
+                    onChange={e => update(i, { required: e.target.checked })}
+                    style={{ width: 'auto', margin: 0 }}
+                  />
+                  Required
+                </label>
+              </div>
+            )}
             <button
               type="button"
               className="btn btn-danger"
@@ -102,12 +113,41 @@ export default function ProductFieldEditor({ fields = [], onChange }) {
             </button>
           </div>
 
-          {field.type === 'select' && (
+          {field.type === 'checkbox' && (
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Min selections</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={field.minSelect ?? 0}
+                  onChange={e => update(i, { minSelect: e.target.value ? parseInt(e.target.value) : 0 })}
+                  style={{ marginBottom: 0 }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Max selections</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={field.maxSelect ?? 1}
+                  onChange={e => update(i, { maxSelect: e.target.value ? parseInt(e.target.value) : 1 })}
+                  style={{ marginBottom: 0 }}
+                />
+              </div>
+            </div>
+          )}
+
+          {(field.type === 'select' || field.type === 'checkbox') && (
             <div style={{ marginTop: '0.4rem' }}>
               <label style={{ fontSize: '0.72rem' }}>Options</label>
               {field.options.map((opt, j) => (
                 <div key={j} style={{ background: 'var(--surface-2)', padding: '0.5rem', borderRadius: '3px', marginBottom: '0.3rem' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '0.3rem', alignItems: 'flex-start' }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: field.type === 'select' ? '2fr 1fr 1fr auto' : '2fr 1fr auto',
+                    gap: '0.3rem', alignItems: 'flex-start'
+                  }}>
                     <div>
                       <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Option name</label>
                       <input
@@ -117,17 +157,19 @@ export default function ProductFieldEditor({ fields = [], onChange }) {
                         style={{ marginBottom: 0 }}
                       />
                     </div>
-                    <div>
-                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Price (€)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={typeof opt === 'string' ? '' : (opt.price ?? '')}
-                        onChange={e => updateOption(i, j, { price: e.target.value ? parseFloat(e.target.value) : null })}
-                        placeholder="Default"
-                        style={{ marginBottom: 0 }}
-                      />
-                    </div>
+                    {field.type === 'select' && (
+                      <div>
+                        <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Price (€)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={typeof opt === 'string' ? '' : (opt.price ?? '')}
+                          onChange={e => updateOption(i, j, { price: e.target.value ? parseFloat(e.target.value) : null })}
+                          placeholder="Default"
+                          style={{ marginBottom: 0 }}
+                        />
+                      </div>
+                    )}
                     <div>
                       <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Qty limit</label>
                       <input

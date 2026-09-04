@@ -221,6 +221,46 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
                           })}
                         </select>
                       )}
+                      {field.type === 'checkbox' && (
+                        <div>
+                          {field.options?.map((opt, idx) => {
+                            const optVal = typeof opt === 'string' ? opt : opt.value;
+                            const currentValues = Array.isArray(field_values[field.id]) ? field_values[field.id] : [];
+                            const isChecked = currentValues.includes(optVal);
+                            const maxReached = field.maxSelect != null && currentValues.length >= field.maxSelect;
+                            const optDisabled = !isChecked && maxReached;
+                            return (
+                              <label key={idx} style={{
+                                display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem',
+                                marginBottom: '0.3rem', opacity: optDisabled ? 0.5 : 1,
+                                cursor: optDisabled ? 'not-allowed' : 'pointer'
+                              }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  disabled={optDisabled}
+                                  onChange={e => {
+                                    const next = e.target.checked
+                                      ? [...currentValues, optVal]
+                                      : currentValues.filter(v => v !== optVal);
+                                    setSelectedProducts(prev => ({
+                                      ...prev,
+                                      [p.id]: { ...prev[p.id], field_values: { ...field_values, [field.id]: next } }
+                                    }));
+                                  }}
+                                  style={{ width: 'auto', margin: 0 }}
+                                />
+                                {optVal}
+                              </label>
+                            );
+                          })}
+                          {field.minSelect != null && field.maxSelect != null && (
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                              (choose {field.minSelect}–{field.maxSelect})
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {field.type === 'text' && (
                         <input
                           type="text"
@@ -414,7 +454,8 @@ export default function EventRegistrants() {
         const fieldInfo = p.field_values && Object.keys(p.field_values).length > 0
           ? ` (${Object.entries(p.field_values).map(([fid, val]) => {
               const fieldDef = (p.fields || []).find(f => f.id === fid);
-              return `${fieldDef?.label || fid}: ${val}`;
+              const displayVal = Array.isArray(val) ? val.join(', ') : val;
+              return `${fieldDef?.label || fid}: ${displayVal}`;
             }).join(', ')})`
           : '';
         message += `\n• ${p.name}${fieldInfo} ×${p.quantity} = €${(price * p.quantity).toFixed(2)}`;
@@ -712,7 +753,7 @@ export default function EventRegistrants() {
                           const price = getProductPrice(p);
                           const fieldParts = Object.entries(p.field_values || {}).map(([fid, val]) => {
                             const fieldDef = (p.fields || []).find(f => f.id === fid);
-                            return { label: fieldDef?.label || fid, val };
+                            return { label: fieldDef?.label || fid, val: Array.isArray(val) ? val.join(', ') : val };
                           });
                           return (
                             <div key={i} style={{ fontSize: '0.8rem', marginBottom: '0.2rem' }}>

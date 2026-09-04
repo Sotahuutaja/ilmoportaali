@@ -8,6 +8,7 @@ const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { createPaymentIntent, getPaymentIntent, capturePaymentIntent, cancelPaymentIntent, refundPaymentIntent, isConfigured } = require('../services/stripeService');
 const { validateIdentifyingProducts, countIdentifyingRegistrations } = require('../utils/identifyingProducts');
+const { validateCheckboxSelection } = require('../utils/checkboxFields');
 const { sendAdditionalPaymentConfirmationEmail } = require('../services/email');
 const { logHelpers } = require('../services/logService');
 
@@ -73,6 +74,12 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
             return res.status(400).json({
               error: `${field.label} is required for ${product.rows[0].name}`
             });
+          }
+        } else if (field.type === 'checkbox') {
+          try {
+            await validateCheckboxSelection(pool, field, field_values?.[field.id], product_id);
+          } catch (checkboxErr) {
+            return res.status(400).json({ error: checkboxErr.message });
           }
         }
       }
@@ -560,6 +567,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
             if (!selectedValue) {
               throw new Error(`${field.label} is required`);
             }
+          } else if (field.type === 'checkbox') {
+            await validateCheckboxSelection(client, field, field_values?.[field.id], product_id);
           }
         }
 

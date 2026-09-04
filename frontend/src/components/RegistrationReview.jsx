@@ -98,7 +98,7 @@ export default function RegistrationReview({
                     {p.field_values && Object.keys(p.field_values).length > 0 && (
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                         {Object.entries(p.field_values).map(([fieldId, value]) => (
-                          <div key={fieldId}>{getFieldLabel(p.product_id, fieldId)}: <strong>{value}</strong></div>
+                          <div key={fieldId}>{getFieldLabel(p.product_id, fieldId)}: <strong>{Array.isArray(value) ? value.join(', ') : value}</strong></div>
                         ))}
                       </div>
                     )}
@@ -146,7 +146,7 @@ export default function RegistrationReview({
                           {p.field_values && Object.keys(p.field_values).length > 0 && (
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                               {Object.entries(p.field_values).map(([fieldId, value]) => (
-                                <div key={fieldId}>{getFieldLabel(p.product_id, fieldId)}: <strong>{value}</strong></div>
+                                <div key={fieldId}>{getFieldLabel(p.product_id, fieldId)}: <strong>{Array.isArray(value) ? value.join(', ') : value}</strong></div>
                               ))}
                             </div>
                           )}

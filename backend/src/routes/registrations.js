@@ -7,6 +7,7 @@ const stripe = require('../services/stripeService');
 const { sendAdditionalPaymentEmail, sendRefundEmail } = require('../services/email');
 const { logHelpers } = require('../services/logService');
 const { validateIdentifyingProducts, countIdentifyingRegistrations } = require('../utils/identifyingProducts');
+const { validateCheckboxSelection } = require('../utils/checkboxFields');
 
 // Helper: calculate total price for a set of products
 async function calculateProductPrice(client, products, eventId) {
@@ -111,7 +112,9 @@ async function insertProducts(client, registrationId, products, eventId, modific
     // Validate required custom fields
     const fields = product.rows[0].fields || [];
     for (const field of fields) {
-      if (field.required && !field_values[field.id]) {
+      if (field.type === 'checkbox') {
+        await validateCheckboxSelection(client, field, field_values[field.id], product_id);
+      } else if (field.required && !field_values[field.id]) {
         throw new Error(`"${field.label}" is required for product "${product.rows[0].name}"`);
       }
     }

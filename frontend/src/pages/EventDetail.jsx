@@ -106,11 +106,18 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
               }}
                 onClick={e => e.stopPropagation()}
               >
-                {fields.map(field => (
+                {fields.map(field => {
+                  const isCheckboxMandatory = field.type === 'checkbox' && (field.minSelect ?? 0) > 0;
+                  return (
                   <div key={field.id} style={{ marginBottom: '0.5rem' }}>
                     <label style={{ fontSize: '0.78rem' }}>
                       {field.label}
-                      {(field.type === 'select' || field.required) && <span style={{ color: '#c0392b', marginLeft: '0.2rem' }}>*</span>}
+                      {(field.type === 'select' || field.required || isCheckboxMandatory) && <span style={{ color: '#c0392b', marginLeft: '0.2rem' }}>*</span>}
+                      {field.type === 'checkbox' && (
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: '0.4rem', fontSize: '0.72rem' }}>
+                          (choose {field.minSelect ?? 0}–{field.maxSelect ?? field.options.length})
+                        </span>
+                      )}
                     </label>
                     {field.type === 'select' ? (
                       <select
@@ -141,6 +148,46 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                           return <option key={idx} value={optValue} disabled={isOutOfStock}>{optionLabel}</option>;
                         })}
                       </select>
+                    ) : field.type === 'checkbox' ? (
+                      <div>
+                        {field.options.map((opt, idx) => {
+                          const optValue = typeof opt === 'string' ? opt : opt.value;
+                          const optRemaining = typeof opt === 'string' ? null : (opt.remaining !== undefined ? opt.remaining : opt.quantity);
+                          const isOutOfStock = optRemaining !== null && optRemaining !== undefined && optRemaining <= 0;
+                          const currentValues = fieldValues?.[p.id]?.[field.id] || [];
+                          const isChecked = currentValues.includes(optValue);
+                          const maxReached = field.maxSelect != null && currentValues.length >= field.maxSelect;
+                          const optDisabled = isOutOfStock || (!isChecked && maxReached);
+                          return (
+                            <label key={idx} style={{
+                              display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem',
+                              marginBottom: '0.3rem', opacity: optDisabled ? 0.5 : 1,
+                              cursor: optDisabled ? 'not-allowed' : 'pointer'
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                disabled={optDisabled}
+                                onChange={e => {
+                                  const next = e.target.checked
+                                    ? [...currentValues, optValue]
+                                    : currentValues.filter(v => v !== optValue);
+                                  setFieldValues(prev => ({
+                                    ...prev,
+                                    [p.id]: { ...(prev[p.id] || {}), [field.id]: next }
+                                  }));
+                                }}
+                                style={{ width: 'auto', margin: 0 }}
+                              />
+                              {optValue}
+                              {isOutOfStock && <span style={{ color: '#c0392b', marginLeft: '0.3rem', fontSize: '0.78rem' }}>(out of stock)</span>}
+                              {!isOutOfStock && optRemaining !== null && optRemaining !== undefined && (
+                                <span style={{ color: 'var(--text-muted)', marginLeft: '0.3rem', fontSize: '0.78rem' }}>({optRemaining} available)</span>
+                              )}
+                            </label>
+                          );
+                        })}
+                      </div>
                     ) : (
                       <input
                         value={fieldValues?.[p.id]?.[field.id] || ''}
@@ -153,7 +200,8 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                       />
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -340,6 +388,18 @@ export default function EventDetail() {
       if (!qty) continue;
       const product = products.find(p => p.id === parseInt(productId));
       for (const field of (product?.fields || [])) {
+        if (field.type === 'checkbox') {
+          const selectedValues = Array.isArray(fv?.[productId]?.[field.id]) ? fv[productId][field.id] : [];
+          const min = field.minSelect ?? (field.required ? 1 : 0);
+          const max = field.maxSelect ?? field.options.length;
+          if (selectedValues.length < min) {
+            return `Choose at least ${min} option${min === 1 ? '' : 's'} for "${field.label}" (${product.name})`;
+          }
+          if (selectedValues.length > max) {
+            return `Choose at most ${max} option${max === 1 ? '' : 's'} for "${field.label}" (${product.name})`;
+          }
+          continue;
+        }
         // Dropdown/select fields are mandatory by default
         // Other fields are only mandatory if explicitly marked as required
         const isMandatory = field.type === 'select' || field.required;
