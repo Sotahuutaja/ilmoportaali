@@ -71,6 +71,57 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Get this team's registrations across every event it's registered for (captain or admin
+// only — same "approved captain of this team" check used for the rest of the
+// captain-only actions on this route, e.g. approve/reject/remove/make-captain).
+// Shows every product ordered, not just identifying/ticket ones — this is for the
+// captain's own visibility into what their team ordered, not a capacity count.
+router.get('/:id/registrations', requireAuth, async (req, res) => {
+  try {
+    const team = await pool.query('SELECT id FROM teams WHERE id = $1', [req.params.id]);
+    if (!team.rows[0]) return res.status(404).json({ error: 'Team not found' });
+
+    if (req.user.role !== 'admin') {
+      const captainOf = await pool.query(
+        'SELECT 1 FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+        [req.params.id, req.user.id, 'captain', 'approved']
+      );
+      if (captainOf.rows.length === 0) {
+        return res.status(403).json({ error: 'Only the team captain or an admin can view this' });
+      }
+    }
+
+    const result = await pool.query(`
+      SELECT
+        r.id, r.event_id, r.is_guest, r.guest_first_name, r.guest_last_name, r.payment_status, r.created_at,
+        u.first_name, u.last_name, u.email as user_email,
+        e.title as event_title, e.starts_at as event_starts_at,
+        json_agg(json_build_object(
+          'product_id', rp.product_id,
+          'name', ep.name,
+          'quantity', rp.quantity,
+          'price', ep.price,
+          'field_values', rp.field_values,
+          'fields', ep.fields,
+          'is_identifying', ep.is_identifying
+        )) FILTER (WHERE rp.id IS NOT NULL) as products
+      FROM registrations r
+      JOIN events e ON r.event_id = e.id
+      LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN registration_products rp ON r.id = rp.registration_id AND rp.deleted_at IS NULL
+      LEFT JOIN event_products ep ON rp.product_id = ep.id
+      WHERE r.team_id = $1
+      GROUP BY r.id, u.first_name, u.last_name, u.email, e.title, e.starts_at
+      ORDER BY e.starts_at DESC, r.created_at ASC
+    `, [req.params.id]);
+
+    res.json({ registrations: result.rows });
+  } catch (err) {
+    console.error('Failed to fetch team registrations:', err.message);
+    res.status(500).json({ error: 'Failed to fetch team registrations' });
+  }
+});
+
 // Create team (admin only)
 router.post('/', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
   const { name, description, captain_id, auto_approve_joins } = req.body;

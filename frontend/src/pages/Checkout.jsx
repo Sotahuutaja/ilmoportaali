@@ -417,12 +417,22 @@ export default function Checkout() {
         <div className="card">
           <h2 style={{ color: '#c0392b', marginBottom: '1rem' }}>Payment Status</h2>
           <p className="error" style={{ fontSize: '1rem', marginBottom: '1.5rem' }}>{error}</p>
-          <button
-            onClick={() => navigate('/')}
-            className="btn btn-primary"
-          >
-            Return to Events
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={() => navigate(`/events/${id}`)}
+              className="btn btn-primary"
+              style={{ flex: 1 }}
+            >
+              Back to event
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="btn btn-secondary"
+              style={{ flex: 1 }}
+            >
+              Back to events
+            </button>
+          </div>
         </div>
       </div>
     );

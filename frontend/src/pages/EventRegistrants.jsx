@@ -525,7 +525,7 @@ export default function EventRegistrants() {
     const firstName = r.is_guest ? r.guest_first_name : (r.first_name || '');
     const lastName = r.is_guest ? r.guest_last_name : (r.last_name || '');
     const email = r.email_for_export || (r.is_guest ? r.guest_email : r.user_email);
-    const age = r.is_guest ? getAge(r.guest_year_of_birth) : getAge(r.year_of_birth);
+    const age = r.is_guest ? getAge(r.year_of_birth) : getAge(r.user_year_of_birth);
     const team = r.team_name || '';
 
     // Create a map of product quantities for this registration
@@ -692,7 +692,7 @@ export default function EventRegistrants() {
             {r.is_guest ? (r.guest_last_name || '') : (r.last_name || '—')}
           </td>
           <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem', textAlign: 'center' }}>
-            {r.is_guest ? getAge(r.guest_year_of_birth) : getAge(r.year_of_birth)}
+            {r.is_guest ? getAge(r.year_of_birth) : getAge(r.user_year_of_birth)}
           </td>
                   <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{email}</td>
                   <td style={{ padding: '0.8rem 1rem' }}>

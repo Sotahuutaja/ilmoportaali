@@ -466,7 +466,8 @@ router.get('/:eventId', requireAuth, async (req, res) => {
     const result = await pool.query(`
       SELECT
         r.*,
-        u.first_name, u.last_name, u.email as user_email, u.year_of_birth, u.gender,
+        u.first_name, u.last_name, u.email as user_email,
+        u.year_of_birth as user_year_of_birth, u.gender as user_gender,
         t.name as team_name,
         COALESCE(u.email, reg_by.email) as email_for_export,
         json_agg(json_build_object(

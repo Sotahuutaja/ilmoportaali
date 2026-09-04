@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import { fullName } from '../AuthContext';
+import { formatDate } from '../utils/datetime';
 
 export default function TeamDetail() {
   const { id } = useParams();
@@ -17,6 +18,9 @@ export default function TeamDetail() {
   const [loading, setLoading] = useState(true);
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionText, setDescriptionText] = useState('');
+  const [teamRegistrations, setTeamRegistrations] = useState(null);
+  const [regsError, setRegsError] = useState('');
+  const [expandedEvents, setExpandedEvents] = useState(() => new Set());
 
   useEffect(() => {
     const loadTeam = async () => {
@@ -41,6 +45,34 @@ export default function TeamDetail() {
   }, [id, user]);
 
   const isCaptain = team && myTeams.some(t => t.id === team.id && t.role === 'captain' && t.status === 'approved');
+
+  const canViewTeamRegistrations = isCaptain || user?.role === 'admin';
+
+  useEffect(() => {
+    if (!team || !canViewTeamRegistrations) return;
+    api.get(`/teams/${id}/registrations`)
+      .then(res => setTeamRegistrations(res.data.registrations))
+      .catch(err => setRegsError(err.response?.data?.error || 'Failed to load team registrations'));
+  }, [team, canViewTeamRegistrations, id]);
+
+  const toggleEventExpanded = (eventId) => {
+    setExpandedEvents(prev => {
+      const next = new Set(prev);
+      if (next.has(eventId)) next.delete(eventId); else next.add(eventId);
+      return next;
+    });
+  };
+
+  // Group the flat registration list into one entry per event, newest event first.
+  const eventGroups = Object.values(
+    (teamRegistrations || []).reduce((acc, r) => {
+      if (!acc[r.event_id]) {
+        acc[r.event_id] = { eventId: r.event_id, title: r.event_title, startsAt: r.event_starts_at, registrants: [] };
+      }
+      acc[r.event_id].registrants.push(r);
+      return acc;
+    }, {})
+  ).sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt));
 
   const handleApprove = async (userId) => {
     try {
@@ -269,6 +301,68 @@ export default function TeamDetail() {
           ))
         )}
       </div>
+
+      {canViewTeamRegistrations && (
+        <div className="card" style={{ marginTop: '1rem' }}>
+          <h3 style={{ marginBottom: '1rem' }}>Team registrations by event</h3>
+          {regsError && <p className="error">{regsError}</p>}
+          {teamRegistrations === null && !regsError ? (
+            <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
+          ) : eventGroups.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)' }}>This team hasn't registered for any events yet.</p>
+          ) : (
+            eventGroups.map(group => {
+              const isExpanded = expandedEvents.has(group.eventId);
+              return (
+                <div key={group.eventId} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <button
+                    onClick={() => toggleEventExpanded(group.eventId)}
+                    style={{
+                      width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      background: 'none', border: 'none', padding: '0.8rem 0', cursor: 'pointer', textAlign: 'left', color: 'inherit'
+                    }}
+                  >
+                    <span>
+                      <strong>{group.title}</strong>
+                      <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+                        {formatDate(group.startsAt)} — {group.registrants.length} registrant{group.registrants.length !== 1 ? 's' : ''}
+                      </span>
+                    </span>
+                    <span>{isExpanded ? '▲' : '▼'}</span>
+                  </button>
+                  {isExpanded && (
+                    <div style={{ paddingBottom: '1rem' }}>
+                      {group.registrants.map(r => (
+                        <div key={r.id} style={{ padding: '0.6rem 0.8rem', background: 'var(--surface-2)', borderRadius: '4px', marginBottom: '0.5rem' }}>
+                          <p style={{ margin: '0 0 0.3rem 0', fontWeight: 600 }}>
+                            {r.is_guest
+                              ? fullName({ first_name: r.guest_first_name, last_name: r.guest_last_name })
+                              : fullName({ first_name: r.first_name, last_name: r.last_name, email: r.user_email })}
+                            {r.is_guest && (
+                              <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>(guest)</span>
+                            )}
+                          </p>
+                          {r.products && r.products.length > 0 ? (
+                            <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.9rem' }}>
+                              {r.products.map((p, idx) => (
+                                <li key={idx}>
+                                  {p.name} × {p.quantity} — €{(parseFloat(p.price) * p.quantity).toFixed(2)}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>No products</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }
