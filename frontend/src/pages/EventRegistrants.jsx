@@ -583,6 +583,13 @@ export default function EventRegistrants() {
     return sum + r.products.reduce((s, p) => s + (getProductPrice(p) * p.quantity), 0);
   }, 0);
 
+  // Only registrations that include an active identifying product (e.g. a ticket) count
+  // toward event capacity — merch-only registrations don't. Mirrors the same rule used
+  // for the capacity check itself and for the "full" gate on the public event page.
+  const ticketHolderCount = registrations.filter(r =>
+    r.products?.some(p => p.is_identifying)
+  ).length;
+
   if (!event) return <p>Loading...</p>;
 
   return (
@@ -619,6 +626,11 @@ export default function EventRegistrants() {
         <div className="card" style={{ flex: 1, textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Total participants</p>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{registrations.length}</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>all registrations, incl. merch-only</p>
+        </div>
+        <div className="card" style={{ flex: 1, textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Ticket holders</p>
+          <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{ticketHolderCount}</p>
           {event.capacity && (
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>of {event.capacity} capacity</p>
           )}

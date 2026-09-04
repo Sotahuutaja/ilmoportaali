@@ -479,6 +479,7 @@ router.get('/:eventId', requireAuth, async (req, res) => {
           'snapshot_at', rp.snapshot_at,
           'field_values', rp.field_values,
           'fields', ep.fields,
+          'is_identifying', ep.is_identifying,
           'modification_reason', rp.modification_reason
         )) FILTER (WHERE rp.id IS NOT NULL) as products
       FROM registrations r

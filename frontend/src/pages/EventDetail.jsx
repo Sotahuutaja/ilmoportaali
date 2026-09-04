@@ -613,14 +613,14 @@ export default function EventDetail() {
         {message && <p className="success">{message}</p>}
         {error && <p className="error">{error}</p>}
 
-        {user && !full && registrationOpen && !isEventPast && (
+        {user && registrationOpen && !isEventPast && (
       <>
       {isRegistered ? (
         <div style={{ background: '#e3f2fd', padding: '1rem', borderRadius: '6px', borderLeft: '4px solid #2196f3', marginBottom: '1.5rem' }}>
           <p style={{ margin: 0, color: '#1565c0', fontWeight: 500 }}>✓ You are already registered for this event</p>
           <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#0d47a1' }}>To modify your registration, contact the event organizers or use the "Cancel registration" button below.</p>
         </div>
-      ) : (
+      ) : full ? null : (
         <>
           <h3 style={{ marginBottom: '1rem' }}>Register yourself</h3>
 
@@ -694,7 +694,7 @@ export default function EventDetail() {
         </div>
       )}
 
-            {captainTeams.filter(t => allowedTeams.some(at => at.team_id === t.id)).length > 0 && (
+            {!full && captainTeams.filter(t => allowedTeams.some(at => at.team_id === t.id)).length > 0 && (
               <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3>Register a guest</h3>
