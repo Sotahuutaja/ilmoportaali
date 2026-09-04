@@ -116,6 +116,25 @@ async function migrate() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_email TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_change_token TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_change_token_expires TIMESTAMPTZ;
+
+    -- The original UNIQUE(registration_id, product_id) constraint below doesn't exempt
+    -- soft-deleted rows, so editing a registration's products (which soft-deletes the old
+    -- rows and re-inserts fresh ones) fails with a duplicate-key error whenever the new
+    -- product list still includes a product the registration already had. Replace it with
+    -- a partial unique index that only guards active (non-deleted) rows, matching every
+    -- stock/capacity query, which already filters on deleted_at IS NULL.
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'registration_products_registration_id_product_id_key'
+      ) THEN
+        ALTER TABLE registration_products DROP CONSTRAINT registration_products_registration_id_product_id_key;
+      END IF;
+    END $$;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS registration_products_active_reg_product_idx
+      ON registration_products (registration_id, product_id)
+      WHERE deleted_at IS NULL;
   `);
 
   console.log('Migration complete');

@@ -723,7 +723,7 @@ export default function EventDetail() {
 
         return (
         <>
-          {(canRegisterIndividually || allowedTeams.length > 0) && (
+          {allowedTeams.length > 0 && (
           <div>
             <label>Register as part of a team {!canRegisterIndividually ? '(required)' : '(optional)'}</label>
             <select value={selectedTeam} onChange={e => setSelectedTeam(e.target.value)}>
