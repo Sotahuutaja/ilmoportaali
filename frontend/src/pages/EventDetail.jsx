@@ -58,6 +58,14 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                   {p.name}
                 </strong>
                 {p.description && <span style={{ color: disabled ? '#999' : 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem', textDecoration: disabled ? 'line-through' : 'none' }}>{p.description}</span>}
+                {p.is_identifying && (
+                  <span style={{
+                    fontSize: '0.75rem', padding: '0.1rem 0.4rem', marginLeft: '0.5rem',
+                    borderRadius: '8px', background: '#2196f3', color: 'white'
+                  }} title="Only one ticket-type product can be selected per registration">
+                    ticket
+                  </span>
+                )}
                 {outOfStock && (
                   <span style={{ color: '#c0392b', marginLeft: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold' }}>
                     ● Sold Out
@@ -301,10 +309,21 @@ export default function EventDetail() {
   }, [event, allowedTeams, myTeams]);
 
   const toggleProduct = (productId, setter) => {
-    setter(prev => ({
-      ...prev,
-      [productId]: prev[productId] ? undefined : 1
-    }));
+    const product = products.find(p => p.id === productId);
+    setter(prev => {
+      const wasSelected = !!prev[productId];
+      const next = { ...prev, [productId]: wasSelected ? undefined : 1 };
+      // Identifying products (e.g. ticket types) are mutually exclusive — selecting one
+      // deselects any other identifying product that was previously chosen.
+      if (!wasSelected && product?.is_identifying) {
+        for (const other of products) {
+          if (other.id !== productId && other.is_identifying && next[other.id]) {
+            next[other.id] = undefined;
+          }
+        }
+      }
+      return next;
+    });
   };
 
   const buildProducts = (selected, fv = {}) =>

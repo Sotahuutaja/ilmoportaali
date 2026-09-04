@@ -18,7 +18,7 @@ export default function EditEvent() {
     stripe_mode: 'test'
   });
   const [products, setProducts] = useState([]);
-  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [], available_from: '', available_until: '' });
+  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [], available_from: '', available_until: '', is_identifying: false });
   const [editingProduct, setEditingProduct] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -94,11 +94,12 @@ export default function EditEvent() {
         quantity: productForm.quantity ? parseInt(productForm.quantity) : null,
         fields: productForm.fields,
         available_from: productForm.available_from ? new Date(productForm.available_from).toISOString() : null,
-        available_until: productForm.available_until ? new Date(productForm.available_until).toISOString() : null
+        available_until: productForm.available_until ? new Date(productForm.available_until).toISOString() : null,
+        is_identifying: !!productForm.is_identifying
       });
       setProducts([...products, res.data.product]);
       setProductMessage('Product added!');
-      setProductForm({ name: '', description: '', price: '', quantity: '', fields: [], available_from: '', available_until: '' });
+      setProductForm({ name: '', description: '', price: '', quantity: '', fields: [], available_from: '', available_until: '', is_identifying: false });
     } catch (err) {
       setProductError(err.response?.data?.error || 'Failed to add product');
     }
@@ -115,7 +116,8 @@ export default function EditEvent() {
         quantity: editingProduct.quantity ? parseInt(editingProduct.quantity) : null,
         fields: editingProduct.fields || [],
         available_from: editingProduct.available_from ? new Date(editingProduct.available_from).toISOString() : null,
-        available_until: editingProduct.available_until ? new Date(editingProduct.available_until).toISOString() : null
+        available_until: editingProduct.available_until ? new Date(editingProduct.available_until).toISOString() : null,
+        is_identifying: !!editingProduct.is_identifying
       });
       setProducts(products.map(p => p.id === editingProduct.id ? res.data.product : p));
       setProductMessage('Product updated!');
@@ -322,6 +324,15 @@ export default function EditEvent() {
                     <input type="datetime-local" value={editingProduct.available_until ? new Date(editingProduct.available_until).toISOString().slice(0, 16) : ''} onChange={e => setEditingProduct({ ...editingProduct, available_until: e.target.value })} style={{ marginBottom: 0 }} />
                   </div>
                 </div>
+                <label style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!editingProduct.is_identifying}
+                    onChange={e => setEditingProduct({ ...editingProduct, is_identifying: e.target.checked })}
+                    style={{ marginBottom: 0, width: 'auto' }}
+                  />
+                  Identifies a registrant (e.g. a ticket) — at most one such product per registration
+                </label>
                 <ProductFieldEditor
                   fields={editingProduct.fields || []}
                   onChange={fields => setEditingProduct({ ...editingProduct, fields })}
@@ -340,6 +351,14 @@ export default function EditEvent() {
                 <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
                   {p.quantity !== null ? `${p.remaining ?? p.quantity} / ${p.quantity} left` : 'Unlimited'}
                 </span>
+                {p.is_identifying && (
+                  <span style={{
+                    fontSize: '0.75rem', padding: '0.1rem 0.4rem', marginLeft: '0.5rem',
+                    borderRadius: '8px', background: '#2196f3', color: 'white'
+                  }}>
+                    ticket
+                  </span>
+                )}
                 {(p.available_from || p.available_until) && (
                   <span style={{ marginLeft: '0.5rem', fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '3px', background: p.is_available ? '#e8f5e9' : '#ffebee', color: p.is_available ? '#2e7d32' : '#c62828' }}>
                     {p.available_from && <span>From {new Date(p.available_from).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
@@ -382,6 +401,15 @@ export default function EditEvent() {
           <input type="datetime-local" value={productForm.available_from} onChange={e => setProductForm({ ...productForm, available_from: e.target.value })} />
           <label>Available until (optional)</label>
           <input type="datetime-local" value={productForm.available_until} onChange={e => setProductForm({ ...productForm, available_until: e.target.value })} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <input
+              type="checkbox"
+              checked={!!productForm.is_identifying}
+              onChange={e => setProductForm({ ...productForm, is_identifying: e.target.checked })}
+              style={{ marginBottom: 0, width: 'auto' }}
+            />
+            Identifies a registrant (e.g. a ticket) — at most one such product per registration
+          </label>
           <ProductFieldEditor
             fields={productForm.fields}
             onChange={fields => setProductForm({ ...productForm, fields })}
