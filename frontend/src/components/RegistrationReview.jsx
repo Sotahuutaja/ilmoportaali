@@ -64,7 +64,9 @@ export default function RegistrationReview({
         <div style={{ marginBottom: '1.5rem' }}>
           <h4 style={{ marginBottom: '0.8rem', color: '#333' }}>Registration Breakdown</h4>
 
-          {/* Captain's products */}
+          {/* Captain's products — omitted entirely when there's nothing to show, e.g. an
+              already-registered captain who's only checking out staged guests. */}
+          {products && products.length > 0 && (
           <div style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--surface-2)', borderRadius: '6px' }}>
             <p style={{ margin: '0 0 0.8rem 0', fontWeight: 600, fontSize: '0.95rem' }}>
               👤 {captainName || 'You (Captain)'} {teamName && `- Team: ${teamName}`}
@@ -105,6 +107,7 @@ export default function RegistrationReview({
               })}
             </div>
           </div>
+          )}
 
           {/* Guests' products */}
           {guests && guests.length > 0 && (

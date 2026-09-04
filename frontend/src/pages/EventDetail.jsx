@@ -574,6 +574,32 @@ export default function EventDetail() {
   const registrationOpen = !regNotOpen && !regClosed;
   const isEventPast = event.ends_at && now > new Date(event.ends_at);
 
+  // Shared "review this order, or continue to payment" block. Used both for the normal
+  // self-registration flow below, and for an already-registered captain who's only
+  // checking out guests they've staged (register() already supports 0 captain products +
+  // pending guests — this just gives that case a button to trigger it with, instead of
+  // duplicating the RegistrationReview wiring in two places).
+  const reviewOrButton = showReview && pendingRegistration ? (
+    <div ref={reviewRef} style={{ marginTop: '2rem' }}>
+      <RegistrationReview
+        products={pendingRegistration.captain.products}
+        eventTitle={event.title}
+        teamName={pendingRegistration.captain.teamName}
+        comments={pendingRegistration.captain.comments}
+        totalAmount={pendingRegistration.totalAmount}
+        onConfirm={handleReviewConfirm}
+        onCancel={handleReviewCancel}
+        captainName={user ? `${user.first_name} ${user.last_name}`.trim() : 'You'}
+        guests={pendingRegistration.guests}
+        allProducts={products}
+      />
+    </div>
+  ) : (
+    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+      <button className="btn btn-primary" onClick={register}>Continue to payment</button>
+    </div>
+  );
+
   return (
     <div style={{ maxWidth: 640, margin: '2rem auto' }}>
       <div className="card">
@@ -662,26 +688,7 @@ export default function EventDetail() {
             />
           </div>
 
-          {showReview && pendingRegistration ? (
-            <div ref={reviewRef} style={{ marginTop: '2rem' }}>
-              <RegistrationReview
-                products={pendingRegistration.captain.products}
-                eventTitle={event.title}
-                teamName={pendingRegistration.captain.teamName}
-                comments={pendingRegistration.captain.comments}
-                totalAmount={pendingRegistration.totalAmount}
-                onConfirm={handleReviewConfirm}
-                onCancel={handleReviewCancel}
-                captainName={user ? `${user.first_name} ${user.last_name}`.trim() : 'You'}
-                guests={pendingRegistration.guests}
-                allProducts={products}
-              />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="btn btn-primary" onClick={register}>Continue to payment</button>
-            </div>
-          )}
+          {reviewOrButton}
         </>
           );
           })()}
@@ -798,6 +805,10 @@ export default function EventDetail() {
                     ))}
                   </div>
                 )}
+
+                {/* An already-registered captain has no self-registration form/button above
+                    to trigger checkout with — this is their way to pay for staged guests. */}
+                {isRegistered && pendingGuests.length > 0 && reviewOrButton}
               </div>
             )}
       {captainTeams.filter(t => allowedTeams.some(at => at.team_id === t.id)).length > 0 && teamRegistrations.length > 0 && (
