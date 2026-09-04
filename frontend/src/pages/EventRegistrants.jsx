@@ -370,6 +370,7 @@ export default function EventRegistrants() {
   const [editingReg, setEditingReg] = useState(null);
   const [teams, setTeams] = useState([]);
   const [eventProducts, setEventProducts] = useState([]);
+  const [managers, setManagers] = useState([]);
 
   useEffect(() => {
     if (!user) {
@@ -398,7 +399,19 @@ export default function EventRegistrants() {
       .then(res => setTeams(res.data.teams));
     api.get(`/events/${id}/products`)
       .then(res => setEventProducts(res.data.products));
+    // Used to work out whether the current user can manage this event (creator, co-manager,
+    // or admin) — mirrors the backend's canManageEvent check, so the edit/payment controls
+    // below show up for co-managers too, not just the event's original creator.
+    api.get(`/events/${id}/managers`)
+      .then(res => setManagers(res.data.managers))
+      .catch(() => {});
   }, [id, user, navigate]);
+
+  const canManage = !!user && (
+    user.role === 'admin' ||
+    event?.creator_id === user.id ||
+    managers.some(m => m.user_id === user.id)
+  );
 
   // Refresh registrations when page regains focus
   useEffect(() => {
@@ -791,7 +804,7 @@ export default function EventRegistrants() {
                   </td>
                   <td style={{ padding: '0.6rem 0.8rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            {(user.role === 'admin' || event?.is_owner) && (
+            {canManage && (
               <>
                 <button className="btn btn-secondary" onClick={() => setEditingReg(r)}>Edit</button>
                 {r.payment_status === 'additional_payment_pending' && (
