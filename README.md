@@ -30,7 +30,7 @@
 Ilmoportaali is a full-stack web application for managing event registrations and team memberships. It allows event creators to set up events with purchasable products, manage participant lists, and export data — while attendees can register, join teams, and manage their profiles.
 
 The system is live at:
-- **Frontend:** `https://ilmoportaali-frontend.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io`
+- **Frontend:** `https://ilmoportaali.boffaus.fi` (custom domain; also reachable at `https://ilmoportaali-frontend.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io`)
 - **Backend API:** `https://ilmoportaali-app.graysand-8ea0ea6e.swedencentral.azurecontainerapps.io`
 
 ---
@@ -190,12 +190,14 @@ The application implements defense-in-depth security practices:
 - Event fields: title, description, location, start/end dates, capacity, and registration period
 - **Registration period** — each event requires a registration open and close datetime; users can only sign up within that window. Outside it, the event page shows "Registration opens on [date]" or "Registration is closed"
 - **Products** — each event can have multiple purchasable products with name, description, price, and optional quantity limits
-- **Product options** — creators can add custom fields to products (text input or dropdown select); users choose options during registration
+- **Product options** — creators can add custom fields to products (text input, dropdown select, or checkbox list); users choose options during registration
   - **Per-option pricing** — dropdown options can have custom prices that override the product's default price
-  - **Per-option quantity limits** — dropdown options can have individual quantity limits (e.g., "Size Small: 5 available")
+  - **Per-option quantity limits** — dropdown and checkbox-list options can have individual quantity limits (e.g., "Size Small: 5 available")
+  - **Checkbox-list fields** — creators can define a set of checkboxes with configurable minimum/maximum selection counts (e.g., "choose 1–3"); unlike dropdown options, checkbox selections never change the product's price regardless of how many options are selected
+  - **Per-product availability windows** — creators can optionally set a start and/or end date-time (displayed and entered in Finnish time, EET/EEST) per product, independent of the event's overall registration period, to open or close sales for individual products on their own schedule
 - Products support drag-and-drop reordering on the edit page and inline editing
 - At least one product must be selected when registering for an event
-- **Co-managers** — event creators can grant other creators full management access over their events
+- **Co-managers** — event creators can grant other creators full management access over their events, including editing registrations, marking payments as paid, and resending payment links on the Participants page (full parity with the event creator)
 - Past events are shown in a separate collapsed section on the events listing page
 
 ### Teams
@@ -223,7 +225,7 @@ The application implements defense-in-depth security practices:
 - **Payment status tracking** — event organizers can view payment status for each participant (pending, paid, failed)
 - **Duplicate registration prevention** — prevents regular users from registering twice while allowing captains to register guests
 - **Mandatory product options** — users must select from dropdown options when products have custom fields
-- Capacity checking with sold-out handling
+- **Capacity checking with sold-out handling** — event capacity counts only registrations holding a ticket-type ("identifying") product; registrations for merchandise-only products don't count against capacity
 - **CSV export** — event organizers can export all registrations including comments and payment status
 - **Event descriptions support formatting** — line breaks preserved in multi-line event descriptions
 
@@ -243,7 +245,7 @@ Accessible by event creators and co-managers:
 - Manage products and co-managers per event
   - **Managers view** — shows event creator and all co-managers with clear badges distinguishing roles
 - **Team management per event** — add/remove eligible teams and toggle auto-approval for automatic team joining upon registration
-- **Participant view** — summary stats (total participants, guests, revenue), search by name/email/team, edit or cancel any registration, CSV export with payment status
+- **Participant view** — summary stats (total participants, ticket holders, guests, revenue) — "total participants" is a raw headcount of all registrations, while "ticket holders" counts only registrations holding a ticket-type product (event capacity is based on ticket holders, not the raw headcount); search by name/email/team, edit or cancel any registration, CSV export with payment status
   - **Payment status visibility** — view payment status (pending, paid, failed) for each participant with color-coded indicators
 - Guest registrations are shown with a guest badge
 - **Event deletion protection** — cannot delete events with active registrations; requires cancelling all registrations first to ensure proper refund processing
@@ -306,14 +308,16 @@ az containerapp update --name ilmoportaali-frontend ...
 
 ## Known Issues & Backlog
 
-- Nothing!
+- **Checkbox-list field editing display bug** — when an admin or co-manager edits a registration that uses a checkbox-list product field (e.g., unchecking one of several previously-selected options), the Participants page displays both the old and new selections together instead of replacing them. The underlying data is saved correctly; this is a display-only bug and is not yet fixed.
+
+### Under Consideration
+
+- **Team-scoped event visibility** — hiding an event's existence entirely from users outside its eligible teams, as distinct from the existing team-restricted *registration* (which already works via each event's eligible-teams configuration). Discussed but not currently committed to.
 
 ### Planned Features
 
 - Add an option to add images to products to be displayed for the users
-- Custom domain (boffaus.fi)
 - Bulk event registration via Excel file import
-- Pin Azure CLI version in GitHub Actions (currently using `latest` due to credential mounting limitations with `azure/cli@v2`)
 - Enable users to register vehicles or other machines they might bring to an event
 - New team creation as an option for users in the Teams page
 - Volunteer management for events

@@ -2,6 +2,37 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-09-15
+
+### Features & Improvements
+
+- **Checkbox-list product field type** — creators can now add checkbox-list custom fields to products, in addition to text input and dropdown select
+  - Configurable minimum/maximum selection counts per field (e.g., "choose 1–3")
+  - Optional per-option quantity limits, enforced server-side
+  - Selections never change the product's price, regardless of how many options are chosen (unlike dropdown fields)
+  - Implemented in `ProductFieldEditor.jsx`, `EventDetail.jsx`, and `EventRegistrants.jsx` on the frontend; validated server-side by a new `backend/src/utils/checkboxFields.js` (`validateCheckboxSelection`), wired into the registration and payment flows
+  - Per-option stock is calculated in `products.js`
+
+- **Ticket holders vs. total participants** — the Participants page now shows both a raw headcount ("Total participants") and a ticket-holder count ("Ticket holders")
+  - Event capacity checking now counts only registrations holding a ticket-type ("identifying") product
+  - Merchandise-only registrations no longer count against event capacity or trigger sold-out handling
+
+### Bug Fixes
+
+- **Duplicate registration_products rows** — fixed a race condition that could create duplicate product rows for the same registration; added a partial unique index via a new migration in `backend/src/migrate.js`
+- **"Full" event incorrectly hid management UI for already-registered users** — event pages that had reached capacity were incorrectly hiding the cancel-registration button and team-management controls for users who were already registered; fixed in `EventDetail.jsx`
+- **Missing "Continue to payment" button for captains adding guests** — captains who were already registered for an event and added guest registrations could lose the "Continue to payment" button; fixed in `EventDetail.jsx`
+- **Empty "Register as part of a team" dropdown** — fixed a case where the team-selection dropdown during registration could render with no options; fixed in `EventDetail.jsx`
+- **Co-managers unable to edit registrations** — co-managers could not actually edit registrations, mark them as paid, or resend payment links from the Participants page, despite the UI suggesting they could; fixed the `canManage` permission check in `EventRegistrants.jsx` to correctly use the event's `/events/:id/managers` list
+- **Product availability window timezone bug** — per-product `available_from`/`available_until` date-times were being interpreted in the wrong timezone; fixed `EditEvent.jsx` to consistently convert using the existing `toHelsinki`/`helsinkiToUTC` utilities, so the fields now correctly reflect Finnish time (EET/EEST)
+- **404 on page refresh** — the nginx cache-control headers added for hashed build assets (below) initially introduced a regression where refreshing a page other than `/` returned a 404; fixed by restoring the missing `root` directive on the catch-all location block
+
+### Technical
+
+- **Static asset caching headers** — `frontend/nginx.conf` now serves `index.html` with `Cache-Control: no-cache` (since it references the current build's hashed filenames) and serves the content-hashed `/assets/` build output with a long-lived, immutable cache header
+
+---
+
 ## 2026-06-18
 
 ### Features & Improvements
