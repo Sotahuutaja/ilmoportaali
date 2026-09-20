@@ -116,6 +116,7 @@ async function migrate() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_email TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_change_token TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_change_token_expires TIMESTAMPTZ;
+    ALTER TABLE teams ADD COLUMN IF NOT EXISTS join_password_hash TEXT;
 
     -- The original UNIQUE(registration_id, product_id) constraint below doesn't exempt
     -- soft-deleted rows, so editing a registration's products (which soft-deletes the old

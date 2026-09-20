@@ -2,6 +2,33 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-09-20
+
+### Features & Improvements
+
+- **Per-checkbox pricing** — checkbox-list product fields can now optionally have their own price per option, in addition to the existing min/max-selection and per-option stock limits
+  - As soon as any option in a checkbox field has a price set, the field becomes "priced": the sum of the checked options' prices replaces the product's price outright (including replacing it with €0 if nothing priced ends up checked), rather than adding on top of the product's base price — so a product using priced checkboxes should have its own base price left at €0
+  - A checkbox field with no priced options keeps working exactly as before and never affects price
+  - Added the missing price input for checkbox options in `ProductFieldEditor.jsx`
+  - The registration page now shows each checkbox option's price (or "Free") up front, before the registrant checks anything, matching how dropdown options already showed their price — fixes both the captain's own registration and guest registration, since they share the same `ProductSelector` component
+
+- **Consolidated price calculation** — replaced ~21 independent copies of the "check for a dropdown/checkbox option price override" logic (spread across `registrations.js`, `payments.js`, `emailWorker.js`, and four frontend pages/components) with a single shared `resolvePrice()` function in `backend/src/utils/pricing.js` and `frontend/src/utils/pricing.js`. Every checkout, registration, refund, email, and admin edit path now goes through the same function, so a future pricing rule only needs to change in one place
+  - Fixed an inconsistency uncovered while consolidating: `EventRegistrants.jsx`'s admin edit modal, refund calculation, and participant list used a truthy check (`if (option.price)`) instead of the correct `!== null && !== undefined` check used everywhere else, so a dropdown option explicitly priced at exactly €0.00 was incorrectly shown/refunded at the product's base price instead of €0 on the admin side. All call sites now agree.
+
+- **Password-protected team joining** — team captains (or admins) can now set an optional join password for their team as a third join method, alongside the existing auto-approve and manual-approval options
+  - Setting a password replaces the auto-approve setting as the team's join method entirely: a correct password gets you in immediately, and the auto-approve toggle is disabled (with an explanatory note) while a password is active; removing the password restores normal auto-approve/manual-approval behavior
+  - Passwords are hashed with bcrypt (matching the existing account-password convention) and are never returned to the client — the API only ever exposes a `requires_password` boolean, never the hash
+  - `POST /teams/:id/request` is now rate-limited (10 attempts / 15 min per IP, same pattern as the login endpoint) since a team password is more guessable than an account password
+  - While implementing this, found and fixed three places in `teams.js` (`GET /`, `GET /:id`, and the admin `PUT /:id`) that did `SELECT *`/`t.*` on the teams table — harmless before, but each would have leaked the new password hash to clients (including the fully public `GET /teams` list) had they not been switched to explicit column lists
+
+### Bug Fixes
+
+- **Duplicate products shown after admin edits a registration** — the response query for the admin "Save changes" edit endpoint (`PUT /:eventId/registrations/:registrationId`) joined `registration_products` without excluding soft-deleted rows, so after the edit's soft-delete-and-reinsert product update, the Participants page briefly showed both the old and new products together until the next full page load. This was also the root cause of the previously-documented "checkbox edit shows old and new selections together" known issue — both are now fixed by the same change
+  - The same missing filter was found and fixed in three more places while checking for the same pattern: the self-cancellation endpoint's refund calculation (which could have over-refunded through Stripe for a registration that had ever been edited), the "resend payment link" email (which could show a customer duplicate/stale line items), and a user's own "My registrations" list on their Profile page
+- **Can't select text by dragging in the product edit form** — the product row's drag-to-reorder wrapper (`<div draggable>` in `EditEvent.jsx`) stayed draggable even while that row's inline edit form was open, and a `draggable` ancestor causes browsers to intercept click-and-drag gestures inside it as "move this element" instead of "select this text" — breaking text selection in every field of the edit form (name, description, price, dates). Fixed by only marking a row draggable while it's showing its collapsed summary, not while it's being edited. The separate "Add product" form was never inside this wrapper and was unaffected
+
+---
+
 ## 2026-09-15
 
 ### Features & Improvements

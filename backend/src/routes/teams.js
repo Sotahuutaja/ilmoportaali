@@ -1,7 +1,14 @@
 const express = require('express');
+const bcrypt = require('bcrypt');
 const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { rateLimit } = require('../middleware/security');
 const router = express.Router();
+
+// Applies to join requests specifically (not the whole router) — a team's join password is
+// more guessable than an account password (often a short word shared verbally), so this
+// caps how many attempts a given IP can make against a given team's /request endpoint.
+const joinRequestLimit = rateLimit({ max: 10, windowMs: 15 * 60 * 1000 });
 
 // Get my team memberships (must be before /:id to avoid route conflict)
 router.get('/my/memberships', requireAuth, async (req, res) => {
@@ -23,8 +30,13 @@ router.get('/my/memberships', requireAuth, async (req, res) => {
 // List all teams (public)
 router.get('/', async (req, res) => {
   try {
+    // Explicit column list — this endpoint has no auth requirement, so join_password_hash
+    // must never appear here. requires_password tells the frontend whether to prompt for a
+    // password without ever exposing the hash itself.
     const result = await pool.query(`
-      SELECT t.*, u.name as created_by_name,
+      SELECT t.id, t.name, t.description, t.created_by, t.created_at, t.auto_approve_joins,
+        (t.join_password_hash IS NOT NULL) as requires_password,
+        u.name as created_by_name,
         COUNT(tm.id) FILTER (WHERE tm.status = 'approved')::integer as member_count
       FROM teams t
       LEFT JOIN users u ON t.created_by = u.id
@@ -42,7 +54,13 @@ router.get('/', async (req, res) => {
 // Get single team with members (members only visible to team members or admin)
 router.get('/:id', requireAuth, async (req, res) => {
   try {
-    const team = await pool.query('SELECT * FROM teams WHERE id = $1', [req.params.id]);
+    // Explicit column list so join_password_hash is never sent to the client — see the
+    // same note on GET '/' above.
+    const team = await pool.query(`
+      SELECT id, name, description, created_by, created_at, auto_approve_joins,
+        (join_password_hash IS NOT NULL) as requires_password
+      FROM teams WHERE id = $1
+    `, [req.params.id]);
     if (!team.rows[0]) return res.status(404).json({ error: 'Team not found' });
 
     // Check if user is a member of this team or is an admin
@@ -181,16 +199,57 @@ router.put('/:id/auto-approve', requireAuth, async (req, res) => {
       if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can change team settings' });
     }
 
-    const result = await pool.query(
-      'UPDATE teams SET auto_approve_joins = $1 WHERE id = $2 RETURNING *',
-      [auto_approve_joins, req.params.id]
-    );
+    const result = await pool.query(`
+      UPDATE teams SET auto_approve_joins = $1 WHERE id = $2
+      RETURNING id, name, description, created_by, created_at, auto_approve_joins,
+        (join_password_hash IS NOT NULL) as requires_password
+    `, [auto_approve_joins, req.params.id]);
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Team not found' });
     res.json({ team: result.rows[0] });
   } catch (err) {
     console.error('Failed to update team:', err.message);
     res.status(500).json({ error: 'Failed to update team' });
+  }
+});
+
+// Set, change, or clear a team's join password (admin or captain). When set, this
+// REPLACES the auto_approve_joins setting as the team's join method entirely: a correct
+// password gets you in immediately, an incorrect or missing one is rejected outright — it
+// never falls back to a pending request, since that would let anyone bypass the password
+// just by not supplying one. Pass password: null (or omit it) to remove protection and
+// return to the normal auto-approve/manual-approval behavior.
+router.put('/:id/join-password', requireAuth, async (req, res) => {
+  const { password } = req.body;
+
+  if (password !== null && password !== undefined && password.trim().length > 0 && password.trim().length < 4) {
+    return res.status(400).json({ error: 'Password must be at least 4 characters' });
+  }
+
+  try {
+    // Check if user is admin or a captain of this team
+    if (req.user.role !== 'admin') {
+      const membership = await pool.query(
+        'SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 AND role = $3 AND status = $4',
+        [req.params.id, req.user.id, 'captain', 'approved']
+      );
+      if (!membership.rows[0]) return res.status(403).json({ error: 'Only captains can change team settings' });
+    }
+
+    const trimmed = typeof password === 'string' ? password.trim() : '';
+    const hash = trimmed.length > 0 ? await bcrypt.hash(trimmed, 12) : null;
+
+    const result = await pool.query(`
+      UPDATE teams SET join_password_hash = $1 WHERE id = $2
+      RETURNING id, name, description, created_by, created_at, auto_approve_joins,
+        (join_password_hash IS NOT NULL) as requires_password
+    `, [hash, req.params.id]);
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Team not found' });
+    res.json({ team: result.rows[0] });
+  } catch (err) {
+    console.error('Failed to update join password:', err.message);
+    res.status(500).json({ error: 'Failed to update join password' });
   }
 });
 
@@ -223,16 +282,33 @@ router.put('/:id/description', requireAuth, async (req, res) => {
 });
 
 // Request to join a team
-router.post('/:id/request', requireAuth, async (req, res) => {
+router.post('/:id/request', joinRequestLimit, requireAuth, async (req, res) => {
+  const { password } = req.body;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Get team auto_approve setting
-    const teamResult = await client.query('SELECT auto_approve_joins FROM teams WHERE id = $1', [req.params.id]);
+    const teamResult = await client.query(
+      'SELECT auto_approve_joins, join_password_hash FROM teams WHERE id = $1',
+      [req.params.id]
+    );
     if (!teamResult.rows[0]) return res.status(404).json({ error: 'Team not found' });
 
-    const status = teamResult.rows[0].auto_approve_joins ? 'approved' : 'pending';
+    const { auto_approve_joins, join_password_hash } = teamResult.rows[0];
+    let status;
+
+    if (join_password_hash) {
+      // Password-protected teams: a correct password is the only way in — no fallback to
+      // a pending request, since that would let anyone skip the password by leaving it out.
+      const matches = typeof password === 'string' && await bcrypt.compare(password, join_password_hash);
+      if (!matches) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Incorrect password' });
+      }
+      status = 'approved';
+    } else {
+      status = auto_approve_joins ? 'approved' : 'pending';
+    }
 
     await client.query(
       'INSERT INTO team_members (team_id, user_id, role, status) VALUES ($1, $2, $3, $4)',
@@ -450,14 +526,16 @@ router.put('/:id', requireAuth, requireRole(pool, 'admin'), async (req, res) => 
   try {
     await client.query('BEGIN');
 
-    const existing = await client.query('SELECT * FROM teams WHERE id = $1', [req.params.id]);
+    const existing = await client.query('SELECT id FROM teams WHERE id = $1', [req.params.id]);
     if (!existing.rows[0]) return res.status(404).json({ error: 'Team not found' });
 
     const result = await client.query(
       `UPDATE teams SET
         name = COALESCE($1, name),
         description = COALESCE($2, description)
-       WHERE id = $3 RETURNING *`,
+       WHERE id = $3
+       RETURNING id, name, description, created_by, created_at, auto_approve_joins,
+         (join_password_hash IS NOT NULL) as requires_password`,
       [name, description, req.params.id]
     );
 

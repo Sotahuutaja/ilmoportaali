@@ -206,6 +206,7 @@ The application implements defense-in-depth security practices:
 - Multiple captains per team (all admin-managed)
 - Admins can set whether team joins require approval or are auto-approved when creating/editing teams
 - Captains can toggle auto-approval setting for their teams
+- **Password-protected joining** — captains (or admins) can optionally set a join password for their team instead of auto-approve/manual approval; anyone who enters the correct password joins instantly, and setting a password takes over as the team's join method (the auto-approve toggle is disabled while a password is set, and removing the password restores it). Passwords are hashed, never stored or shown in plain text, and join attempts are rate-limited to guard against guessing
 - Captains can transfer captaincy to a member (which demotes themselves)
 - Users can request to join a team
 - Captains can approve/reject join requests and remove members

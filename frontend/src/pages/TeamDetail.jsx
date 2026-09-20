@@ -14,6 +14,7 @@ export default function TeamDetail() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [autoApprove, setAutoApprove] = useState(false);
+  const [joinPasswordInput, setJoinPasswordInput] = useState('');
   const [myTeams, setMyTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingDescription, setEditingDescription] = useState(false);
@@ -134,6 +135,30 @@ export default function TeamDetail() {
     }
   };
 
+  const handleSetJoinPassword = async () => {
+    setError(''); setMessage('');
+    try {
+      const res = await api.put(`/teams/${id}/join-password`, { password: joinPasswordInput });
+      setTeam(res.data.team);
+      setJoinPasswordInput('');
+      setMessage('Join password set. Members must now enter it to join — auto-approve no longer applies.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to set join password');
+    }
+  };
+
+  const handleRemoveJoinPassword = async () => {
+    if (!window.confirm('Remove password protection? Joining will go back to auto-approve or manual approval.')) return;
+    setError(''); setMessage('');
+    try {
+      const res = await api.put(`/teams/${id}/join-password`, { password: null });
+      setTeam(res.data.team);
+      setMessage('Password protection removed.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to remove join password');
+    }
+  };
+
   const handleSaveDescription = async () => {
     try {
       const res = await api.put(`/teams/${id}/description`, { description: descriptionText });
@@ -226,18 +251,55 @@ export default function TeamDetail() {
       {(isCaptain || user?.role === 'admin') && (
         <div className="card" style={{ marginBottom: '1rem' }}>
           <h3 style={{ marginBottom: '1rem' }}>Team Settings</h3>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: 0 }}>
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 0,
+            cursor: team.requires_password ? 'not-allowed' : 'pointer',
+            opacity: team.requires_password ? 0.5 : 1
+          }}>
             <input
               type="checkbox"
               checked={autoApprove}
               onChange={handleToggleAutoApprove}
+              disabled={team.requires_password}
               style={{ width: 'auto', margin: 0 }}
             />
             Auto-approve join requests
           </label>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-            {autoApprove ? 'New requests are automatically approved' : 'Requests require your approval'}
+            {team.requires_password
+              ? 'Not used while a join password is set (below) — remove the password to use this instead'
+              : (autoApprove ? 'New requests are automatically approved' : 'Requests require your approval')}
           </p>
+
+          <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
+
+          <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Join password</label>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.2rem', marginBottom: '0.5rem' }}>
+            {team.requires_password
+              ? 'Password protection is enabled — anyone with the password joins instantly, and this replaces the auto-approve setting above.'
+              : 'Optionally require a password to join instead of auto-approve or manual approval. Anyone with the correct password joins instantly.'}
+          </p>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              type="text"
+              value={joinPasswordInput}
+              onChange={e => setJoinPasswordInput(e.target.value)}
+              placeholder={team.requires_password ? 'New password (to change it)' : 'Set a join password'}
+              style={{ marginBottom: 0, flex: 1 }}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={handleSetJoinPassword}
+              disabled={!joinPasswordInput.trim()}
+            >
+              {team.requires_password ? 'Change' : 'Enable'}
+            </button>
+            {team.requires_password && (
+              <button className="btn btn-danger" onClick={handleRemoveJoinPassword}>
+                Remove
+              </button>
+            )}
+          </div>
         </div>
       )}
 
