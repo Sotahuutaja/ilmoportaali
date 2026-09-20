@@ -240,7 +240,7 @@ The application implements defense-in-depth security practices:
 - **Most-favorable discount applies automatically** — if an approved volunteer qualifies for more than one applicable discount on a product (e.g. via two different roles), the one that's most favorable to them is applied; discounts are never stacked
 - **Guests are never eligible** — volunteer benefits are tied to a real user account, so guest registrations (added by a captain) never receive them
 - **Capacity enforcement on approval** — if a role has a capacity limit, organizers can't approve more volunteers than that limit allows (applications themselves are never blocked by capacity, only approval)
-- Organizers review, approve, or reject applications from the event's Participants page
+- **Dedicated Volunteers view** — the event's Participants page has a Participants/Volunteers tab toggle (shown once volunteering is enabled for that event); the Volunteers tab lists every application (one row per role applied for) with first name, last name, age, email, role, applied date, accepted/rejected date, and application status, with its own search and summary tiles, and is where organizers approve or reject applications
 
 ### Admin Panel
 

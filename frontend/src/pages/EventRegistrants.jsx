@@ -348,6 +348,8 @@ export default function EventRegistrants() {
   const [managers, setManagers] = useState([]);
   const [volunteerApplications, setVolunteerApplications] = useState([]);
   const [volunteerError, setVolunteerError] = useState('');
+  const [view, setView] = useState('participants');
+  const [volunteerSearch, setVolunteerSearch] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -612,6 +614,23 @@ export default function EventRegistrants() {
     r.products?.some(p => p.is_identifying)
   ).length;
 
+  const filteredVolunteers = volunteerApplications.filter(a => {
+    const name = `${a.first_name || ''} ${a.last_name || ''}`.trim();
+    const term = volunteerSearch.toLowerCase();
+    return (
+      name.toLowerCase().includes(term) ||
+      a.email?.toLowerCase().includes(term) ||
+      a.role_name?.toLowerCase().includes(term)
+    );
+  });
+
+  const volunteerStats = {
+    total: volunteerApplications.length,
+    approved: volunteerApplications.filter(a => a.status === 'approved').length,
+    pending: volunteerApplications.filter(a => a.status === 'pending').length,
+    rejected: volunteerApplications.filter(a => a.status === 'rejected').length,
+  };
+
   if (!event) return <p>Loading...</p>;
 
   return (
@@ -644,6 +663,25 @@ export default function EventRegistrants() {
       {error && <p className="error" style={{ marginLeft: '1rem', marginRight: '1rem' }}>{error}</p>}
       {message && <p className="success" style={{ marginLeft: '1rem', marginRight: '1rem' }}>{message}</p>}
 
+      {event.volunteering_enabled && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
+          <button
+            className={view === 'participants' ? 'btn btn-primary' : 'btn btn-secondary'}
+            onClick={() => setView('participants')}
+          >
+            Participants
+          </button>
+          <button
+            className={view === 'volunteers' ? 'btn btn-primary' : 'btn btn-secondary'}
+            onClick={() => setView('volunteers')}
+          >
+            Volunteers
+          </button>
+        </div>
+      )}
+
+      {view === 'participants' && (
+        <>
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
         <div className="card" style={{ flex: 1, textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Total participants</p>
@@ -669,36 +707,111 @@ export default function EventRegistrants() {
         </div>
       </div>
 
-      {volunteerApplications.length > 0 && (
-        <div className="card" style={{ marginLeft: '1rem', marginRight: '1rem', marginBottom: '1.5rem' }}>
-          <h3 style={{ marginBottom: '0.75rem' }}>Volunteer applications</h3>
-          {volunteerError && <p className="error">{volunteerError}</p>}
-          {volunteerApplications.map(a => (
-            <div key={a.id} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
-            }}>
-              <div>
-                <strong>{a.first_name} {a.last_name}</strong>
-                <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{a.email}</span>
-                <span style={{ marginLeft: '0.5rem' }}>applied for <strong>{a.role_name}</strong></span>
-                <span style={{
-                  fontSize: '0.75rem', padding: '0.1rem 0.5rem', marginLeft: '0.5rem', borderRadius: '8px', color: 'white',
-                  background: a.status === 'approved' ? '#4caf50' : a.status === 'rejected' ? '#c0392b' : '#ff9800'
-                }}>
-                  {a.status}
-                </span>
-              </div>
-              {a.status === 'pending' && (
-                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                  <button className="btn btn-primary" onClick={() => handleApproveVolunteer(a.id)}>Approve</button>
-                  <button className="btn btn-danger" onClick={() => handleRejectVolunteer(a.id)}>Reject</button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        </>
       )}
+
+      {view === 'volunteers' && (
+        <>
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
+            <div className="card" style={{ flex: 1, textAlign: 'center' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Total applications</p>
+              <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{volunteerStats.total}</p>
+            </div>
+            <div className="card" style={{ flex: 1, textAlign: 'center' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Approved</p>
+              <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{volunteerStats.approved}</p>
+            </div>
+            <div className="card" style={{ flex: 1, textAlign: 'center' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Pending</p>
+              <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{volunteerStats.pending}</p>
+            </div>
+            <div className="card" style={{ flex: 1, textAlign: 'center' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Rejected</p>
+              <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{volunteerStats.rejected}</p>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '1rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
+            <input
+              placeholder="Search by name, email or role..."
+              value={volunteerSearch}
+              onChange={e => setVolunteerSearch(e.target.value)}
+              style={{ marginBottom: 0, width: '100%' }}
+            />
+          </div>
+
+          {volunteerError && <p className="error" style={{ marginLeft: '1rem', marginRight: '1rem' }}>{volunteerError}</p>}
+
+          <div style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem', marginBottom: '1rem', overflow: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>First name</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Last name</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Age</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Email</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Role(s)</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Applied</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Accepted/Rejected</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Application Status</th>
+                  <th style={{ padding: '0.8rem 1rem', textAlign: 'left' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredVolunteers.map(a => (
+                  <tr key={a.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '0.8rem 1rem' }}>{a.first_name || '—'}</td>
+                    <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem' }}>{a.last_name || '—'}</td>
+                    <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem', textAlign: 'center' }}>{getAge(a.year_of_birth)}</td>
+                    <td style={{ padding: '0.6rem 0.8rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{a.email}</td>
+                    <td style={{ padding: '0.8rem 1rem' }}>{a.role_name}</td>
+                    <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      {formatDateTime(a.applied_at, {
+                        day: 'numeric', month: 'numeric', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                      })}
+                    </td>
+                    <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      {a.reviewed_at ? formatDateTime(a.reviewed_at, {
+                        day: 'numeric', month: 'numeric', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                      }) : '—'}
+                    </td>
+                    <td style={{ padding: '0.8rem 1rem' }}>
+                      <span style={{
+                        fontSize: '0.75rem', padding: '0.1rem 0.5rem', borderRadius: '8px', color: 'white',
+                        background: a.status === 'approved' ? '#4caf50' : a.status === 'rejected' ? '#c0392b' : '#ff9800'
+                      }}>
+                        {a.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.6rem 0.8rem' }}>
+                      {a.status === 'pending' ? (
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <button className="btn btn-primary" onClick={() => handleApproveVolunteer(a.id)}>Approve</button>
+                          <button className="btn btn-danger" onClick={() => handleRejectVolunteer(a.id)}>Reject</button>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {filteredVolunteers.length === 0 && (
+                  <tr>
+                    <td colSpan={9} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No volunteer applications found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {view === 'participants' && (
+        <>
 
       <div style={{ marginBottom: '1rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
         <input
@@ -833,6 +946,9 @@ export default function EventRegistrants() {
           </tbody>
         </table>
       </div>
+        </>
+      )}
+
   {editingReg && (
     <EditRegistrantModal
     reg={editingReg}

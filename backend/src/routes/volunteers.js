@@ -309,7 +309,7 @@ router.get('/applications', requireAuth, async (req, res) => {
     if (!allowed) return res.status(403).json({ error: 'Not authorised to manage volunteers for this event' });
 
     const result = await pool.query(`
-      SELECT ev.*, vr.name as role_name, u.first_name, u.last_name, u.email
+      SELECT ev.*, vr.name as role_name, u.first_name, u.last_name, u.email, u.year_of_birth
       FROM event_volunteers ev
       JOIN volunteer_roles vr ON vr.id = ev.role_id
       JOIN users u ON u.id = ev.user_id
