@@ -308,7 +308,7 @@ az containerapp update --name ilmoportaali-frontend ...
 
 ## Known Issues & Backlog
 
-- **Checkbox-list field editing display bug** — when an admin or co-manager edits a registration that uses a checkbox-list product field (e.g., unchecking one of several previously-selected options), the Participants page displays both the old and new selections together instead of replacing them. The underlying data is saved correctly; this is a display-only bug and is not yet fixed.
+- Nothing!
 
 ### Under Consideration
 

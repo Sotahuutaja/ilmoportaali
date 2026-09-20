@@ -260,7 +260,7 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
               rp.product_id, ep.name, ep.price, rp.quantity, rp.field_values, ep.fields
        FROM registrations r
        JOIN events e ON r.event_id = e.id
-       LEFT JOIN registration_products rp ON r.id = rp.registration_id
+       LEFT JOIN registration_products rp ON r.id = rp.registration_id AND rp.deleted_at IS NULL
        LEFT JOIN event_products ep ON rp.product_id = ep.id
        WHERE r.user_id = $1 AND r.event_id = $2`,
       [req.user.id, req.params.eventId]
@@ -674,7 +674,7 @@ router.get('/my/list', requireAuth, async (req, res) => {
       FROM registrations r
       JOIN events e ON r.event_id = e.id
       LEFT JOIN teams t ON r.team_id = t.id
-      LEFT JOIN registration_products rp ON r.id = rp.registration_id
+      LEFT JOIN registration_products rp ON r.id = rp.registration_id AND rp.deleted_at IS NULL
       LEFT JOIN event_products ep ON rp.product_id = ep.id
       WHERE r.user_id = $1
       GROUP BY e.id, r.id, t.name
@@ -982,7 +982,7 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
       FROM registrations r
       LEFT JOIN users u ON r.user_id = u.id
       LEFT JOIN teams t ON r.team_id = t.id
-      LEFT JOIN registration_products rp ON r.id = rp.registration_id
+      LEFT JOIN registration_products rp ON r.id = rp.registration_id AND rp.deleted_at IS NULL
       LEFT JOIN event_products ep ON rp.product_id = ep.id
       WHERE r.id = $1
       GROUP BY r.id, u.first_name, u.last_name, u.email, u.year_of_birth, u.gender, t.name
@@ -1134,7 +1134,7 @@ router.post('/:eventId/registrations/:registrationId/resend-payment-link', requi
       `SELECT ep.name, ep.price, ep.fields, rp.quantity, rp.field_values
        FROM registration_products rp
        JOIN event_products ep ON rp.product_id = ep.id
-       WHERE rp.registration_id = $1`,
+       WHERE rp.registration_id = $1 AND rp.deleted_at IS NULL`,
       [req.params.registrationId]
     );
 
