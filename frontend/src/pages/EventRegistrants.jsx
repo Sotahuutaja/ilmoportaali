@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext';
 import api from '../api';
 import { fullName } from '../AuthContext';
 import { formatDate, formatDateTime } from '../utils/datetime';
+import { resolvePrice } from '../utils/pricing';
 
 function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
   const [form, setForm] = useState({
@@ -30,22 +31,8 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
       if (qty > 0) {
         const product = eventProducts.find(p => p.id === parseInt(productId));
         if (product) {
-          let price = parseFloat(product.price);
-          // Check for field option overrides
-          if (typeof item === 'object' && item.field_values && product.fields) {
-            for (const field of product.fields) {
-              if (field.type === 'select' && item.field_values[field.id]) {
-                const option = field.options?.find(opt => {
-                  const optVal = typeof opt === 'string' ? opt : opt.value;
-                  return optVal === item.field_values[field.id];
-                });
-                if (option && typeof option === 'object' && option.price) {
-                  price = parseFloat(option.price);
-                  break;
-                }
-              }
-            }
-          }
+          const itemFieldValues = typeof item === 'object' ? item.field_values : undefined;
+          const price = resolvePrice(product.price, product.fields, itemFieldValues);
           sum += price * qty;
         }
       }
@@ -146,21 +133,9 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
           const field_values = typeof item === 'object' ? (item?.field_values || {}) : {};
 
           // Calculate effective price with field option overrides
-          let displayPrice = parseFloat(p.price);
-          if (isSelected && field_values && p.fields) {
-            for (const field of p.fields) {
-              if (field.type === 'select' && field_values[field.id]) {
-                const option = field.options?.find(opt => {
-                  const optVal = typeof opt === 'string' ? opt : opt.value;
-                  return optVal === field_values[field.id];
-                });
-                if (option && typeof option === 'object' && option.price) {
-                  displayPrice = parseFloat(option.price);
-                  break;
-                }
-              }
-            }
-          }
+          const displayPrice = isSelected
+            ? resolvePrice(p.price, p.fields, field_values)
+            : parseFloat(p.price);
 
           return (
             <div key={p.id} style={{
@@ -433,24 +408,7 @@ export default function EventRegistrants() {
     if (!reg) return;
 
     // Helper to calculate price with field option overrides
-    const getProductPrice = (product) => {
-      let price = parseFloat(product.price);
-      if (product.field_values && product.fields) {
-        for (const field of product.fields) {
-          if (field.type === 'select' && product.field_values[field.id]) {
-            const option = field.options?.find(opt => {
-              const optVal = typeof opt === 'string' ? opt : opt.value;
-              return optVal === product.field_values[field.id];
-            });
-            if (option && typeof option === 'object' && option.price) {
-              price = parseFloat(option.price);
-              break;
-            }
-          }
-        }
-      }
-      return price;
-    };
+    const getProductPrice = (product) => resolvePrice(product.price, product.fields, product.field_values);
 
     // Calculate total refund amount with field option overrides
     const totalRefund = reg.products
@@ -530,24 +488,7 @@ export default function EventRegistrants() {
   };
 
   // Helper to calculate product price with field option overrides
-  const getProductPrice = (product) => {
-    let price = parseFloat(product.price);
-    if (product.field_values && product.fields) {
-      for (const field of product.fields) {
-        if (field.type === 'select' && product.field_values[field.id]) {
-          const option = field.options?.find(opt => {
-            const optVal = typeof opt === 'string' ? opt : opt.value;
-            return optVal === product.field_values[field.id];
-          });
-          if (option && typeof option === 'object' && option.price) {
-            price = parseFloat(option.price);
-            break;
-          }
-        }
-      }
-    }
-    return price;
-  };
+  const getProductPrice = (product) => resolvePrice(product.price, product.fields, product.field_values);
 
   const getAge = (yearOfBirth) => {
     if (!yearOfBirth) return '—';

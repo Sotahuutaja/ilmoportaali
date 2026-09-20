@@ -1,9 +1,10 @@
 /**
  * Shared validation for "checkbox list" custom fields — a field where a registrant can
- * check between field.minSelect and field.maxSelect of the listed options (each option is
- * just a label, not a price: the product's price never changes based on how many boxes are
- * checked — that's the whole point of this field type, as opposed to 'select', where the
- * chosen option's price replaces the product's price).
+ * check between field.minSelect and field.maxSelect of the listed options. This module only
+ * validates the SELECTION (min/max count, valid values, stock); it has nothing to do with
+ * price. Pricing (including the rule that a checkbox field with any priced option sums its
+ * checked options' prices and replaces the product's price outright) lives in
+ * ./pricing.js's resolvePrice() — see that file for the full rule.
  *
  * Each option can optionally carry its own stock limit (option.quantity), same as 'select'
  * options already do. Used by every place that inserts registration products — free

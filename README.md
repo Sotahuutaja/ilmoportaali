@@ -193,7 +193,7 @@ The application implements defense-in-depth security practices:
 - **Product options** — creators can add custom fields to products (text input, dropdown select, or checkbox list); users choose options during registration
   - **Per-option pricing** — dropdown options can have custom prices that override the product's default price
   - **Per-option quantity limits** — dropdown and checkbox-list options can have individual quantity limits (e.g., "Size Small: 5 available")
-  - **Checkbox-list fields** — creators can define a set of checkboxes with configurable minimum/maximum selection counts (e.g., "choose 1–3"); unlike dropdown options, checkbox selections never change the product's price regardless of how many options are selected
+  - **Checkbox-list fields** — creators can define a set of checkboxes with configurable minimum/maximum selection counts (e.g., "choose 1–3"); options can optionally have their own price, in which case the sum of the checked options' prices replaces the product's base price entirely (so a product using priced checkboxes should have its own base price left at €0). A checkbox field with no priced options never affects price
   - **Per-product availability windows** — creators can optionally set a start and/or end date-time (displayed and entered in Finnish time, EET/EEST) per product, independent of the event's overall registration period, to open or close sales for individual products on their own schedule
 - Products support drag-and-drop reordering on the edit page and inline editing
 - At least one product must be selected when registering for an event

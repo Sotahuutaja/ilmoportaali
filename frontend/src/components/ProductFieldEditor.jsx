@@ -1,8 +1,14 @@
 // ProductFieldEditor — lets event creators define custom fields on a product.
 // A field can be free text, a select (dropdown with predefined options), or a checkbox
-// list (choose between minSelect and maxSelect of the listed options). Checkbox options
-// never carry a price — selecting more of them doesn't change the product's price, only
-// dropdown options do that.
+// list (choose between minSelect and maxSelect of the listed options).
+//
+// Both select and checkbox options can optionally carry their own price. For select, the
+// chosen option's price replaces the product's base price. For checkbox, as soon as ANY
+// option in the field has a price set, the field is "priced": the sum of the checked
+// options' prices replaces the product's price outright (so the product's own base price
+// is effectively unused for that product — set it to 0). A checkbox field left with no
+// priced options at all behaves as before and never affects price. See
+// ../../backend/src/utils/pricing.js for the full rule.
 //
 // Props:
 //   fields      — array of field objects (the current state)
@@ -145,7 +151,7 @@ export default function ProductFieldEditor({ fields = [], onChange }) {
                 <div key={j} style={{ background: 'var(--surface-2)', padding: '0.5rem', borderRadius: '3px', marginBottom: '0.3rem' }}>
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: field.type === 'select' ? '2fr 1fr 1fr auto' : '2fr 1fr auto',
+                    gridTemplateColumns: '2fr 1fr 1fr auto',
                     gap: '0.3rem', alignItems: 'flex-start'
                   }}>
                     <div>
@@ -157,19 +163,22 @@ export default function ProductFieldEditor({ fields = [], onChange }) {
                         style={{ marginBottom: 0 }}
                       />
                     </div>
-                    {field.type === 'select' && (
-                      <div>
-                        <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Price (€)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={typeof opt === 'string' ? '' : (opt.price ?? '')}
-                          onChange={e => updateOption(i, j, { price: e.target.value ? parseFloat(e.target.value) : null })}
-                          placeholder="Default"
-                          style={{ marginBottom: 0 }}
-                        />
-                      </div>
-                    )}
+                    <div>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Price (€)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={typeof opt === 'string' ? '' : (opt.price ?? '')}
+                        onChange={e => updateOption(i, j, { price: e.target.value ? parseFloat(e.target.value) : null })}
+                        placeholder={field.type === 'select' ? 'Default' : 'No price effect'}
+                        style={{ marginBottom: 0 }}
+                      />
+                      {field.type === 'checkbox' && (
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                          Set on any option to make this field's checked total replace the product's price
+                        </span>
+                      )}
+                    </div>
                     <div>
                       <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Qty limit</label>
                       <input

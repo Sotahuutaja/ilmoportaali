@@ -3,29 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import { formatDateTime } from '../utils/datetime';
+import { resolvePrice } from '../utils/pricing';
 import RegistrationReview from '../components/RegistrationReview';
 
 function ProductSelector({ products, selected, setSelected, onToggle, fieldValues, setFieldValues }) {
   // Calculate effective price based on selected dropdown options
-  const getEffectivePrice = (product) => {
-    let price = parseFloat(product.price);
-    const productFields = product.fields || [];
-
-    for (const field of productFields) {
-      if (field.type === 'select') {
-        const selectedValue = fieldValues?.[product.id]?.[field.id];
-        if (selectedValue) {
-          const option = field.options.find(opt =>
-            (typeof opt === 'string' ? opt : opt.value) === selectedValue
-          );
-          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-            price = parseFloat(option.price);
-          }
-        }
-      }
-    }
-    return price;
-  };
+  const getEffectivePrice = (product) => resolvePrice(product.price, product.fields, fieldValues?.[product.id]);
 
   return (
     <div style={{ margin: '1rem 0' }}>
@@ -423,27 +406,7 @@ export default function EventDetail() {
     // Helper to calculate price with field option overrides
     const getProductPriceWithOptions = (productId, fieldVals) => {
       const eventProduct = products.find(ep => ep.id === productId);
-      let price = parseFloat(eventProduct?.price || 0);
-      const productFields = eventProduct?.fields || [];
-
-      if (fieldVals && productFields.length > 0) {
-        for (const field of productFields) {
-          if (field.type === 'select') {
-            const selectedValue = fieldVals[field.id];
-            if (selectedValue) {
-              const option = field.options.find(opt =>
-                (typeof opt === 'string' ? opt : opt.value) === selectedValue
-              );
-              if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-                price = parseFloat(option.price);
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      return price;
+      return resolvePrice(eventProduct?.price || 0, eventProduct?.fields, fieldVals);
     };
 
     // Build product details with names and prices from the event products list
@@ -542,27 +505,7 @@ export default function EventDetail() {
     // Helper to calculate price with field option overrides
     const getGuestProductPrice = (productId, fieldVals) => {
       const eventProduct = products.find(ep => ep.id === productId);
-      let price = parseFloat(eventProduct?.price || 0);
-      const productFields = eventProduct?.fields || [];
-
-      if (fieldVals && productFields.length > 0) {
-        for (const field of productFields) {
-          if (field.type === 'select') {
-            const selectedValue = fieldVals[field.id];
-            if (selectedValue) {
-              const option = field.options.find(opt =>
-                (typeof opt === 'string' ? opt : opt.value) === selectedValue
-              );
-              if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-                price = parseFloat(option.price);
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      return price;
+      return resolvePrice(eventProduct?.price || 0, eventProduct?.fields, fieldVals);
     };
 
     // Build guest product details with option price overrides

@@ -9,6 +9,7 @@ const { requireAuth } = require('../middleware/auth');
 const { createPaymentIntent, getPaymentIntent, capturePaymentIntent, cancelPaymentIntent, refundPaymentIntent, isConfigured } = require('../services/stripeService');
 const { validateIdentifyingProducts, countIdentifyingRegistrations } = require('../utils/identifyingProducts');
 const { validateCheckboxSelection } = require('../utils/checkboxFields');
+const { resolvePrice } = require('../utils/pricing');
 const { sendAdditionalPaymentConfirmationEmail } = require('../services/email');
 const { logHelpers } = require('../services/logService');
 
@@ -101,27 +102,7 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
         }
       }
 
-      let productPrice = parseFloat(product.rows[0].price);
-
-      // Check if any dropdown option has a custom price override
-      if (field_values) {
-        for (const field of fields) {
-          if (field.type === 'select') {
-            const selectedValue = field_values[field.id];
-            if (selectedValue) {
-              const option = field.options.find(opt => {
-                const optVal = typeof opt === 'string' ? opt : opt.value;
-                return optVal === selectedValue;
-              });
-
-              if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-                productPrice = parseFloat(option.price);
-                break;
-              }
-            }
-          }
-        }
-      }
+      const productPrice = resolvePrice(product.rows[0].price, fields, field_values);
 
       totalCents += Math.round(productPrice * quantity * 100);
     }
@@ -340,7 +321,6 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
             // Transform products to include calculated prices with field option overrides
             const productsForEmail = productsResult.rows.map(p => {
-              let price = parseFloat(p.price);
               let fieldValues = p.field_values || {};
               if (typeof fieldValues === 'string') {
                 try {
@@ -350,23 +330,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
                 }
               }
 
-              // Apply field option price override if applicable
               const fields = p.fields || [];
-              for (const field of fields) {
-                if (field.type === 'select') {
-                  const selectedValue = fieldValues[field.id];
-                  if (selectedValue && field.options) {
-                    const option = field.options.find(opt => {
-                      const optVal = typeof opt === 'string' ? opt : opt.value;
-                      return optVal === selectedValue;
-                    });
-                    if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-                      price = parseFloat(option.price);
-                      break;
-                    }
-                  }
-                }
-              }
+              const price = resolvePrice(p.price, fields, fieldValues);
 
               // Transform field_values to use field labels instead of IDs
               const transformedFieldValues = {};
@@ -587,28 +552,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
         }
 
         if (product.rows[0]) {
-          // Calculate price with field option overrides
-          let productPrice = parseFloat(product.rows[0].price);
           const fields = product.rows[0].fields || [];
-
-          if (field_values && fields.length > 0) {
-            for (const field of fields) {
-              if (field.type === 'select') {
-                const selectedValue = field_values[field.id];
-                if (selectedValue && field.options) {
-                  const option = field.options.find(opt => {
-                    const optVal = typeof opt === 'string' ? opt : opt.value;
-                    return optVal === selectedValue;
-                  });
-
-                  if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-                    productPrice = parseFloat(option.price);
-                    break;
-                  }
-                }
-              }
-            }
-          }
+          const productPrice = resolvePrice(product.rows[0].price, fields, field_values);
 
           totalCents += Math.round(productPrice * quantity * 100);
         }

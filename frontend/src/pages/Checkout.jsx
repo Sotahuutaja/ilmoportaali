@@ -9,6 +9,7 @@ import { useAuth } from '../AuthContext';
 import api from '../api';
 import PaymentForm from '../components/PaymentForm';
 import { formatDateTime } from '../utils/datetime';
+import { resolvePrice } from '../utils/pricing';
 
 export default function Checkout() {
   const { id } = useParams();
@@ -302,31 +303,7 @@ export default function Checkout() {
   const getProductPrice = (productId, fieldValues) => {
     const product = products.find(p => p.id === productId);
     if (!product) return 0;
-
-    let price = parseFloat(product.price);
-    const fields = product.fields || [];
-
-    // Check if any field option has a custom price override
-    if (fieldValues && fields.length > 0) {
-      for (const field of fields) {
-        if (field.type === 'select') {
-          const selectedValue = fieldValues[field.id];
-          if (selectedValue && field.options) {
-            const option = field.options.find(opt => {
-              const optVal = typeof opt === 'string' ? opt : opt.value;
-              return optVal === selectedValue;
-            });
-
-            if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-              price = parseFloat(option.price);
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    return price;
+    return resolvePrice(product.price, product.fields, fieldValues);
   };
 
   if (!user) {

@@ -7,6 +7,7 @@
 
 const pool = require('../db');
 const { sendRegistrationConfirmation, sendRegistrationCancellation } = require('./emailService');
+const { resolvePrice } = require('../utils/pricing');
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000; // 5 seconds between retries
@@ -30,35 +31,6 @@ function transformFieldValues(fieldValues, productFields) {
   }
 
   return transformed;
-}
-
-/**
- * Helper function to get product price with field option overrides
- */
-function getProductPriceWithOptions(basePrice, fieldValues, fields) {
-  let price = parseFloat(basePrice);
-  const fieldList = fields || [];
-
-  if (fieldValues && fieldList.length > 0) {
-    for (const field of fieldList) {
-      if (field.type === 'select') {
-        const selectedValue = fieldValues[field.id];
-        if (selectedValue && field.options) {
-          const option = field.options.find(opt => {
-            const optVal = typeof opt === 'string' ? opt : opt.value;
-            return optVal === selectedValue;
-          });
-
-          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-            price = parseFloat(option.price);
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  return price;
 }
 
 /**
@@ -209,8 +181,6 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
 
   // Build products array with prices and transformed field labels
   const products = productsResult.rows.map(p => {
-    // Calculate price with field option overrides
-    let price = parseFloat(p.price);
     // Parse field_values if it's a string (from database)
     let fieldValues = p.field_values || {};
     if (typeof fieldValues === 'string') {
@@ -221,24 +191,7 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
       }
     }
     const fields = p.fields || [];
-
-    for (const field of fields) {
-      if (field.type === 'select') {
-        const selectedValue = fieldValues[field.id];
-
-        if (selectedValue && field.options) {
-          const option = field.options.find(opt => {
-            const optVal = typeof opt === 'string' ? opt : opt.value;
-            return optVal === selectedValue;
-          });
-
-          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-            price = parseFloat(option.price);
-            break;
-          }
-        }
-      }
-    }
+    const price = resolvePrice(p.price, fields, fieldValues);
 
     return {
       name: p.name,
@@ -279,8 +232,6 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
     guest_last_name: g.guest_last_name,
     comments: g.comments,
     products: (g.products || []).map(p => {
-      // Calculate price with field option overrides for guest products
-      let price = parseFloat(p.price);
       // Parse field_values if it's a string (from database)
       let fieldValues = p.field_values || {};
       if (typeof fieldValues === 'string') {
@@ -291,24 +242,7 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
         }
       }
       const fields = productFieldsMap[p.product_id] || [];
-
-      for (const field of fields) {
-        if (field.type === 'select') {
-          const selectedValue = fieldValues[field.id];
-
-          if (selectedValue && field.options) {
-            const option = field.options.find(opt => {
-              const optVal = typeof opt === 'string' ? opt : opt.value;
-              return optVal === selectedValue;
-            });
-
-            if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-              price = parseFloat(option.price);
-              break;
-            }
-          }
-        }
-      }
+      const price = resolvePrice(p.price, fields, fieldValues);
 
       return {
         name: p.name,

@@ -2,6 +2,7 @@
  * RegistrationReview - Shows a summary of captain and guest registrations before checkout
  * Displays individual breakdowns for captain and each guest
  */
+import { resolvePrice } from '../utils/pricing';
 
 export default function RegistrationReview({
   products,
@@ -23,25 +24,7 @@ export default function RegistrationReview({
 
   const getProductPrice = (product) => {
     const eventProduct = allProducts?.find(p => p.id === product.product_id);
-    let price = parseFloat(eventProduct?.price || product.price || 0);
-
-    // Check if any field option has a custom price
-    if (product.field_values && eventProduct?.fields) {
-      for (const field of eventProduct.fields) {
-        if (field.type === 'select' && product.field_values[field.id]) {
-          const selectedValue = product.field_values[field.id];
-          const option = field.options.find(opt => {
-            const optVal = typeof opt === 'string' ? opt : opt.value;
-            return optVal === selectedValue;
-          });
-          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-            price = parseFloat(option.price);
-            break;
-          }
-        }
-      }
-    }
-    return price;
+    return resolvePrice(eventProduct?.price || product.price || 0, eventProduct?.fields, product.field_values);
   };
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>

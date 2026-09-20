@@ -8,6 +8,7 @@ const { sendAdditionalPaymentEmail, sendRefundEmail } = require('../services/ema
 const { logHelpers } = require('../services/logService');
 const { validateIdentifyingProducts, countIdentifyingRegistrations } = require('../utils/identifyingProducts');
 const { validateCheckboxSelection } = require('../utils/checkboxFields');
+const { resolvePrice } = require('../utils/pricing');
 
 // Helper: calculate total price for a set of products
 async function calculateProductPrice(client, products, eventId) {
@@ -19,24 +20,8 @@ async function calculateProductPrice(client, products, eventId) {
     );
     if (!product.rows[0]) throw new Error(`Product ${product_id} not found`);
 
-    let price = parseFloat(product.rows[0].price);
     const fields = product.rows[0].fields || [];
-
-    // Check if any dropdown field has a custom price override
-    for (const field of fields) {
-      if (field.type === 'select') {
-        const selectedValue = field_values[field.id];
-        if (selectedValue) {
-          const option = field.options.find(opt =>
-            (typeof opt === 'string' ? opt : opt.value) === selectedValue
-          );
-          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-            price = parseFloat(option.price);
-            break;
-          }
-        }
-      }
-    }
+    const price = resolvePrice(product.rows[0].price, fields, field_values);
 
     totalCents += Math.round(price * 100) * quantity;
   }
@@ -54,25 +39,9 @@ async function getRegistrationPrice(client, registrationId) {
 
   let totalCents = 0;
   for (const row of result.rows) {
-    let price = parseFloat(row.price);
     const fields = row.fields || [];
     const fieldValues = row.field_values || {};
-
-    // Check if any dropdown field has a custom price override
-    for (const field of fields) {
-      if (field.type === 'select') {
-        const selectedValue = fieldValues[field.id];
-        if (selectedValue) {
-          const option = field.options.find(opt =>
-            (typeof opt === 'string' ? opt : opt.value) === selectedValue
-          );
-          if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-            price = parseFloat(option.price);
-            break;
-          }
-        }
-      }
-    }
+    const price = resolvePrice(row.price, fields, fieldValues);
 
     totalCents += Math.round(price * 100) * row.quantity;
   }
@@ -316,7 +285,6 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
     const products = regResult.rows
       .filter(r => r.product_id)
       .map(row => {
-        let price = parseFloat(row.price);
         // Parse field_values if it's a string
         let fieldValues = row.field_values || {};
         if (typeof fieldValues === 'string') {
@@ -327,22 +295,7 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
           }
         }
         const fields = row.fields || [];
-
-        // Apply field option price overrides
-        for (const field of fields) {
-          if (field.type === 'select') {
-            const selectedValue = fieldValues[field.id];
-            if (selectedValue && field.options) {
-              const option = field.options.find(opt =>
-                (typeof opt === 'string' ? opt : opt.value) === selectedValue
-              );
-              if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-                price = parseFloat(option.price);
-                break;
-              }
-            }
-          }
-        }
+        const price = resolvePrice(row.price, fields, fieldValues);
 
         return {
           name: row.name,
@@ -579,7 +532,6 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
     const products = regResult.rows
       .filter(r => r.product_id)
       .map(row => {
-        let price = parseFloat(row.price);
         // Parse field_values if it's a string
         let fieldValues = row.field_values || {};
         if (typeof fieldValues === 'string') {
@@ -590,22 +542,7 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
           }
         }
         const fields = row.fields || [];
-
-        // Apply field option price overrides
-        for (const field of fields) {
-          if (field.type === 'select') {
-            const selectedValue = fieldValues[field.id];
-            if (selectedValue && field.options) {
-              const option = field.options.find(opt =>
-                (typeof opt === 'string' ? opt : opt.value) === selectedValue
-              );
-              if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-                price = parseFloat(option.price);
-                break;
-              }
-            }
-          }
-        }
+        const price = resolvePrice(row.price, fields, fieldValues);
 
         return {
           name: row.name,
@@ -969,7 +906,6 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
 
                 productsForEmail = products.map(p => {
                   const details = productDetailsMap[p.product_id] || { name: 'Unknown', price: 0, fields: [] };
-                  let price = parseFloat(details.price);
                   let fieldValues = p.field_values || {};
                   if (typeof fieldValues === 'string') {
                     try {
@@ -979,23 +915,8 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
                     }
                   }
 
-                  // Apply field option price override if applicable
                   const fields = details.fields || [];
-                  for (const field of fields) {
-                    if (field.type === 'select') {
-                      const selectedValue = fieldValues[field.id];
-                      if (selectedValue && field.options) {
-                        const option = field.options.find(opt => {
-                          const optVal = typeof opt === 'string' ? opt : opt.value;
-                          return optVal === selectedValue;
-                        });
-                        if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-                          price = parseFloat(option.price);
-                          break;
-                        }
-                      }
-                    }
-                  }
+                  const price = resolvePrice(details.price, fields, fieldValues);
 
                   // Transform field_values to use field labels instead of IDs
                   const transformedFieldValues = {};
@@ -1218,7 +1139,6 @@ router.post('/:eventId/registrations/:registrationId/resend-payment-link', requi
     );
 
     const productsForEmail = productsResult.rows.map(p => {
-      let price = parseFloat(p.price);
       let fieldValues = p.field_values || {};
       if (typeof fieldValues === 'string') {
         try {
@@ -1229,21 +1149,7 @@ router.post('/:eventId/registrations/:registrationId/resend-payment-link', requi
       }
 
       const fields = p.fields || [];
-      for (const field of fields) {
-        if (field.type === 'select') {
-          const selectedValue = fieldValues[field.id];
-          if (selectedValue && field.options) {
-            const option = field.options.find(opt => {
-              const optVal = typeof opt === 'string' ? opt : opt.value;
-              return optVal === selectedValue;
-            });
-            if (option && typeof option === 'object' && option.price !== null && option.price !== undefined) {
-              price = parseFloat(option.price);
-              break;
-            }
-          }
-        }
-      }
+      const price = resolvePrice(p.price, fields, fieldValues);
 
       const transformedFieldValues = {};
       for (const [fieldId, fieldValue] of Object.entries(fieldValues)) {
