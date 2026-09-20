@@ -133,8 +133,15 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                       </select>
                     ) : field.type === 'checkbox' ? (
                       <div>
-                        {field.options.map((opt, idx) => {
+                        {(() => {
+                          // If ANY option in this field carries a price, the field is "priced"
+                          // (see backend/src/utils/pricing.js) — show every option's price so
+                          // the registrant can see the cost before checking anything, and show
+                          // "Free" for options in that same field that have no price of their own.
+                          const isPricedField = field.options.some(o => typeof o === 'object' && o.price !== null && o.price !== undefined);
+                          return field.options.map((opt, idx) => {
                           const optValue = typeof opt === 'string' ? opt : opt.value;
+                          const optPrice = typeof opt === 'string' ? null : opt.price;
                           const optRemaining = typeof opt === 'string' ? null : (opt.remaining !== undefined ? opt.remaining : opt.quantity);
                           const isOutOfStock = optRemaining !== null && optRemaining !== undefined && optRemaining <= 0;
                           const currentValues = fieldValues?.[p.id]?.[field.id] || [];
@@ -163,13 +170,19 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                                 style={{ width: 'auto', margin: 0 }}
                               />
                               {optValue}
+                              {isPricedField && (
+                                <span style={{ color: 'var(--text-muted)', marginLeft: '0.3rem', fontSize: '0.78rem' }}>
+                                  ({optPrice !== null && optPrice !== undefined ? `€${parseFloat(optPrice).toFixed(2)}` : 'Free'})
+                                </span>
+                              )}
                               {isOutOfStock && <span style={{ color: '#c0392b', marginLeft: '0.3rem', fontSize: '0.78rem' }}>(out of stock)</span>}
                               {!isOutOfStock && optRemaining !== null && optRemaining !== undefined && (
                                 <span style={{ color: 'var(--text-muted)', marginLeft: '0.3rem', fontSize: '0.78rem' }}>({optRemaining} available)</span>
                               )}
                             </label>
                           );
-                        })}
+                          });
+                        })()}
                       </div>
                     ) : (
                       <input
