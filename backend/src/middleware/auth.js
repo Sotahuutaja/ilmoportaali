@@ -17,6 +17,25 @@ function requireAuth(req, res, next) {
   }
 }
 
+// Reads the access token if present and sets req.user, but never rejects the request when
+// it's missing or invalid — for public routes (the events listing, an event's own page)
+// that behave differently for a logged-in user (e.g. showing events restricted to their
+// team) but must still work for an anonymous visitor. Deliberately does NOT attempt the
+// refresh-token dance requireAuth does on an expired token: this is a soft, best-effort
+// identification, not a login gate, so a stale token is simply treated as "anonymous"
+// rather than triggering a token refresh on every public page view.
+function optionalAuth(req, res, next) {
+  const token = req.cookies.accessToken;
+  if (!token) return next();
+
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    // Invalid or expired — proceed as anonymous rather than failing the request.
+  }
+  next();
+}
+
 // Handle token refresh when access token expires
 function handleTokenRefresh(req, res, next) {
   const refreshToken = req.cookies.refreshToken;
@@ -101,4 +120,4 @@ function requireRole(pool, ...roles) {
   };
 }
 
-module.exports = { requireAuth, requireRole };
+module.exports = { requireAuth, requireRole, optionalAuth };

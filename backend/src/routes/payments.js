@@ -11,6 +11,7 @@ const { validateIdentifyingProducts, countIdentifyingRegistrations } = require('
 const { validateCheckboxSelection } = require('../utils/checkboxFields');
 const { resolvePrice } = require('../utils/pricing');
 const { getVolunteerDiscountMap, applyVolunteerDiscount } = require('../utils/volunteerPricing');
+const { getEligibleTeamIds } = require('../utils/eventAccess');
 const { sendAdditionalPaymentConfirmationEmail } = require('../services/email');
 const { logHelpers } = require('../services/logService');
 
@@ -189,6 +190,20 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
     if (!captainHasProducts && !guestsHaveProducts) {
       return res.status(400).json({ error: 'At least one product must be registered' });
+    }
+
+    // Reject a team_id that was never made eligible for this event — the frontend's team
+    // pickers (both the captain's own and each guest's) already only ever offer eligible
+    // teams, so this only fires if someone tampers with the request directly. Checked
+    // before any DB writes begin, and before spending a Stripe API call verifying the
+    // payment intent below.
+    const submittedTeamIds = [captain.teamId, ...guests.map(g => g.team_id)]
+      .filter(teamId => teamId !== null && teamId !== undefined);
+    if (submittedTeamIds.length > 0) {
+      const eligibleTeamIds = await getEligibleTeamIds(eventId, pool);
+      if (submittedTeamIds.some(teamId => !eligibleTeamIds.has(teamId))) {
+        return res.status(400).json({ error: 'Selected team is not eligible to register for this event' });
+      }
     }
   }
 
@@ -801,6 +816,17 @@ router.post('/confirm-free-registration', requireAuth, async (req, res) => {
   const guestsHaveProducts = guests.some(g => g.products && g.products.length > 0);
   if (!captainHasProducts && !guestsHaveProducts) {
     return res.status(400).json({ error: 'At least one product must be registered' });
+  }
+
+  // Reject a team_id that was never made eligible for this event — same rule and reasoning
+  // as confirm-payment; a free registration shouldn't be an easier way around it.
+  const submittedTeamIds = [captain.teamId, ...guests.map(g => g.team_id)]
+    .filter(teamId => teamId !== null && teamId !== undefined);
+  if (submittedTeamIds.length > 0) {
+    const eligibleTeamIds = await getEligibleTeamIds(eventId, pool);
+    if (submittedTeamIds.some(teamId => !eligibleTeamIds.has(teamId))) {
+      return res.status(400).json({ error: 'Selected team is not eligible to register for this event' });
+    }
   }
 
   const client = await pool.connect();

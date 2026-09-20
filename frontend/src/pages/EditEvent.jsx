@@ -16,7 +16,8 @@ export default function EditEvent() {
     allow_individual_registration: true,
     registration_starts_at: '', registration_ends_at: '',
     stripe_mode: 'test',
-    volunteering_enabled: false
+    volunteering_enabled: false,
+    restrict_visibility: false
   });
   const [products, setProducts] = useState([]);
   const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [], available_from: '', available_until: '', is_identifying: false });
@@ -63,7 +64,8 @@ export default function EditEvent() {
       registration_starts_at: toHelsinki(e.registration_starts_at),
       registration_ends_at: toHelsinki(e.registration_ends_at),
       stripe_mode: e.stripe_mode || 'test',
-      volunteering_enabled: e.volunteering_enabled ?? false
+      volunteering_enabled: e.volunteering_enabled ?? false,
+      restrict_visibility: e.restrict_visibility ?? false
     });
     setProducts(productsRes.data.products);
     setEventTeams(eventTeamsRes.data.teams);
@@ -648,53 +650,64 @@ export default function EditEvent() {
       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
       Only members of these teams can register under a team for this event.
       </p>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+        <input
+          type="checkbox"
+          checked={form.restrict_visibility}
+          disabled={!form.restrict_visibility && eventTeams.length === 0}
+          onChange={e => setForm({ ...form, restrict_visibility: e.target.checked })}
+          style={{ width: 'auto', margin: 0 }}
+        />
+        Only show this event to eligible teams' members (hides it entirely from everyone else)
+      </label>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+        {eventTeams.length === 0
+          ? 'Add at least one eligible team below before restricting visibility.'
+          : 'The event\'s creator, co-managers, admins, and anyone already registered can still always see it.'}
+        {' '}Remember to click "Save changes" above after changing this.
+      </p>
+
       {teamError && <p className="error">{teamError}</p>}
       {teamMessage && <p className="success">{teamMessage}</p>}
 
-      {eventTeams.map(t => (
-      <div key={t.team_id} style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
-      }}>
-        <div style={{ flex: 1 }}>
-        <strong>{t.name}</strong>
-        <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
-          {t.member_count} members
-        </span>
-        <div style={{ marginTop: '0.25rem', fontSize: '0.85rem' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-            <input
-              type="checkbox"
-              checked={t.auto_approve_joins || false}
-              onChange={() => handleToggleAutoJoin(t.team_id, t.auto_approve_joins || false)}
-              style={{ margin: 0 }}
-            />
-            Auto-approve team joins
-          </label>
-        </div>
-        </div>
-        <button className="btn btn-danger" onClick={() => handleRemoveTeam(t.team_id)}>Remove</button>
-      </div>
-      ))}
+      {allTeams.map(t => {
+        const eventTeam = eventTeams.find(et => et.team_id === t.id);
+        const isAllowed = !!eventTeam;
+        return (
+          <div key={t.id} style={{
+            padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
+          }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={isAllowed}
+                onChange={() => isAllowed ? handleRemoveTeam(t.id) : handleAddTeam(t.id)}
+                style={{ width: 'auto', margin: 0 }}
+              />
+              <strong>{t.name}</strong>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t.member_count} members</span>
+            </label>
+            {isAllowed && (
+              <div style={{ marginTop: '0.4rem', marginLeft: '1.6rem', fontSize: '0.85rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={eventTeam.auto_approve_joins || false}
+                    onChange={() => handleToggleAutoJoin(t.id, eventTeam.auto_approve_joins || false)}
+                    style={{ margin: 0 }}
+                  />
+                  Auto-approve team joins
+                </label>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
-      {eventTeams.length === 0 && (
-      <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No teams allowed yet — all team registrations are blocked.</p>
+      {allTeams.length === 0 && (
+      <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No teams exist yet.</p>
       )}
-
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-      <select
-        defaultValue=""
-        onChange={e => { if (e.target.value) { handleAddTeam(e.target.value); e.target.value = ''; } }}
-        style={{ flex: 1, marginBottom: 0 }}
-      >
-        <option value="">Add a team...</option>
-        {allTeams
-        .filter(t => !eventTeams.find(et => et.team_id === t.id))
-        .map(t => (
-          <option key={t.id} value={t.id}>{t.name}</option>
-        ))}
-      </select>
-      </div>
     </div>
     </div>
   );

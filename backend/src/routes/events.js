@@ -1,14 +1,19 @@
 const express = require('express');
 const pool = require('../db');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth, requireRole, optionalAuth } = require('../middleware/auth');
 const { canManageEvent } = require('../utils/eventAccess');
+const { visibilityClause } = require('../utils/eventVisibility');
 const { logHelpers } = require('../services/logService');
 const router = express.Router();
 
 
-// List all events (public)
-router.get('/', async (req, res) => {
+// List all events (public, but a restrict_visibility event is filtered out for anyone
+// who isn't its manager, an admin, an eligible team's approved member, or already
+// registered for it — see utils/eventVisibility.js)
+router.get('/', optionalAuth, async (req, res) => {
   try {
+    const userId = req.user?.id ?? null;
+    const userRole = req.user?.role ?? null;
     const result = await pool.query(`
       SELECT e.*, u.name as creator_name,
         (SELECT COUNT(DISTINCT r.id)::integer
@@ -18,8 +23,9 @@ router.get('/', async (req, res) => {
          WHERE r.event_id = e.id) as registration_count
       FROM events e
       LEFT JOIN users u ON e.creator_id = u.id
+      WHERE ${visibilityClause('$1', '$2')}
       ORDER BY e.starts_at ASC
-    `);
+    `, [userId, userRole]);
     res.json({ events: result.rows });
   } catch (err) {
     console.error('Failed to fetch events:', err.message);
@@ -51,9 +57,14 @@ router.get('/manageable', requireAuth, requireRole(pool, 'creator', 'admin'), as
   }
 });
 
-// Get single event (public)
-router.get('/:id', async (req, res) => {
+// Get single event (public, subject to the same visibility rule as the listing above —
+// a restricted event a requester isn't allowed to see 404s exactly like a non-existent
+// one would, rather than a 403, so its existence isn't leaked to someone who shouldn't
+// know about it)
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
+    const userId = req.user?.id ?? null;
+    const userRole = req.user?.role ?? null;
     const result = await pool.query(`
       SELECT e.*, u.name as creator_name,
         (SELECT COUNT(DISTINCT r.id)::integer
@@ -63,8 +74,8 @@ router.get('/:id', async (req, res) => {
          WHERE r.event_id = e.id) as registration_count
       FROM events e
       LEFT JOIN users u ON e.creator_id = u.id
-      WHERE e.id = $1
-    `, [req.params.id]);
+      WHERE e.id = $1 AND ${visibilityClause('$2', '$3')}
+    `, [req.params.id, userId, userRole]);
 
     if (!result.rows[0]) {
       return res.status(404).json({ error: 'Event not found' });
@@ -78,7 +89,7 @@ router.get('/:id', async (req, res) => {
 
 // Create event (creator or admin only)
 router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
-  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at, volunteering_enabled } = req.body;
+  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at, volunteering_enabled, restrict_visibility } = req.body;
 
   if (!title || !starts_at || !ends_at) {
     return res.status(400).json({ error: 'Title, start time and end time are required' });
@@ -89,10 +100,10 @@ router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req,
 
   try {
     const result = await pool.query(`
-      INSERT INTO events (title, description, location, starts_at, ends_at, capacity, creator_id, allow_individual_registration, registration_starts_at, registration_ends_at, volunteering_enabled)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      INSERT INTO events (title, description, location, starts_at, ends_at, capacity, creator_id, allow_individual_registration, registration_starts_at, registration_ends_at, volunteering_enabled, restrict_visibility)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
-    `, [title, description, location, starts_at, ends_at, capacity, req.user.id, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, !!volunteering_enabled]);
+    `, [title, description, location, starts_at, ends_at, capacity, req.user.id, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, !!volunteering_enabled, !!restrict_visibility]);
 
     logHelpers.eventCreated(result.rows[0].id, result.rows[0].title, req.user.id);
 
@@ -105,7 +116,7 @@ router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req,
 
 // Update event (creator, co-manager, or admin)
 router.put('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
-  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at, stripe_mode, volunteering_enabled } = req.body;
+  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at, stripe_mode, volunteering_enabled, restrict_visibility } = req.body;
 
   if (!registration_starts_at || !registration_ends_at) {
     return res.status(400).json({ error: 'Registration start and end times are required' });
@@ -125,10 +136,10 @@ router.put('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (re
 
     const result = await pool.query(`
       UPDATE events
-      SET title=$1, description=$2, location=$3, starts_at=$4, ends_at=$5, capacity=$6, allow_individual_registration=$7, registration_starts_at=$8, registration_ends_at=$9, stripe_mode=$10, volunteering_enabled=$11
-      WHERE id=$12
+      SET title=$1, description=$2, location=$3, starts_at=$4, ends_at=$5, capacity=$6, allow_individual_registration=$7, registration_starts_at=$8, registration_ends_at=$9, stripe_mode=$10, volunteering_enabled=$11, restrict_visibility=$12
+      WHERE id=$13
       RETURNING *
-    `, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, stripe_mode || 'test', !!volunteering_enabled, req.params.id]);
+    `, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, stripe_mode || 'test', !!volunteering_enabled, !!restrict_visibility, req.params.id]);
 
     logHelpers.eventUpdated(result.rows[0].id, result.rows[0].title, req.user.id);
 
