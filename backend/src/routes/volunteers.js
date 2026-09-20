@@ -15,7 +15,7 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router({ mergeParams: true });
 const { canManageEvent } = require('../utils/eventAccess');
 const { logHelpers } = require('../services/logService');
-const { DISCOUNT_TYPES } = require('../utils/volunteerPricing');
+const { DISCOUNT_TYPES, getVolunteerDiscountMap } = require('../utils/volunteerPricing');
 
 function isValidDiscount(discount_type, discount_value) {
   if (!DISCOUNT_TYPES.includes(discount_type)) return false;
@@ -211,6 +211,21 @@ router.delete('/roles/:roleId/discounts/:productId', requireAuth, async (req, re
 });
 
 // --- Applications (self-service for applicants, review for organizers) ---------------
+
+// The current user's own approved per-product discounts for this event, grouped by
+// product_id — used by the frontend to show/apply volunteer pricing while picking
+// products and at checkout, before the backend recomputes and enforces it authoritatively.
+// Returns the raw discount rules rather than resolved prices, since the final price also
+// depends on the registrant's field selections (handled client-side via resolvePrice()).
+router.get('/my-discounts', requireAuth, async (req, res) => {
+  try {
+    const map = await getVolunteerDiscountMap(pool, req.user.id, req.params.eventId);
+    res.json({ discounts: Object.fromEntries(map) });
+  } catch (err) {
+    console.error('Failed to fetch your volunteer discounts:', err.message);
+    res.status(500).json({ error: 'Failed to fetch your volunteer discounts' });
+  }
+});
 
 // The current user's own applications for this event.
 router.get('/my-applications', requireAuth, async (req, res) => {

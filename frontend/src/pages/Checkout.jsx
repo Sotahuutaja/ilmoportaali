@@ -10,6 +10,7 @@ import api from '../api';
 import PaymentForm from '../components/PaymentForm';
 import { formatDateTime } from '../utils/datetime';
 import { resolvePrice } from '../utils/pricing';
+import { applyVolunteerDiscount } from '../utils/volunteerPricing';
 
 export default function Checkout() {
   const { id } = useParams();
@@ -27,6 +28,7 @@ export default function Checkout() {
   const [isProcessingRedirect, setIsProcessingRedirect] = useState(false);
   const [registrationData, setRegistrationData] = useState(null); // Full captain + guests data
   const [paymentSuccess, setPaymentSuccess] = useState(null);
+  const [myVolunteerDiscounts, setMyVolunteerDiscounts] = useState({});
 
   useEffect(() => {
     // Check if returning from payment redirect
@@ -128,11 +130,13 @@ export default function Checkout() {
 
     Promise.all([
       api.get(`/events/${id}`),
-      api.get(`/events/${id}/products`)
+      api.get(`/events/${id}/products`),
+      api.get(`/events/${id}/volunteers/my-discounts`).catch(() => ({ data: { discounts: {} } }))
     ])
-      .then(([eventRes, productsRes]) => {
+      .then(([eventRes, productsRes, discountsRes]) => {
         setEvent(eventRes.data.event);
         setProducts(productsRes.data.products);
+        setMyVolunteerDiscounts(discountsRes.data.discounts || {});
 
         // Parse URL parameters
         try {
@@ -299,11 +303,20 @@ export default function Checkout() {
       .join(', ');
   };
 
-  // Helper to get product price with option overrides
+  // Helper to get product price with option overrides. Guests are never eligible for
+  // volunteer discounts (no independent account), so this stays undiscounted — use
+  // getCaptainProductPrice below for the logged-in user's own products.
   const getProductPrice = (productId, fieldValues) => {
     const product = products.find(p => p.id === productId);
     if (!product) return 0;
     return resolvePrice(product.price, product.fields, fieldValues);
+  };
+
+  // Same as above, plus any approved volunteer discount for this event — for the
+  // authenticated user's own products only.
+  const getCaptainProductPrice = (productId, fieldValues) => {
+    const listedPrice = getProductPrice(productId, fieldValues);
+    return applyVolunteerDiscount(listedPrice, myVolunteerDiscounts?.[productId]);
   };
 
   if (!user) {
@@ -444,9 +457,9 @@ export default function Checkout() {
   if (registrationData?.isAdditionalPayment && registrationData?.amount) {
     totalAmount = registrationData.amount / 100; // Convert cents to euros
   } else {
-    // Add captain's products with option-aware pricing
+    // Add captain's products with option-aware pricing (plus any volunteer discount)
     totalAmount += paymentProducts.reduce((sum, p) => {
-      const price = getProductPrice(p.product_id, p.field_values);
+      const price = getCaptainProductPrice(p.product_id, p.field_values);
       return sum + (price * p.quantity);
     }, 0);
 
@@ -492,7 +505,7 @@ export default function Checkout() {
               </p>
               {paymentProducts.map((p, idx) => {
                 const product = products.find(prod => prod.id === p.product_id);
-                const price = getProductPrice(p.product_id, p.field_values);
+                const price = getCaptainProductPrice(p.product_id, p.field_values);
                 const fieldValuesText = formatFieldValues(p.field_values, p.product_id);
                 return (
                   <div key={idx}>

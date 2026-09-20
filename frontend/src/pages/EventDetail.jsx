@@ -4,11 +4,18 @@ import { useAuth } from '../AuthContext';
 import api from '../api';
 import { formatDateTime } from '../utils/datetime';
 import { resolvePrice } from '../utils/pricing';
+import { applyVolunteerDiscount } from '../utils/volunteerPricing';
 import RegistrationReview from '../components/RegistrationReview';
 
-function ProductSelector({ products, selected, setSelected, onToggle, fieldValues, setFieldValues }) {
-  // Calculate effective price based on selected dropdown options
-  const getEffectivePrice = (product) => resolvePrice(product.price, product.fields, fieldValues?.[product.id]);
+function ProductSelector({ products, selected, setSelected, onToggle, fieldValues, setFieldValues, volunteerDiscounts }) {
+  // Calculate effective price based on selected dropdown options, then apply any approved
+  // volunteer discount on top. volunteerDiscounts is only ever passed for the captain's
+  // own selector — guests are never eligible, so their selector omits it and this is a
+  // no-op there (applyVolunteerDiscount returns the price unchanged with no candidates).
+  const getEffectivePrice = (product) => {
+    const listedPrice = resolvePrice(product.price, product.fields, fieldValues?.[product.id]);
+    return applyVolunteerDiscount(listedPrice, volunteerDiscounts?.[product.id]);
+  };
 
   return (
     <div style={{ margin: '1rem 0' }}>
@@ -313,6 +320,7 @@ export default function EventDetail() {
   // Volunteering state
   const [volunteerRoles, setVolunteerRoles] = useState([]);
   const [myVolunteerApplications, setMyVolunteerApplications] = useState([]);
+  const [myVolunteerDiscounts, setMyVolunteerDiscounts] = useState({});
   const [volunteerMessage, setVolunteerMessage] = useState('');
   const [volunteerError, setVolunteerError] = useState('');
 
@@ -333,6 +341,12 @@ export default function EventDetail() {
     if (user) {
       api.get(`/events/${id}/volunteers/my-applications`)
         .then(res => setMyVolunteerApplications(res.data.applications))
+        .catch(() => {});
+      // Approved-role discounts for this event, keyed by product_id — applied to the
+      // captain's own product prices below (never a guest's, per handleApplyVolunteer's
+      // sibling comment elsewhere in this file: guests aren't independently eligible).
+      api.get(`/events/${id}/volunteers/my-discounts`)
+        .then(res => setMyVolunteerDiscounts(res.data.discounts))
         .catch(() => {});
       api.get('/teams/my/memberships').then(res => {
         const approved = res.data.teams.filter(t => t.status === 'approved');
@@ -448,10 +462,13 @@ export default function EventDetail() {
       return setError('Please select at least one product or add guests.');
     }
 
-    // Helper to calculate price with field option overrides
+    // Helper to calculate price with field option overrides, then any approved volunteer
+    // discount on top — this is the captain's own registration, so (unlike the guest
+    // helper below) it's eligible.
     const getProductPriceWithOptions = (productId, fieldVals) => {
       const eventProduct = products.find(ep => ep.id === productId);
-      return resolvePrice(eventProduct?.price || 0, eventProduct?.fields, fieldVals);
+      const listedPrice = resolvePrice(eventProduct?.price || 0, eventProduct?.fields, fieldVals);
+      return applyVolunteerDiscount(listedPrice, myVolunteerDiscounts?.[productId]);
     };
 
     // Build product details with names and prices from the event products list
@@ -773,7 +790,7 @@ export default function EventDetail() {
           </div>
           )}
 
-          <ProductSelector products={products} selected={selectedProducts} setSelected={setSelectedProducts} onToggle={toggleProduct} fieldValues={fieldValues} setFieldValues={setFieldValues} />
+          <ProductSelector products={products} selected={selectedProducts} setSelected={setSelectedProducts} onToggle={toggleProduct} fieldValues={fieldValues} setFieldValues={setFieldValues} volunteerDiscounts={myVolunteerDiscounts} />
 
           <div style={{ margin: '1rem 0' }}>
             <label>Comments (optional)</label>
