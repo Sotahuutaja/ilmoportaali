@@ -284,7 +284,12 @@ export default function EditEvent() {
         {products.map((p, index) => (
           <div
             key={p.id}
-            draggable
+            // Only draggable while this row is showing its collapsed summary — a
+            // draggable ancestor swallows click-drag gestures inside descendant text
+            // inputs (the browser treats the drag as "move this row" instead of "select
+            // this text"), so the inline edit form below must not be inside a draggable
+            // element or its text fields become impossible to select by dragging.
+            draggable={editingProduct?.id !== p.id}
             onDragStart={() => handleDragStart(index)}
             onDragEnter={() => handleDragEnter(index)}
             onDragEnd={handleDragEnd}
@@ -293,7 +298,7 @@ export default function EditEvent() {
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '0.6rem 0.5rem', marginBottom: '0.3rem',
               borderRadius: '6px', border: '1px solid var(--border)',
-              background: 'var(--surface-2)', cursor: 'grab'
+              background: 'var(--surface-2)', cursor: editingProduct?.id === p.id ? 'default' : 'grab'
             }}
           >
             {editingProduct?.id === p.id ? (
