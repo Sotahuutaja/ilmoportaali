@@ -10,6 +10,7 @@ const { createPaymentIntent, getPaymentIntent, capturePaymentIntent, cancelPayme
 const { validateIdentifyingProducts, countIdentifyingRegistrations } = require('../utils/identifyingProducts');
 const { validateCheckboxSelection } = require('../utils/checkboxFields');
 const { resolvePrice } = require('../utils/pricing');
+const { getVolunteerDiscountMap, applyVolunteerDiscount } = require('../utils/volunteerPricing');
 const { sendAdditionalPaymentConfirmationEmail } = require('../services/email');
 const { logHelpers } = require('../services/logService');
 
@@ -33,7 +34,12 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
     // Calculate total price (in cents)
     let totalCents = 0;
 
-    for (const { product_id, quantity, field_values } of products) {
+    // Approved volunteer discounts belong only to the authenticated user's own products —
+    // never to a guest they're registering, since guest registrations have no independent
+    // user_id and can't be volunteers in their own right.
+    const volunteerDiscounts = await getVolunteerDiscountMap(pool, req.user.id, eventId);
+
+    for (const { product_id, quantity, field_values, isGuestProduct } of products) {
       // Validate quantity is a positive integer
       if (!Number.isInteger(quantity) || quantity < 1) {
         return res.status(400).json({ error: 'Quantity must be a positive integer' });
@@ -102,7 +108,10 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
         }
       }
 
-      const productPrice = resolvePrice(product.rows[0].price, fields, field_values);
+      let productPrice = resolvePrice(product.rows[0].price, fields, field_values);
+      if (!isGuestProduct) {
+        productPrice = applyVolunteerDiscount(productPrice, volunteerDiscounts.get(product_id));
+      }
 
       totalCents += Math.round(productPrice * quantity * 100);
     }
@@ -436,6 +445,10 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       });
     }
 
+    // Approved volunteer discounts apply only to the captain's own products, never a
+    // guest's — guests have no independent user_id to hold volunteer status under.
+    const volunteerDiscounts = await getVolunteerDiscountMap(client, req.user.id, eventId);
+
     // Helper function to create a single registration
     const createRegistration = async (isGuest, guestData = null) => {
       let regResult;
@@ -553,7 +566,10 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
         if (product.rows[0]) {
           const fields = product.rows[0].fields || [];
-          const productPrice = resolvePrice(product.rows[0].price, fields, field_values);
+          let productPrice = resolvePrice(product.rows[0].price, fields, field_values);
+          if (!isGuest) {
+            productPrice = applyVolunteerDiscount(productPrice, volunteerDiscounts.get(product_id));
+          }
 
           totalCents += Math.round(productPrice * quantity * 100);
         }

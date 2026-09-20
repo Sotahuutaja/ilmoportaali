@@ -219,14 +219,18 @@ export default function PaymentForm({
       setIsLoading(true);
 
       try {
-        const allProducts = [...selectedProducts];
+        // Tag each entry with whether it belongs to the captain (this account, eligible
+        // for any approved volunteer discount) or a guest (never eligible — guests have
+        // no independent account), since this endpoint combines both into one flat list.
+        const allProducts = selectedProducts.map(p => ({ ...p, isGuestProduct: false }));
         if (registrationData?.guests) {
           registrationData.guests.forEach(guest => {
             guest.products.forEach(p => {
               allProducts.push({
                 product_id: p.product_id,
                 quantity: p.quantity,
-                field_values: p.field_values || {}
+                field_values: p.field_values || {},
+                isGuestProduct: true
               });
             });
           });

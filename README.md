@@ -230,6 +230,17 @@ The application implements defense-in-depth security practices:
 - **CSV export** — event organizers can export all registrations including comments and payment status
 - **Event descriptions support formatting** — line breaks preserved in multi-line event descriptions
 
+### Volunteer Management
+
+- **Opt-in per event** — organizers decide whether their event recruits volunteers through the portal at all, via a toggle on the event's edit page. Turning it off only blocks *new* volunteer applications (enforced server-side, not just hidden in the UI) — existing roles, applications, and already-approved volunteers' benefits are never removed or hidden
+- **Roles** — organizers define any number of roles for their event (e.g. security, info desk, build/setup crew, referees), each with an optional name, description, and capacity (blank = unlimited)
+- **Per-role, per-product benefits** — organizers attach a discount or benefit to any product for any role: free, a percentage off, a fixed amount off, or a fixed override price. Different roles can have entirely different benefits, and the same product can have a different benefit per role
+- **Applications require approval** — users apply to one or more roles for an event through the event page; nothing is granted until an organizer approves the application. A user can hold multiple approved roles for the same event at once, and volunteering is entirely separate from — and doesn't replace — signing up as a regular attendee
+- **Most-favorable discount applies automatically** — if an approved volunteer qualifies for more than one applicable discount on a product (e.g. via two different roles), the one that's most favorable to them is applied; discounts are never stacked
+- **Guests are never eligible** — volunteer benefits are tied to a real user account, so guest registrations (added by a captain) never receive them
+- **Capacity enforcement on approval** — if a role has a capacity limit, organizers can't approve more volunteers than that limit allows (applications themselves are never blocked by capacity, only approval)
+- Organizers review, approve, or reject applications from the event's Participants page
+
 ### Admin Panel
 
 - **User management** with filters, sortable columns, and CSV export
@@ -237,7 +248,7 @@ The application implements defense-in-depth security practices:
 - View age (calculated from year of birth), year of birth, and gender
 - Delete users (with foreign key cleanup)
 - **Team management** — create, edit, and delete teams; assign and remove captains; configure auto-approval settings
-- **System logs** — a searchable, filterable (by category, level, and free text) audit trail of activity across the app: registrations (including free-event signups, not just paid ones), payments, refunds, cancellations, events, teams, user-management actions, products, Stripe webhook events, and auth activity (logins, logouts, password resets, email verification, profile changes). Log entries are written with real names in place of raw database IDs wherever possible (e.g. "Jane Doe cancelled her registration for Summer Camp", not "registration 42 cancelled by user 5"), support CSV export, and can be paged back further than the default view via "Load older logs"
+- **System logs** — a searchable, filterable (by category, level, and free text) audit trail of activity across the app: registrations (including free-event signups, not just paid ones), payments, refunds, cancellations, events, teams, user-management actions, products, volunteer management (roles, discounts, applications, approvals), Stripe webhook events, and auth activity (logins, logouts, password resets, email verification, profile changes). Log entries are written with real names in place of raw database IDs wherever possible (e.g. "Jane Doe cancelled her registration for Summer Camp", not "registration 42 cancelled by user 5"), support CSV export, and can be paged back further than the default view via "Load older logs"
 
 ### Event Management Dashboard
 

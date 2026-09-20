@@ -310,6 +310,12 @@ export default function EventDetail() {
   const [pendingGuests, setPendingGuests] = useState([]);
   const reviewRef = useRef(null);
 
+  // Volunteering state
+  const [volunteerRoles, setVolunteerRoles] = useState([]);
+  const [myVolunteerApplications, setMyVolunteerApplications] = useState([]);
+  const [volunteerMessage, setVolunteerMessage] = useState('');
+  const [volunteerError, setVolunteerError] = useState('');
+
   // Auto-scroll to review section when it appears
   useEffect(() => {
     if (showReview && reviewRef.current) {
@@ -323,7 +329,11 @@ export default function EventDetail() {
     api.get(`/events/${id}`).then(res => setEvent(res.data.event));
     api.get(`/events/${id}/products`).then(res => setProducts(res.data.products));
   api.get(`/events/${id}/teams`).then(res => setAllowedTeams(res.data.teams));
+    api.get(`/events/${id}/volunteers/roles`).then(res => setVolunteerRoles(res.data.roles)).catch(() => {});
     if (user) {
+      api.get(`/events/${id}/volunteers/my-applications`)
+        .then(res => setMyVolunteerApplications(res.data.applications))
+        .catch(() => {});
       api.get('/teams/my/memberships').then(res => {
         const approved = res.data.teams.filter(t => t.status === 'approved');
         setMyTeams(approved);
@@ -351,6 +361,28 @@ export default function EventDetail() {
       if (firstAllowed) setSelectedTeam(String(firstAllowed.id));
     }
   }, [event, allowedTeams, myTeams]);
+
+  const handleApplyVolunteer = async (roleId) => {
+    setVolunteerError(''); setVolunteerMessage('');
+    try {
+      const res = await api.post(`/events/${id}/volunteers/apply`, { role_id: roleId });
+      setMyVolunteerApplications([...myVolunteerApplications, res.data.application]);
+      setVolunteerMessage('Application submitted — the organizers will review it.');
+    } catch (err) {
+      setVolunteerError(err.response?.data?.error || 'Failed to submit application');
+    }
+  };
+
+  const handleWithdrawVolunteer = async (roleId) => {
+    setVolunteerError(''); setVolunteerMessage('');
+    try {
+      await api.delete(`/events/${id}/volunteers/apply/${roleId}`);
+      setMyVolunteerApplications(myVolunteerApplications.filter(a => a.role_id !== roleId));
+      setVolunteerMessage('Application withdrawn.');
+    } catch (err) {
+      setVolunteerError(err.response?.data?.error || 'Failed to withdraw application');
+    }
+  };
 
   const toggleProduct = (productId, setter) => {
     const product = products.find(p => p.id === productId);
@@ -654,6 +686,56 @@ export default function EventDetail() {
 
         {message && <p className="success">{message}</p>}
         {error && <p className="error">{error}</p>}
+
+        {user && event.volunteering_enabled && volunteerRoles.length > 0 && (
+          <div style={{ background: 'var(--surface-2)', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem', border: '1px solid var(--border)' }}>
+            <h3 style={{ marginBottom: '0.5rem' }}>Volunteer for this event</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+              Help make this event happen. Volunteer roles are separate from your registration as an attendee —
+              you can do both. Applications are reviewed by the organizers before any benefits apply.
+            </p>
+            {volunteerMessage && <p className="success">{volunteerMessage}</p>}
+            {volunteerError && <p className="error">{volunteerError}</p>}
+            {volunteerRoles.map(role => {
+              const myApplication = myVolunteerApplications.find(a => a.role_id === role.id);
+              const isFull = role.capacity !== null && role.approved_count >= role.capacity && !myApplication;
+              return (
+                <div key={role.id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '0.6rem', marginBottom: '0.4rem', borderRadius: '6px',
+                  border: '1px solid var(--border)', background: 'var(--surface-1)'
+                }}>
+                  <div>
+                    <strong>{role.name}</strong>
+                    {role.description && <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{role.description}</span>}
+                    {role.capacity !== null && (
+                      <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+                        ({role.approved_count}/{role.capacity} filled)
+                      </span>
+                    )}
+                    {myApplication && (
+                      <span style={{
+                        fontSize: '0.75rem', padding: '0.1rem 0.5rem', marginLeft: '0.5rem', borderRadius: '8px', color: 'white',
+                        background: myApplication.status === 'approved' ? '#4caf50' : myApplication.status === 'rejected' ? '#c0392b' : '#ff9800'
+                      }}>
+                        {myApplication.status}
+                      </span>
+                    )}
+                  </div>
+                  {myApplication ? (
+                    myApplication.status !== 'rejected' && (
+                      <button className="btn btn-secondary" onClick={() => handleWithdrawVolunteer(role.id)}>Withdraw</button>
+                    )
+                  ) : (
+                    <button className="btn btn-primary" disabled={isFull} onClick={() => handleApplyVolunteer(role.id)}>
+                      {isFull ? 'Full' : 'Apply'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {user && registrationOpen && !isEventPast && (
       <>

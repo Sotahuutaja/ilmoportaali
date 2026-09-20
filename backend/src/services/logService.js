@@ -27,6 +27,7 @@ const CATEGORIES = {
   PRODUCT: 'product',
   WEBHOOK: 'webhook',
   STRIPE: 'stripe',
+  VOLUNTEER: 'volunteer',
   OTHER: 'other'
 };
 
@@ -907,6 +908,98 @@ const logHelpers = {
       `Stripe webhook error (${context}): ${error.message || error}`,
       { context, error: error.message || error }
     ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  // --- Volunteers -----------------------------------------------------------------
+
+  volunteeringToggled: (eventId, eventTitle, enabled, adminUserId) => {
+    (async () => {
+      const adminName = await resolveUserName(adminUserId);
+      await addLog(CATEGORIES.VOLUNTEER, LEVELS.INFO,
+        `Volunteering ${enabled ? 'enabled' : 'disabled'} for "${eventTitle}" by ${fallback(adminName, 'user', adminUserId)}`,
+        { eventId, eventTitle, enabled, adminUserId, adminUserName: adminName }
+      );
+    })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  volunteerRoleCreated: (roleId, roleName, eventId, adminUserId) => {
+    (async () => {
+      const [eventTitle, adminName] = await Promise.all([resolveEventTitle(eventId), resolveUserName(adminUserId)]);
+      await addLog(CATEGORIES.VOLUNTEER, LEVELS.SUCCESS,
+        `Volunteer role "${roleName}" created for ${fallback(eventTitle, 'event', eventId)} by ${fallback(adminName, 'user', adminUserId)}`,
+        { roleId, roleName, eventId, eventTitle, adminUserId, adminUserName: adminName }
+      );
+    })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  volunteerRoleUpdated: (roleId, roleName, eventId, adminUserId) => {
+    (async () => {
+      const [eventTitle, adminName] = await Promise.all([resolveEventTitle(eventId), resolveUserName(adminUserId)]);
+      await addLog(CATEGORIES.VOLUNTEER, LEVELS.INFO,
+        `Volunteer role "${roleName}" updated (${fallback(eventTitle, 'event', eventId)}) by ${fallback(adminName, 'user', adminUserId)}`,
+        { roleId, roleName, eventId, eventTitle, adminUserId, adminUserName: adminName }
+      );
+    })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  volunteerRoleDeleted: (roleId, roleName, eventId, adminUserId) => {
+    (async () => {
+      const [eventTitle, adminName] = await Promise.all([resolveEventTitle(eventId), resolveUserName(adminUserId)]);
+      await addLog(CATEGORIES.VOLUNTEER, LEVELS.WARNING,
+        `Volunteer role "${roleName}" deleted (${fallback(eventTitle, 'event', eventId)}) by ${fallback(adminName, 'user', adminUserId)}`,
+        { roleId, roleName, eventId, eventTitle, adminUserId, adminUserName: adminName }
+      );
+    })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  volunteerDiscountSet: (roleId, roleName, productName, discountType, eventId, adminUserId) => {
+    (async () => {
+      const [eventTitle, adminName] = await Promise.all([resolveEventTitle(eventId), resolveUserName(adminUserId)]);
+      await addLog(CATEGORIES.VOLUNTEER, LEVELS.INFO,
+        `Discount rule (${discountType}) set for "${productName}" on role "${roleName}" (${fallback(eventTitle, 'event', eventId)}) by ${fallback(adminName, 'user', adminUserId)}`,
+        { roleId, roleName, productName, discountType, eventId, eventTitle, adminUserId, adminUserName: adminName }
+      );
+    })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  volunteerApplicationSubmitted: (applicationId, roleName, eventId, userId) => {
+    (async () => {
+      const [eventTitle, userName] = await Promise.all([resolveEventTitle(eventId), resolveUserName(userId)]);
+      await addLog(CATEGORIES.VOLUNTEER, LEVELS.INFO,
+        `${fallback(userName, 'User', userId)} applied to volunteer as "${roleName}" for ${fallback(eventTitle, 'event', eventId)}`,
+        { applicationId, roleName, eventId, eventTitle, userId, userName }
+      );
+    })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  volunteerApplicationWithdrawn: (roleId, eventId, userId) => {
+    (async () => {
+      const [eventTitle, userName] = await Promise.all([resolveEventTitle(eventId), resolveUserName(userId)]);
+      await addLog(CATEGORIES.VOLUNTEER, LEVELS.INFO,
+        `${fallback(userName, 'User', userId)} withdrew their volunteer application for ${fallback(eventTitle, 'event', eventId)}`,
+        { roleId, eventId, eventTitle, userId, userName }
+      );
+    })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  volunteerApplicationApproved: (applicationId, roleName, eventId, userId, adminUserId) => {
+    (async () => {
+      const [eventTitle, userName, adminName] = await Promise.all([resolveEventTitle(eventId), resolveUserName(userId), resolveUserName(adminUserId)]);
+      await addLog(CATEGORIES.VOLUNTEER, LEVELS.SUCCESS,
+        `${fallback(userName, 'user', userId)}'s application for "${roleName}" (${fallback(eventTitle, 'event', eventId)}) approved by ${fallback(adminName, 'user', adminUserId)}`,
+        { applicationId, roleName, eventId, eventTitle, userId, userName, adminUserId, adminUserName: adminName }
+      );
+    })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  volunteerApplicationRejected: (applicationId, roleName, eventId, userId, adminUserId) => {
+    (async () => {
+      const [eventTitle, userName, adminName] = await Promise.all([resolveEventTitle(eventId), resolveUserName(userId), resolveUserName(adminUserId)]);
+      await addLog(CATEGORIES.VOLUNTEER, LEVELS.WARNING,
+        `${fallback(userName, 'user', userId)}'s application for "${roleName}" (${fallback(eventTitle, 'event', eventId)}) rejected by ${fallback(adminName, 'user', adminUserId)}`,
+        { applicationId, roleName, eventId, eventTitle, userId, userName, adminUserId, adminUserName: adminName }
+      );
+    })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
   }
 };
 

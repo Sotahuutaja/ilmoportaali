@@ -9,10 +9,14 @@ const { logHelpers } = require('../services/logService');
 const { validateIdentifyingProducts, countIdentifyingRegistrations } = require('../utils/identifyingProducts');
 const { validateCheckboxSelection } = require('../utils/checkboxFields');
 const { resolvePrice } = require('../utils/pricing');
+const { getVolunteerDiscountMap, applyVolunteerDiscount } = require('../utils/volunteerPricing');
 
-// Helper: calculate total price for a set of products
-async function calculateProductPrice(client, products, eventId) {
+// Helper: calculate total price for a set of products. Pass userId (never for a guest —
+// guests are never independently eligible for volunteer benefits) to have any of the
+// user's approved volunteer discounts for this event applied on top of the listed price.
+async function calculateProductPrice(client, products, eventId, userId = null) {
   let totalCents = 0;
+  const discounts = await getVolunteerDiscountMap(client, userId, eventId);
   for (const { product_id, quantity = 1, field_values = {} } of products) {
     const product = await client.query(
       'SELECT price, fields FROM event_products WHERE id = $1 AND event_id = $2',
@@ -21,15 +25,17 @@ async function calculateProductPrice(client, products, eventId) {
     if (!product.rows[0]) throw new Error(`Product ${product_id} not found`);
 
     const fields = product.rows[0].fields || [];
-    const price = resolvePrice(product.rows[0].price, fields, field_values);
+    let price = resolvePrice(product.rows[0].price, fields, field_values);
+    price = applyVolunteerDiscount(price, discounts.get(product_id));
 
     totalCents += Math.round(price * 100) * quantity;
   }
   return totalCents;
 }
 
-// Helper: get current total price of a registration (excludes soft-deleted products)
-async function getRegistrationPrice(client, registrationId) {
+// Helper: get current total price of a registration (excludes soft-deleted products).
+// Pass userId (never for a guest) to apply the user's approved volunteer discounts.
+async function getRegistrationPrice(client, registrationId, userId = null) {
   const result = await client.query(`
     SELECT rp.product_id, rp.quantity, rp.field_values, ep.price, ep.fields, ep.event_id
     FROM registration_products rp
@@ -37,11 +43,15 @@ async function getRegistrationPrice(client, registrationId) {
     WHERE rp.registration_id = $1 AND rp.deleted_at IS NULL
   `, [registrationId]);
 
+  const eventId = result.rows[0]?.event_id;
+  const discounts = await getVolunteerDiscountMap(client, userId, eventId);
+
   let totalCents = 0;
   for (const row of result.rows) {
     const fields = row.fields || [];
     const fieldValues = row.field_values || {};
-    const price = resolvePrice(row.price, fields, fieldValues);
+    let price = resolvePrice(row.price, fields, fieldValues);
+    price = applyVolunteerDiscount(price, discounts.get(row.product_id));
 
     totalCents += Math.round(price * 100) * row.quantity;
   }
@@ -790,7 +800,7 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
       const oldProducts = oldProductsResult.rows;
 
       // Calculate old total before soft-deleting products
-      const oldTotalCents = await getRegistrationPrice(client, req.params.registrationId);
+      const oldTotalCents = await getRegistrationPrice(client, req.params.registrationId, reg.rows[0].is_guest ? null : reg.rows[0].user_id);
 
       // Soft-delete old products (preserve audit trail)
       await client.query(
@@ -804,7 +814,7 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
       }
 
       // Calculate new total
-      const newTotalCents = products.length > 0 ? await calculateProductPrice(client, products, req.params.eventId) : 0;
+      const newTotalCents = products.length > 0 ? await calculateProductPrice(client, products, req.params.eventId, reg.rows[0].is_guest ? null : reg.rows[0].user_id) : 0;
 
       // Handle payment reconciliation
       const difference = newTotalCents - oldTotalCents;
@@ -1008,7 +1018,8 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
             quantity: p.quantity,
             field_values: p.field_values
           })),
-          req.params.eventId
+          req.params.eventId,
+          updated.rows[0].is_guest ? null : updated.rows[0].user_id
         )
       : 0;
 
@@ -1079,7 +1090,7 @@ router.post('/:eventId/registrations/:registrationId/resend-payment-link', requi
     }
 
     // Calculate current registration total (properly accounting for field_values price overrides)
-    const currentTotalCents = await getRegistrationPrice(client, req.params.registrationId);
+    const currentTotalCents = await getRegistrationPrice(client, req.params.registrationId, reg.rows[0].is_guest ? null : reg.rows[0].user_id);
 
     // Check if there's an existing unpaid payment intent
     let paymentIntentId;

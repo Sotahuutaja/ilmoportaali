@@ -232,7 +232,13 @@ export default function AdminLogs() {
       oldStatus: 'Old status',
       newStatus: 'New status',
       notes: 'Notes',
-      context: 'Context'
+      context: 'Context',
+      roleId: 'Role ID',
+      roleName: 'Role',
+      discountType: 'Benefit type',
+      applicationId: 'Application ID',
+      enabled: 'Enabled',
+      count: 'Count'
     };
 
     // Fields to skip if we have a readable alternative
@@ -244,7 +250,8 @@ export default function AdminLogs() {
       teamId: 'teamName',
       productId: 'productName',
       registrationId: 'registrationName',
-      registrationIds: 'registrationNames'
+      registrationIds: 'registrationNames',
+      roleId: 'roleName'
     };
 
     return Object.entries(details)

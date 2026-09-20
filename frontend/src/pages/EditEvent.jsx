@@ -15,7 +15,8 @@ export default function EditEvent() {
     starts_at: '', ends_at: '', capacity: '',
     allow_individual_registration: true,
     registration_starts_at: '', registration_ends_at: '',
-    stripe_mode: 'test'
+    stripe_mode: 'test',
+    volunteering_enabled: false
   });
   const [products, setProducts] = useState([]);
   const [productForm, setProductForm] = useState({ name: '', description: '', price: '', quantity: '', fields: [], available_from: '', available_until: '', is_identifying: false });
@@ -31,6 +32,12 @@ export default function EditEvent() {
   const [allTeams, setAllTeams] = useState([]);
   const [teamMessage, setTeamMessage] = useState('');
   const [teamError, setTeamError] = useState('');
+  const [volunteerRoles, setVolunteerRoles] = useState([]);
+  const [roleForm, setRoleForm] = useState({ name: '', description: '', capacity: '' });
+  const [editingRole, setEditingRole] = useState(null);
+  const [roleMessage, setRoleMessage] = useState('');
+  const [roleError, setRoleError] = useState('');
+  const [discountForm, setDiscountForm] = useState({}); // keyed by roleId -> { product_id, discount_type, discount_value }
 
   useEffect(() => {
     if (!user || (user.role !== 'admin' && user.role !== 'creator')) {
@@ -41,8 +48,9 @@ export default function EditEvent() {
     api.get(`/events/${id}`),
     api.get(`/events/${id}/products`),
     api.get(`/events/${id}/teams`),
-    api.get('/teams')
-  ]).then(([eventRes, productsRes, eventTeamsRes, allTeamsRes]) => {
+    api.get('/teams'),
+    api.get(`/events/${id}/volunteers/roles`)
+  ]).then(([eventRes, productsRes, eventTeamsRes, allTeamsRes, volunteerRolesRes]) => {
     const e = eventRes.data.event;
     setForm({
       title: e.title,
@@ -54,11 +62,13 @@ export default function EditEvent() {
       allow_individual_registration: e.allow_individual_registration ?? true,
       registration_starts_at: toHelsinki(e.registration_starts_at),
       registration_ends_at: toHelsinki(e.registration_ends_at),
-      stripe_mode: e.stripe_mode || 'test'
+      stripe_mode: e.stripe_mode || 'test',
+      volunteering_enabled: e.volunteering_enabled ?? false
     });
     setProducts(productsRes.data.products);
     setEventTeams(eventTeamsRes.data.teams);
     setAllTeams(allTeamsRes.data.teams);
+    setVolunteerRoles(volunteerRolesRes.data.roles);
   }).catch(() => {
     setError('Failed to load event');
   }).finally(() => setLoading(false));
@@ -184,6 +194,88 @@ export default function EditEvent() {
     }
   };
 
+  const handleAddRole = async (e) => {
+    e.preventDefault();
+    setRoleError(''); setRoleMessage('');
+    try {
+      const res = await api.post(`/events/${id}/volunteers/roles`, {
+        name: roleForm.name,
+        description: roleForm.description,
+        capacity: roleForm.capacity ? parseInt(roleForm.capacity) : null
+      });
+      setVolunteerRoles([...volunteerRoles, res.data.role]);
+      setRoleMessage('Role added!');
+      setRoleForm({ name: '', description: '', capacity: '' });
+    } catch (err) {
+      setRoleError(err.response?.data?.error || 'Failed to add role');
+    }
+  };
+
+  const handleUpdateRole = async (e) => {
+    e.preventDefault();
+    setRoleError(''); setRoleMessage('');
+    try {
+      const res = await api.put(`/events/${id}/volunteers/roles/${editingRole.id}`, {
+        name: editingRole.name,
+        description: editingRole.description,
+        capacity: editingRole.capacity ? parseInt(editingRole.capacity) : null
+      });
+      setVolunteerRoles(volunteerRoles.map(r => r.id === editingRole.id ? { ...res.data.role, discounts: r.discounts, approved_count: r.approved_count } : r));
+      setRoleMessage('Role updated!');
+      setEditingRole(null);
+    } catch (err) {
+      setRoleError(err.response?.data?.error || 'Failed to update role');
+    }
+  };
+
+  const handleDeleteRole = async (roleId) => {
+    if (!window.confirm('Delete this volunteer role?')) return;
+    setRoleError(''); setRoleMessage('');
+    try {
+      await api.delete(`/events/${id}/volunteers/roles/${roleId}`);
+      setVolunteerRoles(volunteerRoles.filter(r => r.id !== roleId));
+    } catch (err) {
+      setRoleError(err.response?.data?.error || 'Failed to delete role');
+    }
+  };
+
+  const handleSetDiscount = async (roleId) => {
+    setRoleError(''); setRoleMessage('');
+    const form = discountForm[roleId];
+    if (!form?.product_id || !form?.discount_type) {
+      setRoleError('Choose a product and a discount type');
+      return;
+    }
+    try {
+      const res = await api.post(`/events/${id}/volunteers/roles/${roleId}/discounts`, {
+        product_id: parseInt(form.product_id),
+        discount_type: form.discount_type,
+        discount_value: form.discount_type === 'free' ? null : parseFloat(form.discount_value)
+      });
+      setVolunteerRoles(volunteerRoles.map(r => {
+        if (r.id !== roleId) return r;
+        const discounts = r.discounts.filter(d => d.product_id !== res.data.discount.product_id);
+        return { ...r, discounts: [...discounts, res.data.discount] };
+      }));
+      setDiscountForm({ ...discountForm, [roleId]: { product_id: '', discount_type: '', discount_value: '' } });
+      setRoleMessage('Discount saved!');
+    } catch (err) {
+      setRoleError(err.response?.data?.error || 'Failed to save discount');
+    }
+  };
+
+  const handleRemoveDiscount = async (roleId, productId) => {
+    setRoleError(''); setRoleMessage('');
+    try {
+      await api.delete(`/events/${id}/volunteers/roles/${roleId}/discounts/${productId}`);
+      setVolunteerRoles(volunteerRoles.map(r =>
+        r.id === roleId ? { ...r, discounts: r.discounts.filter(d => d.product_id !== productId) } : r
+      ));
+    } catch (err) {
+      setRoleError(err.response?.data?.error || 'Failed to remove discount');
+    }
+  };
+
   const handleToggleAutoJoin = async (teamId, currentValue) => {
     try {
       const res = await api.patch(`/events/${id}/teams/${teamId}/auto-join`, {
@@ -231,6 +323,15 @@ export default function EditEvent() {
             <input type="checkbox" checked={form.allow_individual_registration} onChange={e => setForm({ ...form, allow_individual_registration: e.target.checked })} style={{ width: 'auto', margin: 0 }} />
             Allow individual registration (without a team)
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <input type="checkbox" checked={form.volunteering_enabled} onChange={e => setForm({ ...form, volunteering_enabled: e.target.checked })} style={{ width: 'auto', margin: 0 }} />
+            Recruit volunteers for this event through the portal
+          </label>
+          {form.volunteering_enabled === false && volunteerRoles.length > 0 && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+              Turning this off only blocks new applications — existing roles, applications and benefits are kept.
+            </p>
+          )}
           <label>Registration opens at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
           <input type="datetime-local" value={form.registration_starts_at} onChange={e => setForm({ ...form, registration_starts_at: e.target.value })} required />
           <label>Registration closes at <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.85rem' }}>(Finnish time, EET/EEST)</span></label>
@@ -423,6 +524,125 @@ export default function EditEvent() {
         </form>
       </div>
     
+    <div className="card" style={{ marginTop: '1.5rem' }}>
+      <h3 style={{ marginBottom: '0.5rem' }}>Volunteer roles</h3>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+        Roles volunteers can apply for, and the per-product discount or benefit each role earns once approved.
+      </p>
+      {roleError && <p className="error">{roleError}</p>}
+      {roleMessage && <p className="success">{roleMessage}</p>}
+
+      {volunteerRoles.map(role => (
+        <div key={role.id} style={{
+          padding: '0.6rem', marginBottom: '0.5rem', borderRadius: '6px',
+          border: '1px solid var(--border)', background: 'var(--surface-2)'
+        }}>
+          {editingRole?.id === role.id ? (
+            <form onSubmit={handleUpdateRole}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem' }}>Name</label>
+                  <input value={editingRole.name} onChange={e => setEditingRole({ ...editingRole, name: e.target.value })} required style={{ marginBottom: 0 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem' }}>Description</label>
+                  <input value={editingRole.description || ''} onChange={e => setEditingRole({ ...editingRole, description: e.target.value })} style={{ marginBottom: 0 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem' }}>Capacity (blank = unlimited)</label>
+                  <input type="number" min="1" value={editingRole.capacity || ''} onChange={e => setEditingRole({ ...editingRole, capacity: e.target.value })} style={{ marginBottom: 0 }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button type="submit" className="btn btn-primary">Save</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setEditingRole(null)}>Cancel</button>
+              </div>
+            </form>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <strong>{role.name}</strong>
+                {role.description && <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{role.description}</span>}
+                <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>
+                  {role.approved_count} approved{role.capacity !== null ? ` / ${role.capacity}` : ''}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                <button className="btn btn-secondary" onClick={() => setEditingRole(role)}>Edit</button>
+                <button className="btn btn-danger" onClick={() => handleDeleteRole(role.id)}>Delete</button>
+              </div>
+            </div>
+          )}
+
+          {/* Per-product discounts for this role */}
+          <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px dashed var(--border)' }}>
+            {role.discounts.length > 0 && (
+              <div style={{ marginBottom: '0.5rem' }}>
+                {role.discounts.map(d => {
+                  const product = products.find(p => p.id === d.product_id);
+                  const label = d.discount_type === 'free' ? 'Free'
+                    : d.discount_type === 'percent' ? `${d.discount_value}% off`
+                    : d.discount_type === 'fixed_amount' ? `€${d.discount_value} off`
+                    : `€${d.discount_value} fixed price`;
+                  return (
+                    <div key={d.product_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                      <span>{product?.name || `Product #${d.product_id}`} — {label}</span>
+                      <button className="btn btn-secondary" style={{ padding: '0.15rem 0.5rem', fontSize: '0.8rem' }} onClick={() => handleRemoveDiscount(role.id, d.product_id)}>Remove</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <select
+                value={discountForm[role.id]?.product_id || ''}
+                onChange={e => setDiscountForm({ ...discountForm, [role.id]: { ...discountForm[role.id], product_id: e.target.value } })}
+                style={{ marginBottom: 0, flex: '1 1 140px' }}
+              >
+                <option value="">Product...</option>
+                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <select
+                value={discountForm[role.id]?.discount_type || ''}
+                onChange={e => setDiscountForm({ ...discountForm, [role.id]: { ...discountForm[role.id], discount_type: e.target.value } })}
+                style={{ marginBottom: 0, flex: '1 1 120px' }}
+              >
+                <option value="">Benefit type...</option>
+                <option value="free">Free</option>
+                <option value="percent">% off</option>
+                <option value="fixed_amount">€ off</option>
+                <option value="override_price">Fixed price</option>
+              </select>
+              {discountForm[role.id]?.discount_type && discountForm[role.id]?.discount_type !== 'free' && (
+                <input
+                  type="number" step="0.01" min="0" placeholder="Value"
+                  value={discountForm[role.id]?.discount_value || ''}
+                  onChange={e => setDiscountForm({ ...discountForm, [role.id]: { ...discountForm[role.id], discount_value: e.target.value } })}
+                  style={{ marginBottom: 0, width: '90px' }}
+                />
+              )}
+              <button type="button" className="btn btn-primary" onClick={() => handleSetDiscount(role.id)}>Set</button>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {volunteerRoles.length === 0 && (
+        <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No volunteer roles yet.</p>
+      )}
+
+      <form onSubmit={handleAddRole} style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+        <h4 style={{ marginBottom: '0.5rem' }}>Add role</h4>
+        <label>Name</label>
+        <input value={roleForm.name} onChange={e => setRoleForm({ ...roleForm, name: e.target.value })} required />
+        <label>Description</label>
+        <input value={roleForm.description} onChange={e => setRoleForm({ ...roleForm, description: e.target.value })} />
+        <label>Capacity (leave blank for unlimited)</label>
+        <input type="number" min="1" value={roleForm.capacity} onChange={e => setRoleForm({ ...roleForm, capacity: e.target.value })} />
+        <button type="submit" className="btn btn-primary" style={{ marginTop: '0.5rem' }}>Add role</button>
+      </form>
+    </div>
+
     <div className="card" style={{ marginTop: '1.5rem' }}>
       <h3 style={{ marginBottom: '1rem' }}>Allowed teams</h3>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>

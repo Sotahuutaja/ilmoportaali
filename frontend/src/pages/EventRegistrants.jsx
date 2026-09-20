@@ -346,6 +346,8 @@ export default function EventRegistrants() {
   const [teams, setTeams] = useState([]);
   const [eventProducts, setEventProducts] = useState([]);
   const [managers, setManagers] = useState([]);
+  const [volunteerApplications, setVolunteerApplications] = useState([]);
+  const [volunteerError, setVolunteerError] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -380,6 +382,11 @@ export default function EventRegistrants() {
     api.get(`/events/${id}/managers`)
       .then(res => setManagers(res.data.managers))
       .catch(() => {});
+    // Only organizers/admins can see this — a non-manager viewer (e.g. a team captain
+    // looking at their own team's registrants) simply gets a 403, which we ignore here.
+    api.get(`/events/${id}/volunteers/applications`)
+      .then(res => setVolunteerApplications(res.data.applications))
+      .catch(() => {});
   }, [id, user, navigate]);
 
   const canManage = !!user && (
@@ -401,6 +408,26 @@ export default function EventRegistrants() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [id]);
+
+  const handleApproveVolunteer = async (appId) => {
+    setVolunteerError('');
+    try {
+      const res = await api.put(`/events/${id}/volunteers/applications/${appId}/approve`);
+      setVolunteerApplications(volunteerApplications.map(a => a.id === appId ? { ...a, ...res.data.application } : a));
+    } catch (err) {
+      setVolunteerError(err.response?.data?.error || 'Failed to approve application');
+    }
+  };
+
+  const handleRejectVolunteer = async (appId) => {
+    setVolunteerError('');
+    try {
+      const res = await api.put(`/events/${id}/volunteers/applications/${appId}/reject`);
+      setVolunteerApplications(volunteerApplications.map(a => a.id === appId ? { ...a, ...res.data.application } : a));
+    } catch (err) {
+      setVolunteerError(err.response?.data?.error || 'Failed to reject application');
+    }
+  };
 
   const handleCancel = async (registrationId, name) => {
     // Find the registration to show refund details
@@ -641,6 +668,37 @@ export default function EventRegistrants() {
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>€{totalRevenue.toFixed(2)}</p>
         </div>
       </div>
+
+      {volunteerApplications.length > 0 && (
+        <div className="card" style={{ marginLeft: '1rem', marginRight: '1rem', marginBottom: '1.5rem' }}>
+          <h3 style={{ marginBottom: '0.75rem' }}>Volunteer applications</h3>
+          {volunteerError && <p className="error">{volunteerError}</p>}
+          {volunteerApplications.map(a => (
+            <div key={a.id} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
+            }}>
+              <div>
+                <strong>{a.first_name} {a.last_name}</strong>
+                <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.85rem' }}>{a.email}</span>
+                <span style={{ marginLeft: '0.5rem' }}>applied for <strong>{a.role_name}</strong></span>
+                <span style={{
+                  fontSize: '0.75rem', padding: '0.1rem 0.5rem', marginLeft: '0.5rem', borderRadius: '8px', color: 'white',
+                  background: a.status === 'approved' ? '#4caf50' : a.status === 'rejected' ? '#c0392b' : '#ff9800'
+                }}>
+                  {a.status}
+                </span>
+              </div>
+              {a.status === 'pending' && (
+                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                  <button className="btn btn-primary" onClick={() => handleApproveVolunteer(a.id)}>Approve</button>
+                  <button className="btn btn-danger" onClick={() => handleRejectVolunteer(a.id)}>Reject</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div style={{ marginBottom: '1rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
         <input

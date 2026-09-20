@@ -78,7 +78,7 @@ router.get('/:id', async (req, res) => {
 
 // Create event (creator or admin only)
 router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
-  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at } = req.body;
+  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at, volunteering_enabled } = req.body;
 
   if (!title || !starts_at || !ends_at) {
     return res.status(400).json({ error: 'Title, start time and end time are required' });
@@ -89,10 +89,10 @@ router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req,
 
   try {
     const result = await pool.query(`
-      INSERT INTO events (title, description, location, starts_at, ends_at, capacity, creator_id, allow_individual_registration, registration_starts_at, registration_ends_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO events (title, description, location, starts_at, ends_at, capacity, creator_id, allow_individual_registration, registration_starts_at, registration_ends_at, volunteering_enabled)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
-    `, [title, description, location, starts_at, ends_at, capacity, req.user.id, allow_individual_registration ?? true, registration_starts_at, registration_ends_at]);
+    `, [title, description, location, starts_at, ends_at, capacity, req.user.id, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, !!volunteering_enabled]);
 
     logHelpers.eventCreated(result.rows[0].id, result.rows[0].title, req.user.id);
 
@@ -105,7 +105,7 @@ router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req,
 
 // Update event (creator, co-manager, or admin)
 router.put('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (req, res) => {
-  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at, stripe_mode } = req.body;
+  const { title, description, location, starts_at, ends_at, capacity, allow_individual_registration, registration_starts_at, registration_ends_at, stripe_mode, volunteering_enabled } = req.body;
 
   if (!registration_starts_at || !registration_ends_at) {
     return res.status(400).json({ error: 'Registration start and end times are required' });
@@ -125,12 +125,16 @@ router.put('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (re
 
     const result = await pool.query(`
       UPDATE events
-      SET title=$1, description=$2, location=$3, starts_at=$4, ends_at=$5, capacity=$6, allow_individual_registration=$7, registration_starts_at=$8, registration_ends_at=$9, stripe_mode=$10
-      WHERE id=$11
+      SET title=$1, description=$2, location=$3, starts_at=$4, ends_at=$5, capacity=$6, allow_individual_registration=$7, registration_starts_at=$8, registration_ends_at=$9, stripe_mode=$10, volunteering_enabled=$11
+      WHERE id=$12
       RETURNING *
-    `, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, stripe_mode || 'test', req.params.id]);
+    `, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, stripe_mode || 'test', !!volunteering_enabled, req.params.id]);
 
     logHelpers.eventUpdated(result.rows[0].id, result.rows[0].title, req.user.id);
+
+    if (!!volunteering_enabled !== existing.rows[0].volunteering_enabled) {
+      logHelpers.volunteeringToggled(result.rows[0].id, result.rows[0].title, !!volunteering_enabled, req.user.id);
+    }
 
     res.json({ event: result.rows[0] });
   } catch (err) {
