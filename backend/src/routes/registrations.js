@@ -163,10 +163,16 @@ router.post('/:eventId', requireAuth, async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    // Paid registrations get this same log call from payments.js once payment is confirmed;
+    // this covers the free-event path, which never touches payments.js at all.
+    logHelpers.registrationSuccess([reg.rows[0].id], req.params.eventId);
+
     res.status(201).json({ message: 'Registered successfully' });
   } catch (err) {
     await client.query('ROLLBACK');
     if (err.code === '23505') return res.status(409).json({ error: 'Already registered for this event' });
+    logHelpers.registrationError(req.user.id, req.params.eventId, err);
     res.status(500).json({ error: err.message || 'Registration failed' });
   } finally {
     client.release();
@@ -242,9 +248,13 @@ router.post('/:eventId/guest', requireAuth, async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    logHelpers.registrationSuccess([reg.rows[0].id], req.params.eventId);
+
     res.status(201).json({ message: 'Guest registered successfully' });
   } catch (err) {
     await client.query('ROLLBACK');
+    logHelpers.guestRegistrationError(req.user.id, req.params.eventId, err);
     res.status(500).json({ error: err.message || 'Guest registration failed' });
   } finally {
     client.release();
@@ -964,6 +974,8 @@ router.put('/:eventId/registrations/:registrationId', requireAuth, async (req, r
 
     await client.query('COMMIT');
 
+    logHelpers.registrationUpdated(req.params.registrationId, req.params.eventId, req.user.id, products !== undefined);
+
     // Return updated registration
     const updated = await pool.query(`
       SELECT
@@ -1187,6 +1199,8 @@ router.post('/:eventId/registrations/:registrationId/resend-payment-link', requi
       console.error('[EMAIL ERROR] Failed to send resend email:', err.message);
       return res.status(500).json({ error: 'Payment intent created but failed to send email' });
     }
+
+    logHelpers.paymentLinkResent(req.params.registrationId, req.user.id, paymentAmountCents);
 
     res.json({
       message: 'Payment link resent successfully',

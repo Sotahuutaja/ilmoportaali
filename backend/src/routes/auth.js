@@ -113,6 +113,8 @@ router.post('/login', loginLimit, async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
+    logHelpers.loginSuccess(user.id, user.email);
+
     // Return only user data, not tokens
     res.json({
       user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, role: user.role, year_of_birth: user.year_of_birth, gender: user.gender }
@@ -145,6 +147,8 @@ router.get('/verify-email', async (req, res) => {
       [result.rows[0].id]
     );
 
+    logHelpers.emailVerified(result.rows[0].email);
+
     res.json({ message: 'Email verified successfully. You can now log in.' });
   } catch (err) {
     console.error('Verification failed:', err.message);
@@ -173,6 +177,8 @@ router.get('/verify-email-change', async (req, res) => {
       'UPDATE users SET email = pending_email, pending_email = NULL, email_change_token = NULL, email_change_token_expires = NULL WHERE id = $1',
       [result.rows[0].id]
     );
+
+    logHelpers.emailChangeCompleted(result.rows[0].email, result.rows[0].pending_email);
 
     res.json({ message: 'Email changed successfully.' });
   } catch (err) {
@@ -296,6 +302,17 @@ router.put('/profile', requireAuth, async (req, res) => {
       [req.user.id]
     );
 
+    const changedLabels = [];
+    if (first_name) changedLabels.push('first name');
+    if (last_name) changedLabels.push('last name');
+    if (password) changedLabels.push('password');
+    if (year_of_birth) changedLabels.push('year of birth');
+    if (gender) changedLabels.push('gender');
+    if (emailVerificationNeeded) changedLabels.push('email (pending verification)');
+    if (changedLabels.length > 0) {
+      logHelpers.profileUpdated(req.user.id, result.rows[0].email, changedLabels);
+    }
+
     // If email verification was initiated, send verification email
     if (emailVerificationNeeded) {
       await sendEmailChangeVerificationEmail(email, emailChangeToken);
@@ -335,6 +352,7 @@ router.post('/forgot-password', emailLimit, async (req, res) => {
     );
 
     await sendPasswordResetEmail(email, token);
+    logHelpers.passwordResetRequested(email);
     res.json({ message: 'If that email exists you will receive a reset link.' });
   } catch (err) {
     console.error('Forgot password failed:', err.message);
@@ -364,6 +382,8 @@ router.post('/reset-password', async (req, res) => {
       [hashed, result.rows[0].id]
     );
 
+    logHelpers.passwordResetCompleted(result.rows[0].email);
+
     res.json({ message: 'Password reset successfully. You can now log in.' });
   } catch (err) {
     console.error('Reset password failed:', err.message);
@@ -376,6 +396,7 @@ router.post('/logout', requireAuth, (req, res) => {
   // Clear both cookies
   res.clearCookie('accessToken');
   res.clearCookie('refreshToken');
+  logHelpers.logoutSuccess(req.user.id, req.user.email);
   res.json({ message: 'Logged out successfully' });
 });
 

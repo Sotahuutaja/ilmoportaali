@@ -17,6 +17,26 @@ const LEVEL_ICONS = {
   success: '✓'
 };
 
+const PAGE_SIZE = 100;
+
+// "2 min ago" / "3 hours ago" / "5 days ago" — falls back to the absolute date beyond a week,
+// since "12 days ago" stops being a useful way to place something in time.
+function formatRelativeTime(timestamp) {
+  const date = new Date(timestamp);
+  const diffMs = Date.now() - date.getTime();
+  const diffSec = Math.round(diffMs / 1000);
+
+  if (diffSec < 5) return 'just now';
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffHour = Math.round(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}h ago`;
+  const diffDay = Math.round(diffHour / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString('fi-FI');
+}
+
 export default function AdminLogs() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -24,6 +44,9 @@ export default function AdminLogs() {
   const [categories, setCategories] = useState({});
   const [levels, setLevels] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
@@ -37,6 +60,7 @@ export default function AdminLogs() {
     }
   }, [user, navigate]);
 
+  // Fetches the first page fresh (used for initial load, filter changes, and auto-refresh).
   const fetchLogs = async () => {
     try {
       setError('');
@@ -44,12 +68,13 @@ export default function AdminLogs() {
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedLevel) params.append('level', selectedLevel);
       if (searchTerm) params.append('search', searchTerm);
-      params.append('limit', 200);
+      params.append('limit', PAGE_SIZE);
 
       const response = await api.get(`/logs?${params.toString()}`);
       setLogs(response.data.logs);
       setCategories(response.data.categories);
       setLevels(response.data.levels);
+      setHasMore(response.data.logs.length === PAGE_SIZE);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch logs');
     } finally {
@@ -57,8 +82,34 @@ export default function AdminLogs() {
     }
   };
 
+  // Fetches the next page and appends it — independent of auto-refresh, which only ever
+  // re-fetches the top page. Dedupes by id in case the two overlap.
+  const loadOlderLogs = async () => {
+    setLoadingMore(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedCategory) params.append('category', selectedCategory);
+      if (selectedLevel) params.append('level', selectedLevel);
+      if (searchTerm) params.append('search', searchTerm);
+      params.append('limit', PAGE_SIZE);
+      params.append('offset', logs.length);
+
+      const response = await api.get(`/logs?${params.toString()}`);
+      setLogs(prev => {
+        const seen = new Set(prev.map(l => l.id));
+        return [...prev, ...response.data.logs.filter(l => !seen.has(l.id))];
+      });
+      setHasMore(response.data.logs.length === PAGE_SIZE);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to fetch older logs');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
     fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, selectedLevel, searchTerm]);
 
   useEffect(() => {
@@ -69,15 +120,65 @@ export default function AdminLogs() {
     }, 3000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, selectedCategory, selectedLevel, searchTerm]);
 
   const handleClearLogs = async () => {
-    if (!window.confirm('Clear all logs? This cannot be undone.')) return;
+    const typed = window.prompt(
+      'This permanently deletes every log entry — the whole audit trail, not just what\'s currently filtered. ' +
+      'Consider using "Export logs" first if you might need these later.\n\n' +
+      'Type DELETE to confirm.'
+    );
+    if (typed !== 'DELETE') return;
+
     try {
       await api.delete('/logs');
       setLogs([]);
+      setHasMore(false);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to clear logs');
+    }
+  };
+
+  // Exports up to 500 logs matching the current filters as a CSV, independent of how many
+  // are currently loaded on screen (loading more, or pagination) — this is meant to be a
+  // reasonably complete snapshot to keep before clearing, not just "what's visible".
+  const handleExportLogs = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedCategory) params.append('category', selectedCategory);
+      if (selectedLevel) params.append('level', selectedLevel);
+      if (searchTerm) params.append('search', searchTerm);
+      params.append('limit', 500);
+
+      const response = await api.get(`/logs?${params.toString()}`);
+      const exportLogs = response.data.logs;
+
+      const headers = ['Timestamp', 'Level', 'Category', 'Message', 'Details'];
+      const rows = exportLogs.map(log => [
+        log.timestamp,
+        log.level,
+        log.category,
+        log.message,
+        JSON.stringify(log.details || {})
+      ]);
+
+      const csv = [headers, ...rows]
+        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `admin-logs-${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to export logs');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -102,25 +203,48 @@ export default function AdminLogs() {
     const fieldLabels = {
       userId: 'User ID',
       userName: 'User',
+      adminUserId: 'Admin ID',
+      adminUserName: 'Admin',
+      actorUserId: 'Actor ID',
+      actorName: 'Actor',
       eventId: 'Event ID',
       eventTitle: 'Event',
+      teamId: 'Team ID',
+      teamName: 'Team',
+      productId: 'Product ID',
+      productName: 'Product',
       registrationId: 'Registration ID',
       registrationName: 'Registration',
       registrationIds: 'Registration IDs',
+      registrationNames: 'Registrants',
       paymentIntentId: 'Payment Intent ID',
       amount: 'Amount',
       error: 'Error',
       email: 'Email',
+      oldEmail: 'Old email',
+      newEmail: 'New email',
       reason: 'Reason',
       type: 'Type',
-      operation: 'Operation'
+      operation: 'Operation',
+      fields: 'Fields changed',
+      changes: 'Changes',
+      status: 'Status',
+      oldStatus: 'Old status',
+      newStatus: 'New status',
+      notes: 'Notes',
+      context: 'Context'
     };
 
     // Fields to skip if we have a readable alternative
     const skipIfExists = {
-      'userId': 'userName',
-      'eventId': 'eventTitle',
-      'registrationId': 'registrationName'
+      userId: 'userName',
+      adminUserId: 'adminUserName',
+      actorUserId: 'actorName',
+      eventId: 'eventTitle',
+      teamId: 'teamName',
+      productId: 'productName',
+      registrationId: 'registrationName',
+      registrationIds: 'registrationNames'
     };
 
     return Object.entries(details)
@@ -156,9 +280,9 @@ export default function AdminLogs() {
         ← Back to Admin
       </Link>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <h2 style={{ margin: 0 }}>System Logs</h2>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 0 }}>
             <input
               type="checkbox"
@@ -170,6 +294,9 @@ export default function AdminLogs() {
           </label>
           <button className="btn btn-secondary" onClick={fetchLogs}>
             Refresh
+          </button>
+          <button className="btn btn-secondary" onClick={handleExportLogs} disabled={exporting}>
+            {exporting ? 'Exporting…' : 'Export logs'}
           </button>
           <button className="btn btn-danger" onClick={handleClearLogs}>
             Clear logs
@@ -210,7 +337,7 @@ export default function AdminLogs() {
           <div>
             <label>Search</label>
             <input
-              placeholder="Search in message and details..."
+              placeholder="Search in message and details (names, emails, IDs...)"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               style={{ marginBottom: 0 }}
@@ -260,8 +387,8 @@ export default function AdminLogs() {
                   }}>
                     {LEVEL_ICONS[log.level]}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: '1rem' }}>
                       <div>
                         <strong style={{ color: LEVEL_COLORS[log.level] }}>
                           {log.level.toUpperCase()}
@@ -270,12 +397,14 @@ export default function AdminLogs() {
                           {log.category.toUpperCase()}
                         </span>
                       </div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'right' }}>
-                        <div>{formatDate(log.timestamp)}</div>
-                        <div>{formatTime(log.timestamp)}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div title={`${formatDate(log.timestamp)} ${formatTime(log.timestamp)}`}>
+                          {formatRelativeTime(log.timestamp)}
+                        </div>
+                        <div>{formatDate(log.timestamp)} {formatTime(log.timestamp)}</div>
                       </div>
                     </div>
-                    <div style={{ marginBottom: '0.5rem' }}>
+                    <div style={{ marginBottom: '0.5rem', wordBreak: 'break-word' }}>
                       {log.message}
                     </div>
                     {Object.keys(log.details).length > 0 && (
@@ -298,7 +427,14 @@ export default function AdminLogs() {
                                       {label}:
                                     </td>
                                     <td style={{ padding: '0.5rem 0', color: 'var(--text)' }}>
-                                      <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>
+                                      <code style={{
+                                        background: 'rgba(0,0,0,0.1)',
+                                        padding: '0.2rem 0.4rem',
+                                        borderRadius: '3px',
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-word',
+                                        display: 'inline-block'
+                                      }}>
                                         {value}
                                       </code>
                                     </td>
@@ -320,8 +456,15 @@ export default function AdminLogs() {
         </div>
       )}
 
-      <div style={{ marginTop: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-        Showing {logs.length} logs {autoRefresh && '(auto-refreshing every 3 seconds)'}
+      <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+          Showing {logs.length} logs {autoRefresh && '(auto-refreshing every 3 seconds)'}
+        </div>
+        {hasMore && !loading && (
+          <button className="btn btn-secondary" onClick={loadOlderLogs} disabled={loadingMore}>
+            {loadingMore ? 'Loading…' : 'Load older logs'}
+          </button>
+        )}
       </div>
     </div>
   );

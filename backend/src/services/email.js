@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { logHelpers } = require('./logService');
 
 const FROM_EMAIL = process.env.GMAIL_FROM_EMAIL;
 const APP_URL = process.env.APP_URL;
@@ -14,11 +15,15 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Core send function
-async function sendEmail({ to, subject, html }) {
+// Core send function. `type` is a short human label ("verification", "password reset",
+// "refund notification", ...) used only for the admin log entry, not for anything about
+// how the email is actually sent.
+async function sendEmail({ to, subject, html, type }) {
   if (!FROM_EMAIL) throw new Error('GMAIL_FROM_EMAIL not configured');
   if (!GMAIL_USER) throw new Error('GMAIL_USER not configured');
   if (!GMAIL_PASSWORD) throw new Error('GMAIL_PASSWORD not configured');
+
+  const label = type || subject;
 
   try {
     await transporter.sendMail({
@@ -28,8 +33,10 @@ async function sendEmail({ to, subject, html }) {
       html
     });
     console.log(`[EMAIL] Sent to ${to}`);
+    logHelpers.emailSuccess(label, to);
   } catch (err) {
     console.error('[EMAIL ERROR] Failed to send email:', err.message);
+    logHelpers.emailError(label, to, err);
     throw err;
   }
 }
@@ -39,6 +46,7 @@ async function sendVerificationEmail(email, token) {
   const link = `${APP_URL}/verify-email?token=${token}`;
   await sendEmail({
     to: email,
+    type: 'verification',
     subject: 'Verify your Ilmoportaali account',
     html: `
       <h2>Welcome to Ilmoportaali!</h2>
@@ -55,6 +63,7 @@ async function sendPasswordResetEmail(email, token) {
   const link = `${APP_URL}/reset-password?token=${token}`;
   await sendEmail({
     to: email,
+    type: 'password reset',
     subject: 'Reset your Ilmoportaali password',
     html: `
       <h2>Password reset</h2>
@@ -71,6 +80,7 @@ async function sendEmailChangeVerificationEmail(newEmail, token) {
   const link = `${APP_URL}/verify-email-change?token=${token}`;
   await sendEmail({
     to: newEmail,
+    type: 'email change verification',
     subject: 'Verify your new email address',
     html: `
       <h2>Verify your new email</h2>
@@ -123,6 +133,7 @@ async function sendAdditionalPaymentEmail(email, eventTitle, additionalAmount, p
 
   await sendEmail({
     to: email,
+    type: 'additional payment request',
     subject: `Additional payment required for ${eventTitle}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -202,6 +213,7 @@ async function sendRefundEmail(email, eventTitle, refundAmount, oldProducts = []
 
   await sendEmail({
     to: email,
+    type: 'refund notification',
     subject: `Refund issued for ${eventTitle}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -268,6 +280,7 @@ async function sendAdditionalPaymentConfirmationEmail(email, eventTitle, amountP
 
   await sendEmail({
     to: email,
+    type: 'additional payment confirmation',
     subject: `Payment confirmed for ${eventTitle}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

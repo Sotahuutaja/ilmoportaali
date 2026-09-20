@@ -3,6 +3,7 @@ const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router({ mergeParams: true });
 const { canManageEvent } = require('../utils/eventAccess');
+const { logHelpers } = require('../services/logService');
 
 // Get products for an event (public)
 router.get('/', async (req, res) => {
@@ -166,6 +167,9 @@ router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req,
       'INSERT INTO event_products (event_id, name, description, price, quantity, fields, available_from, available_until, is_identifying) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
       [req.params.eventId, name, description, price || 0, quantity || null, JSON.stringify(fields), available_from || null, available_until || null, !!is_identifying]
     );
+
+    logHelpers.productCreated(result.rows[0].id, result.rows[0].name, req.params.eventId, req.user.id);
+
     res.status(201).json({ product: result.rows[0] });
   } catch (err) {
     console.error('Failed to create product:', err.message);
@@ -191,6 +195,9 @@ router.put('/reorder', requireAuth, requireRole(pool, 'creator', 'admin'), async
       );
     }
     await client.query('COMMIT');
+
+    logHelpers.productReordered(req.params.eventId, req.user.id, order.length);
+
     res.json({ message: 'Order updated' });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -215,6 +222,8 @@ router.put('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'), as
     `, [name, description, price, quantity || null, JSON.stringify(fields), available_from || null, available_until || null, !!is_identifying, req.params.productId, req.params.eventId]);
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Product not found' });
+
+    logHelpers.productUpdated(result.rows[0].id, result.rows[0].name, req.params.eventId, req.user.id);
 
     // Fetch the product with remaining quantity and availability calculated
     const withRemaining = await pool.query(`
@@ -260,7 +269,6 @@ router.delete('/:productId', requireAuth, requireRole(pool, 'creator', 'admin'),
     const product = result.rows[0];
 
     // Log the deletion
-    const { logHelpers } = require('../services/logService');
     logHelpers.productDeleted(req.params.productId, product.name, req.user.id);
 
     res.json({ message: 'Product deleted' });
@@ -285,6 +293,8 @@ router.patch('/:productId/restore', requireAuth, requireRole(pool, 'creator', 'a
     if (!result.rows[0]) {
       return res.status(404).json({ error: 'Product not found' });
     }
+
+    logHelpers.productRestored(result.rows[0].id, result.rows[0].name, req.user.id);
 
     res.json({ product: result.rows[0], message: 'Product restored' });
   } catch (err) {

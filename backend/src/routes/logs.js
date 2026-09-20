@@ -15,7 +15,7 @@ const router = express.Router();
  */
 router.get('/', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
   try {
-    const { category, level, search, limit } = req.query;
+    const { category, level, search, limit, offset } = req.query;
 
     // Validate category
     if (category && !Object.values(CATEGORIES).includes(category)) {
@@ -32,7 +32,8 @@ router.get('/', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
       category,
       level,
       search,
-      limit: Math.min(parseInt(limit) || 100, 500)
+      limit: Math.min(parseInt(limit) || 100, 500),
+      offset: Math.max(parseInt(offset) || 0, 0)
     });
 
     res.json({

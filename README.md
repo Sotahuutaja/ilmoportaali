@@ -237,6 +237,7 @@ The application implements defense-in-depth security practices:
 - View age (calculated from year of birth), year of birth, and gender
 - Delete users (with foreign key cleanup)
 - **Team management** — create, edit, and delete teams; assign and remove captains; configure auto-approval settings
+- **System logs** — a searchable, filterable (by category, level, and free text) audit trail of activity across the app: registrations (including free-event signups, not just paid ones), payments, refunds, cancellations, events, teams, user-management actions, products, Stripe webhook events, and auth activity (logins, logouts, password resets, email verification, profile changes). Log entries are written with real names in place of raw database IDs wherever possible (e.g. "Jane Doe cancelled her registration for Summer Camp", not "registration 42 cancelled by user 5"), support CSV export, and can be paged back further than the default view via "Load older logs"
 
 ### Event Management Dashboard
 

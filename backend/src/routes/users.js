@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { logHelpers } = require('../services/logService');
 
 const router = express.Router();
 
@@ -46,6 +47,14 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    const updatedFields = [];
+    if (first_name) updatedFields.push('first name');
+    if (last_name) updatedFields.push('last name');
+    if (email) updatedFields.push('email');
+    if (role) updatedFields.push(`role: ${role}`);
+    const updatedUserName = `${result.rows[0].first_name} ${result.rows[0].last_name}`.trim();
+    logHelpers.userUpdated(req.params.id, updatedUserName, req.user.id, updatedFields.length > 0 ? updatedFields : ['no fields']);
+
     res.json({ user: result.rows[0] });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Email already in use' });
@@ -65,6 +74,9 @@ router.put('/:id/password', async (req, res) => {
   try {
     const hashed = await bcrypt.hash(password, 12);
     await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, req.params.id]);
+
+    logHelpers.userPasswordReset(req.params.id, req.user.id);
+
     res.json({ message: 'Password updated' });
   } catch (err) {
     console.error('Failed to reset password:', err.message);
@@ -79,11 +91,14 @@ router.delete('/:id', async (req, res) => {
   }
 
   try {
-    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [req.params.id]);
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id, first_name, last_name, email', [req.params.id]);
 
     if (!result.rows[0]) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    const deletedName = `${result.rows[0].first_name} ${result.rows[0].last_name}`.trim() || result.rows[0].email;
+    logHelpers.userDeleted(req.params.id, deletedName, req.user.id);
 
     res.json({ message: 'User deleted' });
   } catch (err) {

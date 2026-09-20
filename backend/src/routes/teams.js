@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { rateLimit } = require('../middleware/security');
+const { logHelpers } = require('../services/logService');
 const router = express.Router();
 
 // Applies to join requests specifically (not the whole router) — a team's join password is
@@ -161,6 +162,9 @@ router.post('/', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
     );
 
     await client.query('COMMIT');
+
+    logHelpers.teamCreated(team.rows[0].id, team.rows[0].name, captain_id, req.user.id);
+
     res.status(201).json({ team: team.rows[0] });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -175,8 +179,11 @@ router.post('/', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
 // Delete team (admin only)
 router.delete('/:id', requireAuth, requireRole(pool, 'admin'), async (req, res) => {
   try {
-    const result = await pool.query('DELETE FROM teams WHERE id = $1 RETURNING id', [req.params.id]);
+    const result = await pool.query('DELETE FROM teams WHERE id = $1 RETURNING id, name', [req.params.id]);
     if (!result.rows[0]) return res.status(404).json({ error: 'Team not found' });
+
+    logHelpers.teamDeleted(result.rows[0].id, result.rows[0].name, req.user.id);
+
     res.json({ message: 'Team deleted' });
   } catch (err) {
     console.error('Failed to delete team:', err.message);
@@ -206,6 +213,9 @@ router.put('/:id/auto-approve', requireAuth, async (req, res) => {
     `, [auto_approve_joins, req.params.id]);
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Team not found' });
+
+    logHelpers.teamAutoApproveChanged(req.params.id, result.rows[0].name, auto_approve_joins, req.user.id);
+
     res.json({ team: result.rows[0] });
   } catch (err) {
     console.error('Failed to update team:', err.message);
@@ -246,6 +256,9 @@ router.put('/:id/join-password', requireAuth, async (req, res) => {
     `, [hash, req.params.id]);
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Team not found' });
+
+    logHelpers.teamJoinPasswordChanged(req.params.id, result.rows[0].name, !!hash, req.user.id);
+
     res.json({ team: result.rows[0] });
   } catch (err) {
     console.error('Failed to update join password:', err.message);
@@ -274,6 +287,9 @@ router.put('/:id/description', requireAuth, async (req, res) => {
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Team not found' });
+
+    logHelpers.teamDescriptionUpdated(req.params.id, result.rows[0].name, req.user.id);
+
     res.json({ team: result.rows[0] });
   } catch (err) {
     console.error('Failed to update team description:', err.message);
@@ -316,6 +332,9 @@ router.post('/:id/request', joinRequestLimit, requireAuth, async (req, res) => {
     );
 
     await client.query('COMMIT');
+
+    logHelpers.teamJoinRequested(req.params.id, null, req.user.id, status);
+
     const message = status === 'approved' ? 'Successfully joined team!' : 'Join request sent';
     res.status(201).json({ message });
   } catch (err) {
@@ -346,6 +365,9 @@ router.post('/:id/invite', requireAuth, async (req, res) => {
       'INSERT INTO team_members (team_id, user_id, role, status) VALUES ($1, $2, $3, $4)',
       [req.params.id, user_id, 'member', 'approved']
     );
+
+    logHelpers.teamMemberInvited(req.params.id, null, user_id, req.user.id);
+
     res.status(201).json({ message: 'User invited' });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'User already a member' });
@@ -371,6 +393,9 @@ router.put('/:id/approve/:userId', requireAuth, async (req, res) => {
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Join request not found' });
+
+    logHelpers.teamJoinApproved(req.params.id, null, req.params.userId, req.user.id);
+
     res.json({ message: 'Request approved', membership: result.rows[0] });
   } catch (err) {
     console.error('Failed to approve request:', err.message);
@@ -395,6 +420,9 @@ router.delete('/:id/reject/:userId', requireAuth, async (req, res) => {
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Join request not found' });
+
+    logHelpers.teamJoinRejected(req.params.id, null, req.params.userId, req.user.id);
+
     res.json({ message: 'Request rejected' });
   } catch (err) {
     console.error('Failed to reject request:', err.message);
@@ -433,6 +461,12 @@ router.put('/:id/members/:userId', requireAuth, requireRole(pool, 'admin'), asyn
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Member not found' });
+
+    const memberChanges = [];
+    if (status !== undefined) memberChanges.push(`status: ${status}`);
+    if (role !== undefined) memberChanges.push(`role: ${role}`);
+    logHelpers.teamMemberUpdated(req.params.id, null, req.params.userId, req.user.id, memberChanges);
+
     res.json({ membership: result.rows[0] });
   } catch (err) {
     console.error('Failed to update member:', err.message);
@@ -463,6 +497,9 @@ router.delete('/:id/members/:userId', requireAuth, async (req, res) => {
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Member not found' });
+
+    logHelpers.teamMemberRemoved(teamId, null, userId, req.user.id, isRemovingSelf);
+
     res.json({ message: 'Member removed' });
   } catch (err) {
     console.error('Failed to remove member:', err.message);
@@ -495,6 +532,15 @@ router.put('/:id/captain', requireAuth, async (req, res) => {
 
     await client.query('BEGIN');
 
+    // Capture the outgoing captain(s) before demoting, purely so the audit log can say
+    // who the captaincy moved FROM (a team can have more than one captain, so this is
+    // "the first one we found", not necessarily the only one demoted).
+    const outgoingCaptains = await client.query(
+      'SELECT user_id FROM team_members WHERE team_id = $1 AND role = $2',
+      [req.params.id, 'captain']
+    );
+    const fromUserId = outgoingCaptains.rows[0]?.user_id || null;
+
     // Demote current captain to member
     await client.query(
       'UPDATE team_members SET role = $1 WHERE team_id = $2 AND role = $3',
@@ -508,6 +554,9 @@ router.put('/:id/captain', requireAuth, async (req, res) => {
     );
 
     await client.query('COMMIT');
+
+    logHelpers.teamCaptainTransferred(req.params.id, null, fromUserId, user_id, req.user.id);
+
     res.json({ message: 'Captaincy transferred' });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -549,6 +598,9 @@ router.put('/:id', requireAuth, requireRole(pool, 'admin'), async (req, res) => 
     }
 
     await client.query('COMMIT');
+
+    logHelpers.teamUpdated(req.params.id, result.rows[0].name, req.user.id);
+
     res.json({ team: result.rows[0] });
   } catch (err) {
     await client.query('ROLLBACK');

@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { canManageEvent } = require('../utils/eventAccess');
+const { logHelpers } = require('../services/logService');
 const router = express.Router();
 
 
@@ -93,6 +94,8 @@ router.post('/', requireAuth, requireRole(pool, 'creator', 'admin'), async (req,
       RETURNING *
     `, [title, description, location, starts_at, ends_at, capacity, req.user.id, allow_individual_registration ?? true, registration_starts_at, registration_ends_at]);
 
+    logHelpers.eventCreated(result.rows[0].id, result.rows[0].title, req.user.id);
+
     res.status(201).json({ event: result.rows[0] });
   } catch (err) {
     console.error('Failed to create event:', err.message);
@@ -126,6 +129,8 @@ router.put('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async (re
       WHERE id=$11
       RETURNING *
     `, [title, description, location, starts_at, ends_at, capacity, allow_individual_registration ?? true, registration_starts_at, registration_ends_at, stripe_mode || 'test', req.params.id]);
+
+    logHelpers.eventUpdated(result.rows[0].id, result.rows[0].title, req.user.id);
 
     res.json({ event: result.rows[0] });
   } catch (err) {
@@ -165,6 +170,9 @@ router.delete('/:id', requireAuth, requireRole(pool, 'creator', 'admin'), async 
     await client.query('DELETE FROM events WHERE id = $1', [req.params.id]);
 
     await client.query('COMMIT');
+
+    logHelpers.eventDeleted(req.params.id, existing.rows[0].title, req.user.id);
+
     res.json({ message: 'Event deleted' });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -211,6 +219,10 @@ router.post('/:id/managers', requireAuth, async (req, res) => {
       'INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2) RETURNING *',
       [req.params.id, user_id]
     );
+
+    const eventForLog = await pool.query('SELECT title FROM events WHERE id = $1', [req.params.id]);
+    logHelpers.eventManagerAdded(req.params.id, eventForLog.rows[0]?.title, user_id, req.user.id);
+
     res.status(201).json({ manager: result.rows[0] });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'User is already a manager' });
@@ -229,6 +241,10 @@ router.delete('/:id/managers/:userId', requireAuth, async (req, res) => {
       'DELETE FROM event_managers WHERE event_id = $1 AND user_id = $2',
       [req.params.id, req.params.userId]
     );
+
+    const eventForLog = await pool.query('SELECT title FROM events WHERE id = $1', [req.params.id]);
+    logHelpers.eventManagerRemoved(req.params.id, eventForLog.rows[0]?.title, req.params.userId, req.user.id);
+
     res.json({ message: 'Manager removed' });
   } catch (err) {
     console.error('Failed to remove manager:', err.message);
