@@ -197,7 +197,7 @@ export default function PaymentForm({
 
   const selectedStripePromise = getStripePromise();
 
-  const displayAmount = totalAmount ? `€${totalAmount.toFixed(2)}` : null;
+  const displayAmount = totalAmount != null ? `€${totalAmount.toFixed(2)}` : null;
 
   // Create payment intent on mount (or use existing for additional payments)
   useEffect(() => {
@@ -209,7 +209,10 @@ export default function PaymentForm({
       return;
     }
 
-    if (!totalAmount || !eventId) {
+    // totalAmount can legitimately be exactly 0 (a free event/product, or a volunteer
+    // discount that brings the total to €0) — that's handled below, not skipped here.
+    // Only a genuinely missing eventId means there's nothing to create a payment for yet.
+    if (totalAmount == null || !eventId) {
       setIsLoading(false);
       return;
     }
@@ -253,6 +256,37 @@ export default function PaymentForm({
         }
 
         const data = await response.json();
+
+        // The backend re-checks the real total (including any volunteer discount) itself
+        // rather than trusting totalAmount from the client, and tells us here when nothing
+        // is actually owed — in that case there's no payment step at all, so complete the
+        // registration directly instead of ever creating a Stripe payment intent.
+        if (data.requiresPayment === false) {
+          const payloadData = registrationData || {
+            captain: {
+              products: selectedProducts,
+              teamId: teamId || null,
+              comments: comments || null
+            }
+          };
+
+          const freeResponse = await fetch('/api/payments/confirm-free-registration', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eventId, registrations: payloadData })
+          });
+
+          if (!freeResponse.ok) {
+            const freeData = await freeResponse.json();
+            throw new Error(freeData.error || 'Failed to complete registration');
+          }
+
+          const freeData = await freeResponse.json();
+          setIsLoading(false);
+          onSuccess?.(freeData);
+          return;
+        }
+
         setClientSecret(data.clientSecret);
         setPaymentIntentId(data.paymentIntentId);
         setMockMode(data.mockMode);
@@ -266,7 +300,7 @@ export default function PaymentForm({
     };
 
     createIntent();
-  }, [eventId, totalAmount, selectedProducts, registrationData, teamId, comments, onError]);
+  }, [eventId, totalAmount, selectedProducts, registrationData, teamId, comments, onError, onSuccess]);
 
   if (isLoading) {
     return (

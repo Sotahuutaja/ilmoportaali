@@ -351,16 +351,18 @@ export default function Checkout() {
             borderRadius: '6px',
             marginBottom: '1.5rem'
           }}>
-            <h3 style={{ marginTop: 0, marginBottom: '0.5rem' }}>✓ Payment Successful!</h3>
+            <h3 style={{ marginTop: 0, marginBottom: '0.5rem' }}>✓ {paymentSuccess.invoiceNumber ? 'Payment Successful!' : 'Registration Successful!'}</h3>
             <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
-              Your registration has been confirmed.
+              Your registration has been confirmed{paymentSuccess.invoiceNumber ? '' : ' — no payment was required'}.
             </p>
             <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
               Registration ID: <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{paymentSuccess.registrationId}</code>
             </p>
-            <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
-              Invoice: <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{paymentSuccess.invoiceNumber}</code>
-            </p>
+            {paymentSuccess.invoiceNumber && (
+              <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
+                Invoice: <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{paymentSuccess.invoiceNumber}</code>
+              </p>
+            )}
             <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#0c5460', fontWeight: 500 }}>
               A confirmation email has been sent to your email address.
             </p>
@@ -557,16 +559,18 @@ export default function Checkout() {
               borderRadius: '6px',
               marginBottom: '1.5rem'
             }}>
-              <h3 style={{ marginTop: 0, marginBottom: '0.5rem' }}>✓ Payment Successful!</h3>
+              <h3 style={{ marginTop: 0, marginBottom: '0.5rem' }}>✓ {paymentSuccess.invoiceNumber ? 'Payment Successful!' : 'Registration Successful!'}</h3>
               <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
-                Your {event ? `registration for ${event.title}` : 'additional payment'} has been confirmed.
+                Your {event ? `registration for ${event.title}` : 'additional payment'} has been confirmed{paymentSuccess.invoiceNumber ? '' : ' — no payment was required'}.
               </p>
               <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
                 Registration ID: <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{paymentSuccess.registrationId}</code>
               </p>
-              <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
-                Invoice: <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{paymentSuccess.invoiceNumber}</code>
-              </p>
+              {paymentSuccess.invoiceNumber && (
+                <p style={{ margin: '0.3rem 0', fontSize: '0.95rem' }}>
+                  Invoice: <code style={{ background: 'rgba(0,0,0,0.1)', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{paymentSuccess.invoiceNumber}</code>
+                </p>
+              )}
               <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#0c5460', fontWeight: 500 }}>
                 A confirmation email has been sent to your email address.
               </p>

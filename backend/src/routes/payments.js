@@ -116,8 +116,13 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
       totalCents += Math.round(productPrice * quantity * 100);
     }
 
+    // Nothing owed — either the event/products are free outright, or an approved
+    // volunteer discount brought the total to €0. There's no payment to collect, so tell
+    // the frontend to complete the registration directly (POST /confirm-free-registration)
+    // instead of creating a Stripe payment intent for a €0.00 charge, which Stripe (and the
+    // checkout UI built around it) isn't set up to handle.
     if (totalCents < 1) {
-      return res.status(400).json({ error: 'Total amount must be greater than €0.01' });
+      return res.json({ requiresPayment: false, amount: 0, amountFormatted: '€0.00' });
     }
 
     // Create payment intent using event's stripe_mode (mock or real)
@@ -760,6 +765,273 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
  * GET /api/payments/status/:paymentIntentId
  * Check the status of a payment (useful for polling)
  */
+
+/**
+ * POST /api/payments/confirm-free-registration
+ * The "no payment needed" counterpart to /confirm-payment: completes a registration
+ * (captain + guests, same shape as confirm-payment) when every selected product resolves
+ * to €0 — whether because the event/products are free outright, or because an approved
+ * volunteer discount brings the total to zero. Stripe is never involved.
+ *
+ * The zero total is always re-verified here from the product/discount data actually in the
+ * database — never trusted from the client — so this can't be used to register for
+ * anything that actually costs money; if the recomputed total comes out above €0, the
+ * whole attempt is rejected and nothing is created.
+ *
+ * This mirrors confirm-payment's registration-creation logic (capacity lock, existing-
+ * registration guard, per-product validation, capacity enforcement) rather than reusing it
+ * directly, so that this new, less-trusted-by-default path can't accidentally affect the
+ * real payment flow — see CHANGELOG for why this exists.
+ */
+router.post('/confirm-free-registration', requireAuth, async (req, res) => {
+  const { eventId, registrations } = req.body;
+
+  if (!eventId || !registrations) {
+    return res.status(400).json({ error: 'eventId and registrations are required' });
+  }
+
+  const captain = registrations.captain;
+  const guests = registrations.guests || [];
+
+  if (!captain || !Array.isArray(captain.products)) {
+    return res.status(400).json({ error: 'Captain registration is required' });
+  }
+
+  const captainHasProducts = captain.products.length > 0;
+  const guestsHaveProducts = guests.some(g => g.products && g.products.length > 0);
+  if (!captainHasProducts && !guestsHaveProducts) {
+    return res.status(400).json({ error: 'At least one product must be registered' });
+  }
+
+  const client = await pool.connect();
+  try {
+    const event = await pool.query('SELECT * FROM events WHERE id = $1', [eventId]);
+    if (!event.rows[0]) return res.status(404).json({ error: 'Event not found' });
+
+    await client.query('BEGIN');
+
+    const registrationIds = [];
+    let totalCents = 0;
+
+    // Same capacity lock and existing-registration guard as confirm-payment, so a free
+    // registration can't race past capacity or double up any differently than a paid one.
+    const eventForCapacity = await client.query(
+      'SELECT capacity FROM events WHERE id = $1 FOR UPDATE',
+      [eventId]
+    );
+    const eventCapacity = eventForCapacity.rows[0]?.capacity;
+
+    const existingCaptainReg = await client.query(
+      'SELECT id FROM registrations WHERE user_id = $1 AND event_id = $2 FOR UPDATE',
+      [req.user.id, eventId]
+    );
+    const existingCaptainRegId = existingCaptainReg.rows[0]?.id;
+
+    if (existingCaptainRegId && captain.products.length > 0 && !registrations.guests) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error: 'You are already registered for this event. To modify your registration, contact event organizers.'
+      });
+    }
+
+    if (captain.products.length === 0 && (!registrations.guests || registrations.guests.length === 0)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'No products to register' });
+    }
+
+    // Approved volunteer discounts apply only to the captain's own products, never a
+    // guest's — guests have no independent user_id to hold volunteer status under.
+    const volunteerDiscounts = await getVolunteerDiscountMap(client, req.user.id, eventId);
+
+    const createRegistration = async (isGuest, guestData = null) => {
+      let regResult;
+
+      if (isGuest) {
+        regResult = await client.query(
+          `INSERT INTO registrations (user_id, event_id, team_id, comments, is_guest, guest_first_name, guest_last_name, year_of_birth, gender, registered_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+          [
+            null,
+            eventId,
+            guestData.team_id || null,
+            guestData.comments || null,
+            true,
+            guestData.guest_first_name,
+            guestData.guest_last_name,
+            guestData.year_of_birth || null,
+            guestData.gender || null,
+            req.user.id
+          ]
+        );
+      } else if (existingCaptainRegId) {
+        regResult = await client.query(
+          `UPDATE registrations SET team_id = $1, comments = $2 WHERE id = $3 RETURNING id`,
+          [captain.teamId || null, captain.comments || null, existingCaptainRegId]
+        );
+        regResult.rows[0].id = existingCaptainRegId;
+      } else {
+        regResult = await client.query(
+          `INSERT INTO registrations (user_id, event_id, team_id, comments)
+           VALUES ($1, $2, $3, $4) RETURNING id`,
+          [req.user.id, eventId, captain.teamId || null, captain.comments || null]
+        );
+      }
+
+      const regId = regResult.rows[0].id;
+      const productsToAdd = isGuest ? guestData.products : captain.products;
+
+      await validateIdentifyingProducts(client, productsToAdd, eventId);
+
+      for (const { product_id, quantity, field_values } of productsToAdd) {
+        if (!Number.isInteger(quantity) || quantity < 1) {
+          throw new Error('Quantity must be a positive integer');
+        }
+        if (field_values && typeof field_values !== 'object') {
+          throw new Error('field_values must be an object');
+        }
+
+        const productInfo = await client.query(
+          'SELECT name, price, fields, quantity, available_from, available_until FROM event_products WHERE id = $1',
+          [product_id]
+        );
+        if (!productInfo.rows[0]) {
+          throw new Error(`Product ${product_id} not found`);
+        }
+
+        const now = new Date();
+        if (productInfo.rows[0].available_from && now < new Date(productInfo.rows[0].available_from)) {
+          throw new Error(`${productInfo.rows[0].name} is not yet available for purchase`);
+        }
+        if (productInfo.rows[0].available_until && now > new Date(productInfo.rows[0].available_until)) {
+          throw new Error(`${productInfo.rows[0].name} is no longer available for purchase`);
+        }
+
+        const fields = productInfo.rows[0].fields || [];
+        for (const field of fields) {
+          if (field.type === 'select') {
+            const selectedValue = field_values?.[field.id];
+            if (!selectedValue) {
+              throw new Error(`${field.label} is required`);
+            }
+          } else if (field.type === 'checkbox') {
+            await validateCheckboxSelection(client, field, field_values?.[field.id], product_id);
+          }
+        }
+
+        if (productInfo.rows[0].quantity !== null) {
+          const used = await client.query(
+            'SELECT COALESCE(SUM(quantity), 0) as used FROM registration_products WHERE product_id = $1 AND deleted_at IS NULL',
+            [product_id]
+          );
+          const remaining = productInfo.rows[0].quantity - parseInt(used.rows[0].used);
+          if (remaining < quantity) {
+            throw new Error(`${productInfo.rows[0].name} has insufficient stock (${remaining} available, ${quantity} requested)`);
+          }
+        }
+
+        let productPrice = resolvePrice(productInfo.rows[0].price, fields, field_values);
+        if (!isGuest) {
+          productPrice = applyVolunteerDiscount(productPrice, volunteerDiscounts.get(product_id));
+        }
+        totalCents += Math.round(productPrice * quantity * 100);
+
+        await client.query(
+          `INSERT INTO registration_products (registration_id, product_id, quantity, field_values)
+           VALUES ($1, $2, $3, $4)`,
+          [regId, product_id, quantity, JSON.stringify(field_values || {})]
+        );
+      }
+
+      return regId;
+    };
+
+    let captainRegId;
+    if (captain.products.length > 0) {
+      captainRegId = await createRegistration(false);
+      registrationIds.push(captainRegId);
+    }
+
+    for (const guest of guests) {
+      const guestRegId = await createRegistration(true, guest);
+      registrationIds.push(guestRegId);
+    }
+
+    if (captain.teamId) {
+      const teamInfo = await client.query(
+        'SELECT auto_approve_joins FROM event_teams WHERE event_id = $1 AND team_id = $2',
+        [eventId, captain.teamId]
+      );
+      if (teamInfo.rows[0] && teamInfo.rows[0].auto_approve_joins) {
+        try {
+          await client.query(
+            `INSERT INTO team_members (team_id, user_id, role, status, invited_by)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (team_id, user_id) DO UPDATE SET status = 'approved'`,
+            [captain.teamId, req.user.id, 'member', 'approved', req.user.id]
+          );
+        } catch (err) {
+          console.error('[FREE REGISTRATION] Failed to auto-join captain to team:', err.message);
+        }
+      }
+    }
+
+    if (eventCapacity) {
+      const identifyingCount = await countIdentifyingRegistrations(client, eventId);
+      if (identifyingCount > eventCapacity) {
+        throw new Error('Event is full');
+      }
+    }
+
+    // The whole point of this endpoint: refuse to complete anything that isn't actually
+    // free, no matter what the client claimed. A stale frontend calculation, a discount
+    // that no longer applies, or a direct API call with a paid product would all be caught
+    // here and rolled back rather than silently granted for free.
+    if (totalCents > 0) {
+      throw new Error('This registration is not free — please use the payment flow');
+    }
+
+    const primaryRegId = captainRegId || registrationIds[0];
+
+    await client.query(
+      'UPDATE registrations SET payment_status = $1 WHERE id = ANY($2)',
+      ['paid', registrationIds]
+    );
+
+    await client.query('COMMIT');
+
+    console.log(`[FREE REGISTRATION] Completed for event ${eventId}, created ${registrationIds.length} registration(s): ${registrationIds.join(', ')}`);
+    logHelpers.registrationSuccess(registrationIds, eventId);
+
+    if (primaryRegId) {
+      try {
+        await pool.query(
+          `INSERT INTO email_queue (registration_id, email_type, recipient_email, status)
+           VALUES ($1, $2, $3, $4)`,
+          [primaryRegId, 'registration_confirmation', req.user.email, 'pending']
+        );
+      } catch (err) {
+        console.error('[FREE REGISTRATION] Failed to queue confirmation email:', err.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Registration completed successfully (${registrationIds.length} registration(s))`,
+      registrationId: primaryRegId,
+      registrationIds,
+      amount: 0,
+      amountFormatted: '€0.00'
+    });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('[FREE REGISTRATION ERROR]', err.message);
+    logHelpers.registrationError(req.user.id, eventId, err);
+    res.status(err.message === 'Event is full' ? 409 : 500).json({ error: err.message || 'Registration failed' });
+  } finally {
+    client.release();
+  }
+});
+
 router.get('/status/:paymentIntentId', requireAuth, async (req, res) => {
   try {
     const paymentIntent = await getPaymentIntent(req.params.paymentIntentId);

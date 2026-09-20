@@ -229,6 +229,7 @@ The application implements defense-in-depth security practices:
 - **Capacity checking with sold-out handling** — event capacity counts only registrations holding a ticket-type ("identifying") product; registrations for merchandise-only products don't count against capacity
 - **CSV export** — event organizers can export all registrations including comments and payment status
 - **Event descriptions support formatting** — line breaks preserved in multi-line event descriptions
+- **Free registration** — if a registration's total comes to exactly €0 (a free event, free products, or an approved volunteer discount that brings the total to zero), checkout completes the registration directly with no Stripe step at all, rather than trying to create a €0 payment
 
 ### Volunteer Management
 

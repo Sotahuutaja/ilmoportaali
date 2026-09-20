@@ -357,18 +357,6 @@ const logHelpers = {
     })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
   },
 
-  // Guest registrations are entered by a team captain on someone else's behalf, so a
-  // failure here isn't "the captain's own registration failed" — call that out explicitly.
-  guestRegistrationError: (captainUserId, eventId, error) => {
-    (async () => {
-      const [captainName, eventTitle] = await Promise.all([resolveUserName(captainUserId), resolveEventTitle(eventId)]);
-      await addLog(CATEGORIES.REGISTRATION, LEVELS.ERROR,
-        `Guest registration failed on ${fallback(eventTitle, 'event', eventId)} (attempted by ${fallback(captainName, 'user', captainUserId)})`,
-        { error: error.message || error, userId: captainUserId, eventId, userName: captainName, eventTitle }
-      );
-    })().catch(err => console.error('[LOG HELPER ERROR]', err.message));
-  },
-
   registrationUpdated: (registrationId, eventId, adminUserId, productsChanged) => {
     (async () => {
       const [{ name, eventTitle }, adminName] = await Promise.all([
