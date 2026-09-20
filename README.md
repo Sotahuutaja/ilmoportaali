@@ -220,7 +220,7 @@ The application implements defense-in-depth security practices:
 - Registration is only possible within the event's registration period
 - **Team selection during registration** — users can select from all eligible teams during registration, even if not currently a member
   - Enforced server-side, not just hidden from the picker: registering (or adding a guest) under a team that isn't actually eligible for the event is rejected outright, whether or not individual registration is also allowed
-- **Automatic team joining** — event creators can enable auto-approval for team registration, automatically making users approved team members upon successful payment
+- **Automatic team joining** — registering under a team at an event can automatically make you an approved member of that team upon successful payment, based on the team's own auto-approve setting (the same one its captain sets for direct join requests) — not something the event's organizer controls
 - **Comments** — users can add optional comments/notes for the event organizers
 - **Guest registration** — captains can register guests by providing first name, last name, email, team, product selections, and optional comments
 - **Payment processing** — Stripe integration for secure payment handling with multiple payment methods (card, MobilePay, iDEAL, etc.)
@@ -259,7 +259,7 @@ Accessible by event creators and co-managers:
 - View all events you own or co-manage (co-managed events show a badge)
 - Manage products and co-managers per event
   - **Managers view** — shows event creator and all co-managers with clear badges distinguishing roles
-- **Team management per event** — a checklist of every team in the system, each with a checkbox to allow/disallow it for this event and (once allowed) its own auto-approve-joins toggle
+- **Team management per event** — a checklist of every team in the system, each with a checkbox to allow/disallow it for this event
   - **Team-scoped event visibility** — an optional "only show this event to eligible teams' members" toggle hides the event entirely (both the listing and its own page return as if it doesn't exist) from anyone who isn't its creator, a co-manager, an admin, an approved member of one of its eligible teams, or already registered for it. Independent of `allow_individual_registration` — an event can have eligible teams configured purely as an optional perk while staying open and visible to everyone, so hiding it is a separate, explicit choice. Disabled while no eligible teams are configured, since that would hide the event from everyone but staff
 - **Participant view** — summary stats (total participants, ticket holders, guests, revenue) — "total participants" is a raw headcount of all registrations, while "ticket holders" counts only registrations holding a ticket-type product (event capacity is based on ticket holders, not the raw headcount); search by name/email/team, edit or cancel any registration, CSV export with payment status
   - **Payment status visibility** — view payment status (pending, paid, failed) for each participant with color-coded indicators

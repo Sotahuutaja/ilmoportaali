@@ -627,12 +627,14 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
       registrationIds.push(guestRegId);
     }
 
-    // Auto-join teams if they have auto_approve_joins enabled for this event
-    // For captain
+    // Auto-join the captain into their team if the TEAM's own auto_approve_joins is on —
+    // the same setting its captain already uses for direct join requests. This used to be
+    // a separate per-event override the event organizer controlled; that's gone now, since
+    // it's not the organizer's call which teams auto-accept members.
     if (captain.teamId) {
       const teamInfo = await client.query(
-        'SELECT auto_approve_joins FROM event_teams WHERE event_id = $1 AND team_id = $2',
-        [eventId, captain.teamId]
+        'SELECT auto_approve_joins FROM teams WHERE id = $1',
+        [captain.teamId]
       );
       if (teamInfo.rows[0] && teamInfo.rows[0].auto_approve_joins) {
         try {
@@ -982,10 +984,12 @@ router.post('/confirm-free-registration', requireAuth, async (req, res) => {
       registrationIds.push(guestRegId);
     }
 
+    // Same source of truth as confirm-payment: the team's own auto_approve_joins, not a
+    // per-event override.
     if (captain.teamId) {
       const teamInfo = await client.query(
-        'SELECT auto_approve_joins FROM event_teams WHERE event_id = $1 AND team_id = $2',
-        [eventId, captain.teamId]
+        'SELECT auto_approve_joins FROM teams WHERE id = $1',
+        [captain.teamId]
       );
       if (teamInfo.rows[0] && teamInfo.rows[0].auto_approve_joins) {
         try {

@@ -5,6 +5,26 @@ import api from '../api';
 import { toHelsinki, helsinkiToUTC } from '../utils/datetime';
 import ProductFieldEditor from '../components/ProductFieldEditor';
 
+// A card's header made clickable — every section on this page starts collapsed (see
+// openSections in EditEvent below), so the header doubles as the only way to open it.
+function SectionHeader({ title, open, onToggle, subtitle }) {
+  return (
+    <div
+      onClick={onToggle}
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+    >
+      <div>
+        <h3 style={{ margin: 0 }}>{title}</h3>
+        {subtitle && !open && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>{subtitle}</p>}
+      </div>
+      <span style={{
+        color: 'var(--text-muted)', fontSize: '1rem', display: 'inline-block',
+        transition: 'transform 0.2s', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)'
+      }}>▼</span>
+    </div>
+  );
+}
+
 export default function EditEvent() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -39,6 +59,11 @@ export default function EditEvent() {
   const [roleMessage, setRoleMessage] = useState('');
   const [roleError, setRoleError] = useState('');
   const [discountForm, setDiscountForm] = useState({}); // keyed by roleId -> { product_id, discount_type, discount_value }
+  // Every section below starts collapsed so the page opens short — a long event with a
+  // dozen products and several volunteer roles used to force a lot of scrolling just to
+  // reach "Allowed teams" or the Save button, most of it stuff you weren't there to edit.
+  const [openSections, setOpenSections] = useState({ details: false, products: false, roles: false, teams: false });
+  const toggleSection = key => setOpenSections({ ...openSections, [key]: !openSections[key] });
 
   useEffect(() => {
     if (!user || (user.role !== 'admin' && user.role !== 'creator')) {
@@ -278,20 +303,6 @@ export default function EditEvent() {
     }
   };
 
-  const handleToggleAutoJoin = async (teamId, currentValue) => {
-    try {
-      const res = await api.patch(`/events/${id}/teams/${teamId}/auto-join`, {
-        auto_approve_joins: !currentValue
-      });
-      setEventTeams(eventTeams.map(t =>
-        t.team_id === teamId ? res.data.eventTeam : t
-      ));
-      setTeamMessage(`Auto-join ${!currentValue ? 'enabled' : 'disabled'} for this team.`);
-    } catch (err) {
-      setTeamError(err.response?.data?.error || 'Failed to update team settings');
-    }
-  };
-
   if (loading) return <p>Loading...</p>;
 
   return (
@@ -305,10 +316,9 @@ export default function EditEvent() {
 
       {/* Event details */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <h3 style={{ marginBottom: '1rem' }}>Event details</h3>
-        {error && <p className="error">{error}</p>}
-        {message && <p className="success">{message}</p>}
-        <form onSubmit={handleSave}>
+        <SectionHeader title="Event details" open={openSections.details} onToggle={() => toggleSection('details')} />
+        {openSections.details && (
+        <form onSubmit={handleSave} style={{ marginTop: '1rem' }}>
           <label>Title</label>
           <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
           <label>Description</label>
@@ -373,13 +383,15 @@ export default function EditEvent() {
               Live Mode
             </button>
           </div>
-          <button type="submit" className="btn btn-primary">Save changes</button>
         </form>
+        )}
       </div>
 
       {/* Products */}
       <div className="card">
-        <h3 style={{ marginBottom: '0.5rem' }}>Products</h3>
+        <SectionHeader title="Products" open={openSections.products} onToggle={() => toggleSection('products')} subtitle={`${products.length} product${products.length === 1 ? '' : 's'}`} />
+        {openSections.products && (
+        <div style={{ marginTop: '1rem' }}>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>Drag to reorder</p>
         {productError && <p className="error">{productError}</p>}
         {productMessage && <p className="success">{productMessage}</p>}
@@ -524,10 +536,14 @@ export default function EditEvent() {
           />
           <button type="submit" className="btn btn-primary" style={{ marginTop: '0.75rem' }}>Add product</button>
         </form>
+        </div>
+        )}
       </div>
     
     <div className="card" style={{ marginTop: '1.5rem' }}>
-      <h3 style={{ marginBottom: '0.5rem' }}>Volunteer roles</h3>
+      <SectionHeader title="Volunteer roles" open={openSections.roles} onToggle={() => toggleSection('roles')} subtitle={`${volunteerRoles.length} role${volunteerRoles.length === 1 ? '' : 's'}`} />
+      {openSections.roles && (
+      <div style={{ marginTop: '1rem' }}>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
         Roles volunteers can apply for, and the per-product discount or benefit each role earns once approved.
       </p>
@@ -643,10 +659,14 @@ export default function EditEvent() {
         <input type="number" min="1" value={roleForm.capacity} onChange={e => setRoleForm({ ...roleForm, capacity: e.target.value })} />
         <button type="submit" className="btn btn-primary" style={{ marginTop: '0.5rem' }}>Add role</button>
       </form>
+      </div>
+      )}
     </div>
 
     <div className="card" style={{ marginTop: '1.5rem' }}>
-      <h3 style={{ marginBottom: '1rem' }}>Allowed teams</h3>
+      <SectionHeader title="Allowed teams" open={openSections.teams} onToggle={() => toggleSection('teams')} subtitle={`${eventTeams.length} team${eventTeams.length === 1 ? '' : 's'} allowed`} />
+      {openSections.teams && (
+      <div style={{ marginTop: '1rem' }}>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
       Only members of these teams can register under a team for this event.
       </p>
@@ -672,8 +692,7 @@ export default function EditEvent() {
       {teamMessage && <p className="success">{teamMessage}</p>}
 
       {allTeams.map(t => {
-        const eventTeam = eventTeams.find(et => et.team_id === t.id);
-        const isAllowed = !!eventTeam;
+        const isAllowed = eventTeams.some(et => et.team_id === t.id);
         return (
           <div key={t.id} style={{
             padding: '0.5rem 0', borderBottom: '1px solid var(--border)'
@@ -688,19 +707,6 @@ export default function EditEvent() {
               <strong>{t.name}</strong>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t.member_count} members</span>
             </label>
-            {isAllowed && (
-              <div style={{ marginTop: '0.4rem', marginLeft: '1.6rem', fontSize: '0.85rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={eventTeam.auto_approve_joins || false}
-                    onChange={() => handleToggleAutoJoin(t.id, eventTeam.auto_approve_joins || false)}
-                    style={{ margin: 0 }}
-                  />
-                  Auto-approve team joins
-                </label>
-              </div>
-            )}
           </div>
         );
       })}
@@ -708,7 +714,20 @@ export default function EditEvent() {
       {allTeams.length === 0 && (
       <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No teams exist yet.</p>
       )}
+      </div>
+      )}
     </div>
+
+    {error && <p className="error" style={{ marginTop: '1.5rem' }}>{error}</p>}
+    {message && <p className="success" style={{ marginTop: '1.5rem' }}>{message}</p>}
+    <button
+      type="button"
+      className="btn btn-primary"
+      onClick={handleSave}
+      style={{ display: 'block', width: '100%', marginTop: '1.5rem', padding: '1rem', fontSize: '1.15rem', fontWeight: 'bold' }}
+    >
+      Save changes
+    </button>
     </div>
   );
 }
