@@ -77,14 +77,19 @@ export function resolvePrice(basePrice, fields, fieldValues) {
 }
 
 /**
- * True when this product has a "priced" checkbox field (see resolvePrice above) with
- * nothing checked in it yet. resolvePrice() correctly reports €0.00 in that state, but
- * showing that flat €0.00 in a product list — before the registrant has even opened the
- * product to pick options — reads as "this costs nothing" rather than "price depends on
- * what you pick". Callers use this to show a "select options" hint instead, for that case
- * only; once anything in the field is checked (even an option worth €0), this returns
- * false and the real computed price is shown, since it's now an actual, deliberate value
- * rather than an unset one.
+ * True while NONE of this product's "priced" checkbox fields (see resolvePrice above) have
+ * anything checked yet. resolvePrice() correctly reports €0.00 in that state, but showing
+ * that flat €0.00 in a product list — before the registrant has even opened the product to
+ * pick options — reads as "this costs nothing" rather than "price depends on what you
+ * pick". Callers use this to show a "select options"/"from" hint instead, for that case
+ * only.
+ *
+ * Deliberately checks that EVERY priced checkbox field is still empty, not that any one of
+ * them is — a product can have more than one priced checkbox field (e.g. "room size" and
+ * "extra mattress"), and the running total should start reflecting real choices the moment
+ * the registrant checks anything in ANY of them, not stay pinned to the "from" hint until
+ * every last required field has an answer. Once at least one selection exists anywhere,
+ * this returns false and the real (partial, still-updating) computed price is shown.
  *
  * @param {Array} fields - the product's field definitions (product.fields)
  * @param {object} fieldValues - the registrant's chosen values, keyed by field.id
@@ -94,14 +99,16 @@ export function hasUnselectedPricedCheckbox(fields, fieldValues) {
   const fieldList = fields || [];
   const values = fieldValues || {};
 
-  return fieldList.some(field => {
+  const pricedCheckboxFields = fieldList.filter(field => {
     if (field.type !== 'checkbox' || !field.options) return false;
-
-    const isPricedField = field.options.some(opt =>
+    return field.options.some(opt =>
       typeof opt === 'object' && opt.price !== null && opt.price !== undefined
     );
-    if (!isPricedField) return false;
+  });
 
+  if (pricedCheckboxFields.length === 0) return false;
+
+  return pricedCheckboxFields.every(field => {
     const selected = Array.isArray(values[field.id]) ? values[field.id] : [];
     return selected.length === 0;
   });
