@@ -75,3 +75,34 @@ export function resolvePrice(basePrice, fields, fieldValues) {
 
   return price;
 }
+
+/**
+ * True when this product has a "priced" checkbox field (see resolvePrice above) with
+ * nothing checked in it yet. resolvePrice() correctly reports €0.00 in that state, but
+ * showing that flat €0.00 in a product list — before the registrant has even opened the
+ * product to pick options — reads as "this costs nothing" rather than "price depends on
+ * what you pick". Callers use this to show a "select options" hint instead, for that case
+ * only; once anything in the field is checked (even an option worth €0), this returns
+ * false and the real computed price is shown, since it's now an actual, deliberate value
+ * rather than an unset one.
+ *
+ * @param {Array} fields - the product's field definitions (product.fields)
+ * @param {object} fieldValues - the registrant's chosen values, keyed by field.id
+ * @returns {boolean}
+ */
+export function hasUnselectedPricedCheckbox(fields, fieldValues) {
+  const fieldList = fields || [];
+  const values = fieldValues || {};
+
+  return fieldList.some(field => {
+    if (field.type !== 'checkbox' || !field.options) return false;
+
+    const isPricedField = field.options.some(opt =>
+      typeof opt === 'object' && opt.price !== null && opt.price !== undefined
+    );
+    if (!isPricedField) return false;
+
+    const selected = Array.isArray(values[field.id]) ? values[field.id] : [];
+    return selected.length === 0;
+  });
+}

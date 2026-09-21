@@ -2,6 +2,12 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-09-21
+
+### Bug Fixes
+
+- **Misleading €0.00 shown for products priced entirely by checkboxes** — a product with priced checkbox options correctly computes to €0.00 before the registrant has checked anything, but showing that as the product's price on the registration page read as "this is free" rather than "pick options to see the price" — especially for a product that does have its own base ("default") price set, since that base price is otherwise completely ignored once a checkbox field is priced (see "Per-checkbox pricing" below) and never entered the calculation at all, even as a fallback. The registration page (`EventDetail.jsx`'s product list, both the captain's own and any guest's) now shows that base price as an informational "From €X.XX" starting figure instead, for a product whose price depends on a priced checkbox field with nothing checked in it yet; if the product's base price is also €0, it falls back to "Select options for price". As soon as anything in that field is checked, even an option worth €0 itself, the real computed price shows again — the "From" figure was only ever a hint, never part of the actual total. New `hasUnselectedPricedCheckbox()` helper in `frontend/src/utils/pricing.js`, alongside `resolvePrice()`; no backend or pricing-logic change, purely how the not-yet-priced state is displayed
+
 ## 2026-09-20
 
 ### Features & Improvements

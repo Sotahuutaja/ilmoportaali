@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import { formatDateTime } from '../utils/datetime';
-import { resolvePrice } from '../utils/pricing';
+import { resolvePrice, hasUnselectedPricedCheckbox } from '../utils/pricing';
 import { applyVolunteerDiscount } from '../utils/volunteerPricing';
 import RegistrationReview from '../components/RegistrationReview';
 
@@ -27,6 +27,7 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
         const unavailable = p.is_available === false;
         const fields = p.fields || [];
         const effectivePrice = getEffectivePrice(p);
+        const priceUnresolved = hasUnselectedPricedCheckbox(p.fields, fieldValues?.[p.id]);
         const disabled = outOfStock || unavailable;
         return (
           <div key={p.id} style={{ marginBottom: '0.4rem' }}>
@@ -73,7 +74,21 @@ function ProductSelector({ products, selected, setSelected, onToggle, fieldValue
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <strong style={{ color: outOfStock ? '#999' : 'inherit' }}>€{effectivePrice.toFixed(2)}</strong>
+                {priceUnresolved ? (
+                  parseFloat(p.price) > 0 ? (
+                    // The product's own "default" price is otherwise completely ignored once a
+                    // checkbox field is priced (see resolvePrice) — it never enters the actual
+                    // calculation. Showing it here as a "from" figure is purely informational,
+                    // so a product creators genuinely priced at, say, €20 doesn't read as free
+                    // just because nothing's been checked yet; it still resolves to whatever the
+                    // checked options sum to (possibly €0) the moment something is picked.
+                    <strong style={{ color: outOfStock ? '#999' : 'inherit' }}>From €{parseFloat(p.price).toFixed(2)}</strong>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Select options for price</span>
+                  )
+                ) : (
+                  <strong style={{ color: outOfStock ? '#999' : 'inherit' }}>€{effectivePrice.toFixed(2)}</strong>
+                )}
                 {isSelected && !p.is_identifying && (
                   <input
                     type="number" min="1"
