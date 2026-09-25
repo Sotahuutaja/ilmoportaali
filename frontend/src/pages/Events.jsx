@@ -12,10 +12,6 @@ function EventCard({ event }) {
         📅 {formatDateTime(event.starts_at, { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
       </p>
       <p style={{ margin: '0.5rem 0', whiteSpace: 'pre-wrap' }}>{event.description}</p>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-        {event.registration_count} registered
-        {event.capacity ? ` / ${event.capacity} capacity` : ''}
-      </p>
       <Link to={`/events/${event.id}`}>
         <button className="btn btn-primary" style={{ marginTop: '0.8rem' }}>
           View event

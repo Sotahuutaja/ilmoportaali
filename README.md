@@ -200,6 +200,7 @@ The application implements defense-in-depth security practices:
 - At least one product must be selected when registering for an event
 - **Co-managers** — event creators can grant other creators full management access over their events, including editing registrations, marking payments as paid, and resending payment links on the Participants page (full parity with the event creator)
 - Past events are shown in a separate collapsed section on the events listing page
+- **Registration counts are not public** — neither the events listing page nor an individual event's own page shows how many people have registered (or an event's capacity) for any given event; that information is only available to the event's organizers, co-managers, and admins on the Participants page. An event's own page still shows a "This event is full" notice once it's sold out (based on capacity vs. ticket-holding registrations), without exposing the underlying numbers
 
 ### Teams
 

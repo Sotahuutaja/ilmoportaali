@@ -704,11 +704,11 @@ export default function EventDetail() {
           📅 {formatDateTime(event.starts_at)} — {formatDateTime(event.ends_at)}
         </p>
         <p style={{ margin: '1rem 0', whiteSpace: 'pre-wrap' }}>{event.description}</p>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          {event.registration_count} registered
-          {event.capacity ? ` / ${event.capacity} spots` : ''}
-          {full ? ' — FULL' : ''}
-        </p>
+        {full && (
+          <p style={{ color: '#c0392b', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+            This event is full
+          </p>
+        )}
         {event.registration_starts_at && (
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
             🗓 Ilmoittautumisaika (EET/EEST):{' '}

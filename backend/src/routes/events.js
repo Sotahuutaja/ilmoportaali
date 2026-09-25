@@ -9,18 +9,17 @@ const router = express.Router();
 
 // List all events (public, but a restrict_visibility event is filtered out for anyone
 // who isn't its manager, an admin, an eligible team's approved member, or already
-// registered for it — see utils/eventVisibility.js)
+// registered for it — see utils/eventVisibility.js). Deliberately omits registration_count
+// — how many people have signed up isn't organizer-only sensitive, but it's also not
+// something every visitor browsing the public events list needs to see; GET /:id and
+// GET /manageable still include it for the event's own page (which needs it to know
+// whether the event is full) and the organizer dashboard, respectively.
 router.get('/', optionalAuth, async (req, res) => {
   try {
     const userId = req.user?.id ?? null;
     const userRole = req.user?.role ?? null;
     const result = await pool.query(`
-      SELECT e.*, u.name as creator_name,
-        (SELECT COUNT(DISTINCT r.id)::integer
-         FROM registrations r
-         JOIN registration_products rp ON rp.registration_id = r.id AND rp.deleted_at IS NULL
-         JOIN event_products ep ON ep.id = rp.product_id AND ep.is_identifying = TRUE
-         WHERE r.event_id = e.id) as registration_count
+      SELECT e.*, u.name as creator_name
       FROM events e
       LEFT JOIN users u ON e.creator_id = u.id
       WHERE ${visibilityClause('$1', '$2')}

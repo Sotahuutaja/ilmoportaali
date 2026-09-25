@@ -2,6 +2,14 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-09-25
+
+### Changes
+
+- **Registration counts removed from the public events listing** — each event card on the Events page used to show "X registered" (and "/ Y capacity" when a capacity was set) to every visitor, logged in or not. That's not information the public needs, so it's gone from the page, and the backend no longer even includes `registration_count` in the public `GET /events` list response — it's not just hidden in the UI, it's not sent at all. The organizer dashboard and an event's own page (which still needs the count internally to know when it's sold out) are unaffected
+
+- **Registration counts removed from the individual event page too** — an event's own page had the same "X registered / Y spots" line shown publicly, just worded slightly differently from the listing page above. Replaced with a plain "This event is full" notice that only appears once the event has actually sold out, with no raw numbers shown either way. The underlying capacity check itself (`event.capacity` vs. `event.registration_count`, including the API's `registration_count` field on `GET /events/:id`) is unchanged — it's only the public display of those numbers that's gone; organizers still see full participant counts on the Participants page
+
 ## 2026-09-21
 
 ### Bug Fixes
