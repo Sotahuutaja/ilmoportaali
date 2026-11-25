@@ -2,6 +2,13 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-11-25 (housekeeping)
+
+### Code Quality
+
+- **Removed dead code found in a codebase-wide sweep** — unused imports and variables across several pages (`App.jsx`, `AdminUsers.jsx`, `Checkout.jsx`, `EditEvent.jsx`, `EventRegistrants.jsx`, `ResetPassword.jsx`, `Teams.jsx`, `PaymentForm.jsx`), a stray `canManageEvent` re-export from `routes/events.js` left over from an earlier refactor (the real implementation has lived in `utils/eventAccess.js` for a while — nothing imported the re-export), a leftover `resolvePrice` import in `emailWorker.js` from last session's price-snapshot change, and a duplicate-key bug in `AdminUsers.jsx` where an earlier `marginLeft`/`marginRight` pair in the same style object was always silently overwritten by a later pair and never actually applied. Also removed an unused `supertest` devDependency (the one test file is pure logic tests, no HTTP testing) and a stray empty file that had ended up committed to the backend folder
+- **Dropped the orphaned `event_teams.auto_approve_joins` column** — unused since auto-approving team joins on event registration was handed over to the team's own setting. `migrate.js` was unconditionally re-adding this column on every server boot, which would have silently undone a bare drop migration on the next deploy — that line is removed too, so the new drop migration actually sticks
+
 ## 2026-11-25
 
 ### Features & Improvements

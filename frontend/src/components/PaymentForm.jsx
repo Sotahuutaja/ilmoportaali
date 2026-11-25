@@ -14,7 +14,6 @@ function PaymentFormContent({
   paymentIntentId,
   mockMode,
   isProcessing,
-  error,
   displayAmount,
   selectedProducts,
   registrationData,
@@ -337,7 +336,6 @@ export default function PaymentForm({
             paymentIntentId={paymentIntentId}
             mockMode={mockMode}
             isProcessing={isProcessing}
-            error={error}
             displayAmount={displayAmount}
             selectedProducts={selectedProducts}
             registrationData={registrationData}

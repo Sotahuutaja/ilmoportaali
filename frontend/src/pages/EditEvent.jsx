@@ -194,7 +194,7 @@ export default function EditEvent() {
       await api.put(`/events/${id}/products/reorder`, {
         order: products.map(p => p.id)
       });
-    } catch (err) {
+    } catch {
       setProductError('Failed to save order');
     }
   };

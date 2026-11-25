@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
-import { fullName } from '../AuthContext';
 import { formatDate, formatDateTime } from '../utils/datetime';
 import { resolvePrice, purchasedPrice } from '../utils/pricing';
 
@@ -20,7 +19,7 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
       ? Object.fromEntries(reg.products.map(p => [p.product_id, { quantity: p.quantity, field_values: p.field_values || {} }]))
       : {}
   );
-  const [error, setError] = useState('');
+  const [error] = useState('');
   const [costChangeConfirmed, setCostChangeConfirmed] = useState(false);
   const [costChange, setCostChange] = useState(null);
 
@@ -44,7 +43,7 @@ function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
     const entries = Object.entries(selectedProducts);
 
     const products = entries
-      .filter(([productId, item]) => {
+      .filter(([, item]) => {
         const qty = typeof item === 'number' ? item : (item?.quantity || 0);
         return qty > 0;
       })
@@ -490,7 +489,7 @@ export default function EventRegistrants() {
     }
   };
 
-  const handleResendPaymentLink = async (registrationId, name) => {
+  const handleResendPaymentLink = async (registrationId) => {
     try {
       const res = await api.post(`/registrations/${id}/registrations/${registrationId}/resend-payment-link`);
       setMessage(`Payment link resent to ${res.data.email}`);
@@ -505,7 +504,7 @@ export default function EventRegistrants() {
     if (notes === null) return; // User cancelled
 
     try {
-      const res = await api.patch(`/registrations/${id}/registrations/${registrationId}/payment-status`, {
+      await api.patch(`/registrations/${id}/registrations/${registrationId}/payment-status`, {
         payment_status: 'paid',
         notes: notes || null
       });

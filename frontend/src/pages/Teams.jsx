@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
-import { fullName } from '../AuthContext';
 
 export default function Teams() {
   const { user } = useAuth();

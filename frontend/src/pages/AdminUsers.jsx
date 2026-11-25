@@ -280,8 +280,6 @@ export default function AdminUsers() {
       <div className="card" style={{
         padding: 0,
         overflow: 'auto',
-        marginLeft: '1rem',
-        marginRight: '1rem',
         width: '100vw',
         marginLeft: 'calc(-50vw + 50%)',
         marginRight: 'calc(-50vw + 50%)'

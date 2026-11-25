@@ -108,7 +108,6 @@ async function migrate() {
     ALTER TABLE events ADD COLUMN IF NOT EXISTS registration_ends_at TIMESTAMPTZ;
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS comments TEXT;
     ALTER TABLE teams ADD COLUMN IF NOT EXISTS auto_approve_joins BOOLEAN NOT NULL DEFAULT FALSE;
-    ALTER TABLE event_teams ADD COLUMN IF NOT EXISTS auto_approve_joins BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE events ADD COLUMN IF NOT EXISTS stripe_mode VARCHAR(10) NOT NULL DEFAULT 'test';
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS year_of_birth INTEGER;
     ALTER TABLE registrations ADD COLUMN IF NOT EXISTS gender TEXT;

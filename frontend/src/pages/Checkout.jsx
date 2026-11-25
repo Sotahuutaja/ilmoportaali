@@ -167,18 +167,18 @@ export default function Checkout() {
                   setTeamId(regData.captain.teamId);
                   setComments(regData.captain.comments);
                 }
-              } catch (err) {
+              } catch {
                 console.error('Failed to restore checkout data from localStorage');
               }
             }
           }
-        } catch (err) {
+        } catch {
           setError('Invalid checkout parameters');
         }
 
         setLoading(false);
       })
-      .catch(err => {
+      .catch(() => {
         setError('Failed to load event details');
         setLoading(false);
       });
@@ -296,7 +296,7 @@ export default function Checkout() {
   };
 
   // Helper to format field_values for display
-  const formatFieldValues = (fieldValues, productId) => {
+  const formatFieldValues = (fieldValues) => {
     if (!fieldValues || Object.keys(fieldValues).length === 0) return '';
     return Object.entries(fieldValues)
       .map(([fieldId, value]) => `${getFieldLabel(fieldId)}: ${Array.isArray(value) ? value.join(', ') : value}`)

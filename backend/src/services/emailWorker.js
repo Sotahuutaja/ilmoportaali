@@ -7,7 +7,7 @@
 
 const pool = require('../db');
 const { sendRegistrationConfirmation, sendRegistrationCancellation } = require('./emailService');
-const { resolvePrice, purchasedPrice } = require('../utils/pricing');
+const { purchasedPrice } = require('../utils/pricing');
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000; // 5 seconds between retries

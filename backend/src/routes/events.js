@@ -324,4 +324,4 @@ router.delete('/:id/teams/:teamId', requireAuth, async (req, res) => {
   }
 });
 
-module.exports = { router, canManageEvent };
+module.exports = { router };
