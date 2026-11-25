@@ -84,4 +84,37 @@ function resolvePrice(basePrice, fields, fieldValues) {
   return price;
 }
 
-module.exports = { resolvePrice };
+/**
+ * Prefer the price actually recorded at the moment a product was added to a registration
+ * (registration_products.product_price, snapshotted by every insert path — see payments.js
+ * and registrations.js's insertProducts()) over resolvePrice()'s live recomputation against
+ * the product's *current* configuration.
+ *
+ * Without this, any place that displays or refunds an already-purchased product keeps
+ * re-deriving its price from whatever the product looks like today — so editing a
+ * product's fields or prices after people have already registered silently rewrites
+ * history for every past registrant too (showing, or even refunding, an amount that has
+ * nothing to do with what they actually paid).
+ *
+ * Only falls back to a live resolvePrice() call for rows that predate this column being
+ * populated on every purchase (product_price is NULL) — there's no way to recover what an
+ * older purchase actually cost once the product's configuration has since changed, so this
+ * is a best-effort fallback for pre-existing data, not a guarantee.
+ *
+ * @param {object} row - a registration_products row (or anything shaped like one), with
+ *   `product_price` (the snapshot, possibly null) and `price` (the product's current base
+ *   price, used only as a fallback)
+ * @param {Array} fields - the product's field definitions to fall back to resolvePrice()
+ *   with (ideally the product's *current* fields, since no historical snapshot of fields
+ *   themselves is kept)
+ * @param {object} fieldValues - the registrant's chosen values, keyed by field.id
+ * @returns {number} the effective unit price, in euros
+ */
+function purchasedPrice(row, fields, fieldValues) {
+  if (row.product_price !== null && row.product_price !== undefined) {
+    return parseFloat(row.product_price);
+  }
+  return resolvePrice(row.price, fields, fieldValues);
+}
+
+module.exports = { resolvePrice, purchasedPrice };

@@ -113,3 +113,26 @@ export function hasUnselectedPricedCheckbox(fields, fieldValues) {
     return selected.length === 0;
   });
 }
+
+/**
+ * Prefer the price actually recorded at the moment a product was purchased
+ * (registration_products.product_price, mirrored here as product.product_price) over
+ * resolvePrice()'s live recomputation against the product's *current* configuration — see
+ * the matching helper and full rationale in ../../backend/src/utils/pricing.js.
+ *
+ * Only falls back to a live resolvePrice() call when no snapshot is present (product_price
+ * is null/undefined), which is the case for anything purchased before this was added, or
+ * anywhere this is called on a product that isn't an already-purchased registration line
+ * (e.g. the registration form itself, before anything's been bought).
+ *
+ * @param {object} product - a purchased product as returned by the API (has `product_price`,
+ *   `price`, `fields`, and `field_values`)
+ * @returns {number} the effective unit price, in euros
+ */
+export function purchasedPrice(product) {
+  const snapshotPrice = product?.product_price;
+  if (snapshotPrice !== null && snapshotPrice !== undefined) {
+    return parseFloat(snapshotPrice);
+  }
+  return resolvePrice(product?.price, product?.fields, product?.field_values);
+}

@@ -7,7 +7,7 @@
 
 const pool = require('../db');
 const { sendRegistrationConfirmation, sendRegistrationCancellation } = require('./emailService');
-const { resolvePrice } = require('../utils/pricing');
+const { resolvePrice, purchasedPrice } = require('../utils/pricing');
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000; // 5 seconds between retries
@@ -191,7 +191,7 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
       }
     }
     const fields = p.fields || [];
-    const price = resolvePrice(p.price, fields, fieldValues);
+    const price = purchasedPrice(p, fields, fieldValues);
 
     return {
       name: p.name,
@@ -204,7 +204,7 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
   // Fetch related guest registrations (exclude soft-deleted products)
   const guestsResult = await pool.query(
     `SELECT r.*,
-            (SELECT json_agg(json_build_object('product_id', rp.product_id, 'quantity', rp.quantity, 'field_values', rp.field_values, 'name', ep.name, 'price', ep.price))
+            (SELECT json_agg(json_build_object('product_id', rp.product_id, 'quantity', rp.quantity, 'field_values', rp.field_values, 'name', ep.name, 'price', ep.price, 'product_price', rp.product_price))
              FROM registration_products rp
              JOIN event_products ep ON rp.product_id = ep.id
              WHERE rp.registration_id = r.id AND rp.deleted_at IS NULL) as products
@@ -242,7 +242,7 @@ async function sendConfirmationEmailFromQueue(registrationId, recipientEmail) {
         }
       }
       const fields = productFieldsMap[p.product_id] || [];
-      const price = resolvePrice(p.price, fields, fieldValues);
+      const price = purchasedPrice(p, fields, fieldValues);
 
       return {
         name: p.name,

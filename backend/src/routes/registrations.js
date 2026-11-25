@@ -8,7 +8,7 @@ const { sendAdditionalPaymentEmail, sendRefundEmail } = require('../services/ema
 const { logHelpers } = require('../services/logService');
 const { validateIdentifyingProducts } = require('../utils/identifyingProducts');
 const { validateCheckboxSelection } = require('../utils/checkboxFields');
-const { resolvePrice } = require('../utils/pricing');
+const { resolvePrice, purchasedPrice } = require('../utils/pricing');
 const { getVolunteerDiscountMap, applyVolunteerDiscount } = require('../utils/volunteerPricing');
 
 // Helper: calculate total price for a set of products. Pass userId (never for a guest —
@@ -98,8 +98,12 @@ async function insertProducts(client, registrationId, products, eventId, modific
       }
     }
 
-    // Capture product snapshot at time of insert
-    const productPrice = parseFloat(product.rows[0].price);
+    // Capture product snapshot at time of insert — the resolved price (base price plus
+    // any field-option override, e.g. a priced checkbox selection), not just the product's
+    // raw base price, so this matches what the registrant is actually being charged for
+    // this specific selection. See purchasedPrice() in utils/pricing.js for how this is
+    // read back.
+    const productPrice = resolvePrice(product.rows[0].price, fields, field_values);
     await client.query(
       `INSERT INTO registration_products
        (registration_id, product_id, quantity, field_values, product_name, product_price, snapshot_at, created_at, modification_reason)
@@ -115,7 +119,7 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
     // First, fetch registration details and products before deleting
     const regResult = await pool.query(
       `SELECT r.id, r.event_id, e.title, e.starts_at,
-              rp.product_id, ep.name, ep.price, rp.quantity, rp.field_values, ep.fields
+              rp.product_id, ep.name, ep.price, rp.quantity, rp.field_values, ep.fields, rp.product_price
        FROM registrations r
        JOIN events e ON r.event_id = e.id
        LEFT JOIN registration_products rp ON r.id = rp.registration_id AND rp.deleted_at IS NULL
@@ -153,7 +157,7 @@ router.delete('/:eventId', requireAuth, async (req, res) => {
           }
         }
         const fields = row.fields || [];
-        const price = resolvePrice(row.price, fields, fieldValues);
+        const price = purchasedPrice(row, fields, fieldValues);
 
         return {
           name: row.name,
@@ -359,7 +363,7 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
               u.email, u.first_name, u.last_name,
               rb.email as registered_by_email,
               e.title, e.starts_at,
-              rp.product_id, ep.name, ep.price, rp.quantity, rp.field_values, ep.fields
+              rp.product_id, ep.name, ep.price, rp.quantity, rp.field_values, ep.fields, rp.product_price
        FROM registrations r
        LEFT JOIN users u ON r.user_id = u.id
        LEFT JOIN users rb ON r.registered_by = rb.id
@@ -400,7 +404,7 @@ router.delete('/:eventId/registrations/:registrationId', requireAuth, async (req
           }
         }
         const fields = row.fields || [];
-        const price = resolvePrice(row.price, fields, fieldValues);
+        const price = purchasedPrice(row, fields, fieldValues);
 
         return {
           name: row.name,
@@ -992,7 +996,7 @@ router.post('/:eventId/registrations/:registrationId/resend-payment-link', requi
 
     // Fetch products for email
     const productsResult = await client.query(
-      `SELECT ep.name, ep.price, ep.fields, rp.quantity, rp.field_values
+      `SELECT ep.name, ep.price, ep.fields, rp.quantity, rp.field_values, rp.product_price
        FROM registration_products rp
        JOIN event_products ep ON rp.product_id = ep.id
        WHERE rp.registration_id = $1 AND rp.deleted_at IS NULL`,
@@ -1010,7 +1014,7 @@ router.post('/:eventId/registrations/:registrationId/resend-payment-link', requi
       }
 
       const fields = p.fields || [];
-      const price = resolvePrice(p.price, fields, fieldValues);
+      const price = purchasedPrice(p, fields, fieldValues);
 
       const transformedFieldValues = {};
       for (const [fieldId, fieldValue] of Object.entries(fieldValues)) {

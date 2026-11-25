@@ -9,7 +9,7 @@ const { requireAuth } = require('../middleware/auth');
 const { createPaymentIntent, getPaymentIntent, capturePaymentIntent, cancelPaymentIntent, refundPaymentIntent, isConfigured } = require('../services/stripeService');
 const { validateIdentifyingProducts, countIdentifyingRegistrations } = require('../utils/identifyingProducts');
 const { validateCheckboxSelection } = require('../utils/checkboxFields');
-const { resolvePrice } = require('../utils/pricing');
+const { resolvePrice, purchasedPrice } = require('../utils/pricing');
 const { getVolunteerDiscountMap, applyVolunteerDiscount } = require('../utils/volunteerPricing');
 const { getEligibleTeamIds } = require('../utils/eventAccess');
 const { sendAdditionalPaymentConfirmationEmail } = require('../services/email');
@@ -344,7 +344,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
             // Get products for this registration with prices and fields (exclude soft-deleted)
             const productsResult = await pool.query(
-              'SELECT ep.name, ep.price, ep.fields, rp.quantity, rp.field_values FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1 AND rp.deleted_at IS NULL',
+              'SELECT ep.name, ep.price, ep.fields, rp.quantity, rp.field_values, rp.product_price FROM registration_products rp JOIN event_products ep ON rp.product_id = ep.id WHERE rp.registration_id = $1 AND rp.deleted_at IS NULL',
               [registrationId]
             );
 
@@ -360,7 +360,7 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
               }
 
               const fields = p.fields || [];
-              const price = resolvePrice(p.price, fields, fieldValues);
+              const price = purchasedPrice(p, fields, fieldValues);
 
               // Transform field_values to use field labels instead of IDs
               const transformedFieldValues = {};
@@ -584,9 +584,11 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
           }
         }
 
+        let listPrice = 0;
         if (product.rows[0]) {
           const fields = product.rows[0].fields || [];
-          let productPrice = resolvePrice(product.rows[0].price, fields, field_values);
+          listPrice = resolvePrice(product.rows[0].price, fields, field_values);
+          let productPrice = listPrice;
           if (!isGuest) {
             productPrice = applyVolunteerDiscount(productPrice, volunteerDiscounts.get(product_id));
           }
@@ -594,11 +596,14 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
           totalCents += Math.round(productPrice * quantity * 100);
         }
 
-        // Insert product for this registration
+        // Insert product for this registration, snapshotting its name and resolved price
+        // (base price plus any field-option override) at the moment of purchase — see
+        // purchasedPrice() in utils/pricing.js for why later product/field changes must
+        // never retroactively change what this registration is shown as having paid.
         await client.query(
-          `INSERT INTO registration_products (registration_id, product_id, quantity, field_values)
-           VALUES ($1, $2, $3, $4)`,
-          [regId, product_id, quantity, JSON.stringify(field_values || {})]
+          `INSERT INTO registration_products (registration_id, product_id, quantity, field_values, product_name, product_price, snapshot_at, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+          [regId, product_id, quantity, JSON.stringify(field_values || {}), product.rows[0]?.name || null, listPrice]
         );
         console.log(`[PAYMENT] Inserted registration_product: reg=${regId}, product=${product_id}, qty=${quantity}`);
       }
@@ -957,16 +962,19 @@ router.post('/confirm-free-registration', requireAuth, async (req, res) => {
           }
         }
 
-        let productPrice = resolvePrice(productInfo.rows[0].price, fields, field_values);
+        const listPrice = resolvePrice(productInfo.rows[0].price, fields, field_values);
+        let productPrice = listPrice;
         if (!isGuest) {
           productPrice = applyVolunteerDiscount(productPrice, volunteerDiscounts.get(product_id));
         }
         totalCents += Math.round(productPrice * quantity * 100);
 
+        // Snapshot name and resolved price at time of purchase — see purchasedPrice() in
+        // utils/pricing.js.
         await client.query(
-          `INSERT INTO registration_products (registration_id, product_id, quantity, field_values)
-           VALUES ($1, $2, $3, $4)`,
-          [regId, product_id, quantity, JSON.stringify(field_values || {})]
+          `INSERT INTO registration_products (registration_id, product_id, quantity, field_values, product_name, product_price, snapshot_at, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+          [regId, product_id, quantity, JSON.stringify(field_values || {}), productInfo.rows[0]?.name || null, listPrice]
         );
       }
 

@@ -4,7 +4,7 @@ import { useAuth } from '../AuthContext';
 import api from '../api';
 import { fullName } from '../AuthContext';
 import { formatDate, formatDateTime } from '../utils/datetime';
-import { resolvePrice } from '../utils/pricing';
+import { resolvePrice, purchasedPrice } from '../utils/pricing';
 
 function EditRegistrantModal({ reg, teams, eventProducts, onClose, onSave }) {
   const [form, setForm] = useState({
@@ -436,8 +436,10 @@ export default function EventRegistrants() {
     const reg = registrations.find(r => r.id === registrationId);
     if (!reg) return;
 
-    // Helper to calculate price with field option overrides
-    const getProductPrice = (product) => resolvePrice(product.price, product.fields, product.field_values);
+    // Helper to get the price actually paid for a product, preferring the snapshot taken
+    // at time of purchase over resolvePrice()'s live recomputation of the product's
+    // current configuration — see purchasedPrice() in utils/pricing.js.
+    const getProductPrice = (product) => purchasedPrice(product);
 
     // Calculate total refund amount with field option overrides
     const totalRefund = reg.products
@@ -516,8 +518,13 @@ export default function EventRegistrants() {
     }
   };
 
-  // Helper to calculate product price with field option overrides
-  const getProductPrice = (product) => resolvePrice(product.price, product.fields, product.field_values);
+  // Helper to get the price actually paid for a product, preferring the snapshot taken at
+  // time of purchase over resolvePrice()'s live recomputation of the product's current
+  // configuration — see purchasedPrice() in utils/pricing.js. This is what every
+  // registrant-facing total (CSV export, revenue stat, per-registrant row) uses; editing a
+  // product's price or fields later never rewrites what past registrants are shown as
+  // having paid.
+  const getProductPrice = (product) => purchasedPrice(product);
 
   const getAge = (yearOfBirth) => {
     if (!yearOfBirth) return '—';

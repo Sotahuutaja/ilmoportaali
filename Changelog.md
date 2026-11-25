@@ -2,6 +2,16 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-11-25
+
+### Features & Improvements
+
+- **Price at time of purchase** — every price shown for an already-purchased product (the organizer revenue stat, each registrant's price breakdown, CSV export, cancellation refunds, and payment-confirmation/refund emails) used to be recalculated live from the product's *current* price and fields every time it was displayed. That meant editing a product after people had already registered for it silently rewrote history for every past registrant — including, in the worst case, changing what they'd be refunded if they cancelled, to an amount that had nothing to do with what they actually paid. `registration_products` now snapshots each product's name and resolved price (the base price plus any field-option override, e.g. a priced checkbox selection) at the exact moment it's purchased, on every purchase path (Stripe checkout, free registrations, and admin-added registrations) — not just the one path that already had partial support for it. Every display and refund calculation now prefers that snapshot, via a new `purchasedPrice()` helper, falling back to the old live recalculation only for registrations that predate this change (there's no way to recover what they actually paid once the product's configuration has since changed)
+
+### Bug Fixes
+
+- **Cancellation refunds could silently use today's price instead of what was actually paid** — both self-cancellation and organizer/captain-initiated cancellation calculated the Stripe refund amount by recalculating each product's price from its current configuration, rather than reading back what was charged at purchase time. If a product's price or fields changed after someone registered (as happened with a checkbox field's pricing — see the "price at time of purchase" change above), cancelling could issue a refund for the wrong amount entirely, including potentially €0 for something that was genuinely paid for. Refunds now use the same purchase-time snapshot as every other display
+
 ## 2026-09-25
 
 ### Changes
