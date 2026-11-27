@@ -1030,6 +1030,18 @@ router.post('/confirm-free-registration', requireAuth, async (req, res) => {
 
     const primaryRegId = captainRegId || registrationIds[0];
 
+    // Create a zero-amount invoice, same as the paid flow does, so a free registration
+    // has the same paper trail and so the confirmation email below (which requires an
+    // invoice row to exist) actually gets sent instead of permanently failing.
+    if (primaryRegId) {
+      const invoiceNumber = `INV-${primaryRegId}-${Date.now()}`;
+      await client.query(
+        `INSERT INTO invoices (registration_id, amount_cents, invoice_number, paid_at)
+         VALUES ($1, $2, $3, NOW())`,
+        [primaryRegId, 0, invoiceNumber]
+      );
+    }
+
     await client.query(
       'UPDATE registrations SET payment_status = $1 WHERE id = ANY($2)',
       ['paid', registrationIds]

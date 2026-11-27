@@ -2,6 +2,12 @@
 
 All notable changes to Ilmoportaali are documented in this file.
 
+## 2026-11-27
+
+### Bug Fixes
+
+- **Free (0€) registrations never actually received a confirmation email** — `confirm-free-registration` queued a `registration_confirmation` email exactly like the paid flow, but never created an `invoices` row (only `confirm-payment` did that). The email-sending code unconditionally requires an invoice to exist to build the email, so sending threw `Invoice for registration <id> not found` every time, the worker retried a few times, and the email_queue row was silently marked `failed` with no one ever told. Fixed by having `confirm-free-registration` create a zero-amount invoice (`amount_cents = 0`), the same as the paid path does, so free registrations now get both a proper invoice record and their confirmation email
+
 ## 2026-11-25 (housekeeping)
 
 ### Code Quality
