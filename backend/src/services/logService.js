@@ -898,6 +898,24 @@ const logHelpers = {
     ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
   },
 
+  // --- Checkout recovery (the pending_checkouts safety net for abandoned/lost redirects) --
+
+  checkoutRecovered: (paymentIntentId, registrationIds, amountCents) => {
+    addLog(CATEGORIES.WEBHOOK, LEVELS.SUCCESS,
+      `Recovered an orphaned payment: ${paymentIntentId} had no registration on file despite being paid (€${(amountCents / 100).toFixed(2)}) — created ${registrationIds.length} registration(s) from the stashed checkout data`,
+      { paymentIntentId, registrationIds, amountCents }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
+  checkoutRecoveryFailed: (paymentIntentId, error, refunded) => {
+    addLog(CATEGORIES.WEBHOOK, LEVELS.ERROR,
+      refunded
+        ? `Checkout recovery failed for orphaned payment ${paymentIntentId} (${error.message || error}) — automatically refunded`
+        : `CRITICAL: checkout recovery failed for orphaned payment ${paymentIntentId} (${error.message || error}) AND the automatic refund also failed — needs manual attention in Stripe`,
+      { paymentIntentId, error: error.message || error, refunded }
+    ).catch(err => console.error('[LOG HELPER ERROR]', err.message));
+  },
+
   // --- Volunteers -----------------------------------------------------------------
 
   volunteeringToggled: (eventId, eventTitle, enabled, adminUserId) => {

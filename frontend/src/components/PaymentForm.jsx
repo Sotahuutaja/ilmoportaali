@@ -128,6 +128,17 @@ function PaymentFormContent({
 
       if (!response.ok) {
         const data = await response.json();
+
+        // If this exact payment was already turned into a registration — most likely
+        // because the checkout-recovery sweep (see backend/src/services/
+        // checkoutRecovery.js) beat us to it while this tab was away or slow to return —
+        // that's a success, not a failure: the registration genuinely exists.
+        if (response.status === 409 && data.registrationId) {
+          console.log('[PAYMENT-FORM] Payment was already processed elsewhere; treating as success:', data);
+          onSuccess?.(data);
+          return;
+        }
+
         throw new Error(data.error || 'Failed to confirm payment');
       }
 
@@ -238,6 +249,18 @@ export default function PaymentForm({
           });
         }
 
+        // The same captain+guests structure confirm-payment (and, if needed later,
+        // confirm-free-registration) will use — computed once here so it's identical
+        // everywhere it's sent, including the server-side stash used to recover this
+        // checkout if the browser never comes back after paying.
+        const payloadData = registrationData || {
+          captain: {
+            products: selectedProducts,
+            teamId: teamId || null,
+            comments: comments || null
+          }
+        };
+
         const response = await fetch('/api/payments/create-payment-intent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -245,7 +268,8 @@ export default function PaymentForm({
             eventId,
             products: allProducts,
             teamId: teamId || null,
-            comments: comments || null
+            comments: comments || null,
+            registrations: payloadData
           })
         });
 
@@ -261,14 +285,6 @@ export default function PaymentForm({
         // is actually owed — in that case there's no payment step at all, so complete the
         // registration directly instead of ever creating a Stripe payment intent.
         if (data.requiresPayment === false) {
-          const payloadData = registrationData || {
-            captain: {
-              products: selectedProducts,
-              teamId: teamId || null,
-              comments: comments || null
-            }
-          };
-
           const freeResponse = await fetch('/api/payments/confirm-free-registration', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

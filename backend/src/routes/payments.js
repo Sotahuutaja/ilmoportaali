@@ -14,6 +14,7 @@ const { getVolunteerDiscountMap, applyVolunteerDiscount } = require('../utils/vo
 const { getEligibleTeamIds } = require('../utils/eventAccess');
 const { sendAdditionalPaymentConfirmationEmail } = require('../services/email');
 const { logHelpers } = require('../services/logService');
+const { stashPendingCheckout, clearPendingCheckout } = require('../services/checkoutRecovery');
 
 const router = express.Router();
 
@@ -23,7 +24,7 @@ const router = express.Router();
  * Called BEFORE creating the registration (payment first, registration second)
  */
 router.post('/create-payment-intent', requireAuth, async (req, res) => {
-  const { eventId, products, teamId, comments } = req.body;
+  const { eventId, products, teamId, comments, registrations } = req.body;
 
   try {
     // Validate event exists
@@ -133,6 +134,19 @@ router.post('/create-payment-intent', requireAuth, async (req, res) => {
     // Don't store in session - pass back to frontend instead
 
     console.log(`[PAYMENT] Created intent ${paymentIntent.id} for €${(totalCents / 100).toFixed(2)} in ${stripeMode} mode`);
+
+    // Stash the intended registration (captain + guests, full identity/team/field data)
+    // against this payment intent so it can still be completed later if the browser
+    // never makes it back to /confirm-payment — see services/checkoutRecovery.js.
+    // Best-effort and non-blocking: a failure here never affects this response.
+    await stashPendingCheckout({
+      paymentIntentId: paymentIntent.id,
+      eventId,
+      userId: req.user.id,
+      recipientEmail: req.user.email,
+      registrations,
+      expectedAmountCents: totalCents
+    });
 
     res.json({
       clientSecret: paymentIntent.client_secret,
@@ -711,6 +725,10 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
 
     await client.query('COMMIT');
 
+    // The registration now exists for real — the stashed checkout data (if any) is no
+    // longer needed and must not be picked up again later by the recovery sweep.
+    await clearPendingCheckout(paymentIntentId);
+
     console.log(`[PAYMENT] Confirmed payment ${paymentIntentId}, created ${registrationIds.length} registration(s): ${registrationIds.join(', ')}`);
     logHelpers.paymentSuccess(paymentIntentId, totalCents);
     logHelpers.registrationSuccess(registrationIds, eventId);
@@ -775,6 +793,8 @@ router.post('/confirm-payment', requireAuth, async (req, res) => {
         }
         paymentNote = ' Your payment method has not been charged.';
       }
+
+      await clearPendingCheckout(paymentIntentId);
     }
 
     res.status(500).json({ error: `Failed to complete registration: ${err.message}${paymentNote}`, detail: err.message });

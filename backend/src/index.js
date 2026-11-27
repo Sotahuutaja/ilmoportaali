@@ -6,6 +6,7 @@ const { initPaymentSchema } = require('./initPaymentSchema');
 const { initLogs } = require('./initLogs');
 const { runMigrations } = require('./runMigrations');
 const { processPendingEmails } = require('./services/emailWorker');
+const { sweepAbandonedCheckouts, SWEEP_INTERVAL_MS } = require('./services/checkoutRecovery');
 
 // Fail fast if critical environment variables are missing
 if (!process.env.JWT_SECRET) {
@@ -124,6 +125,25 @@ app.listen(port, async () => {
     console.log('[EMAIL] Email worker started (processes every 30 seconds)');
   } catch (err) {
     console.error('Email worker initialization failed (non-blocking):', err.message);
+    // Don't crash the server, just log the error
+  }
+
+  // Start the checkout recovery sweep — periodically completes any registration whose
+  // payment succeeded on Stripe's side but whose browser never made it back to
+  // /confirm-payment (see services/checkoutRecovery.js for why this exists).
+  try {
+    console.log('[CHECKOUT RECOVERY] Starting abandoned-checkout sweep...');
+    setInterval(async () => {
+      try {
+        await sweepAbandonedCheckouts();
+      } catch (err) {
+        console.error('[CHECKOUT RECOVERY] Periodic sweep error:', err.message);
+        // Don't crash the server, just log the error
+      }
+    }, SWEEP_INTERVAL_MS);
+    console.log(`[CHECKOUT RECOVERY] Sweep started (runs every ${SWEEP_INTERVAL_MS / 60000} minutes)`);
+  } catch (err) {
+    console.error('Checkout recovery sweep initialization failed (non-blocking):', err.message);
     // Don't crash the server, just log the error
   }
 });
